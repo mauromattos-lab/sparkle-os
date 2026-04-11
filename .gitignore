@@ -33,6 +33,12 @@ Thumbs.db
 # Zenya raw exports (n8n workflows/executions — dados operacionais, podem conter dados sensíveis)
 docs/zenya/raw/
 
+# AI Assistant configs (machine-specific, not project artifacts)
+.antigravity/
+.codex/
+.cursor/
+.gemini/
+
 # SparkleOS additions
 # AIOS Runtime — session state, handoffs, decision logs (gitignored)
 .aios/
