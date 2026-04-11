@@ -13,7 +13,7 @@
 
 **Tipo:** Snapshot inicial — preservação do estado em produção
 **Tag git:** `zenya-ip-v1.0.0`
-**Commit base:** `c9f9061`
+**Commit:** `1f04766`
 **Executado por:** @analyst (Atlas) — Story 2.2
 
 ### O que foi preservado
