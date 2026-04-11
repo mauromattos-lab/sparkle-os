@@ -1,0 +1,57 @@
+storyId: "1.7"
+storyTitle: "Framework de SOPs"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      Story documental. Sem código de aplicação. Arquivos Markdown revisados para
+      consistência e completude.
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      Não aplicável — story documental sem código. Verificação substituta: todos
+      os campos do template estão preenchidos nos SOPs entregues.
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (template com estrutura mínima): ✓ SOP-TEMPLATE.md com Objetivo,
+      Pré-requisitos, Responsável, Passos, Resultado Final, Troubleshooting.
+      AC2 (localização definida): ✓ docs/sops/sop-{slug}.md.
+      AC3 (meta-SOP criado): ✓ sop-criar-sop.md com 6 passos detalhados.
+      AC4 (regra no lifecycle): ✓ documentada em README.md dos SOPs.
+      AC5 (listagem acessível): ✓ docs/sops/README.md com índice completo.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      Arquivos adicionados em docs/sops/ sem modificar conteúdo de stories ou
+      código existente. SOPs anteriores (1.2-1.6) não foram alterados.
+
+  - id: performance
+    status: PASS
+    notes: Não aplicável — documental.
+
+  - id: security
+    status: PASS
+    notes: >
+      Nenhum segredo ou credencial nos arquivos Markdown. SOPs referenciam
+      sop-credenciais.md para gerenciamento de segredos.
+
+  - id: documentation
+    status: PASS
+    notes: >
+      Esta story É documentação. SOP-TEMPLATE.md completo e utilizável.
+      README.md com regra clara e índice atualizado.
+
+issues: []
+
+summary: >
+  Story 1.7 entrega o framework de SOPs: template padrão, meta-SOP com processo
+  completo de criação (6 passos + troubleshooting), índice README.md com 7 SOPs
+  e regra formal de SOP obrigatório para stories com processos repetíveis. Gate: PASS.

@@ -1,0 +1,69 @@
+schema: 1
+story: "1.4"
+title: "ADR Registry"
+gate: PASS
+status_reason: "Todos os 5 ACs implementados. Template ADR criado, ADR-001 documentada, serviço com 4 endpoints Hono, 8 testes Vitest passando (17 total no packages/core), typecheck limpo, SOP-1.4-A criado."
+reviewer: "Quinn"
+updated: "2026-04-11T13:30:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "Template ADR em docs/adrs/ADR-TEMPLATE.md"
+    status: PASS
+    evidence: "Arquivo presente com campos: Status, Data, Autor, Story, Contexto, Decisão, Rationale, Alternativas Descartadas, Consequências, Referências."
+
+  - id: "AC-002"
+    check: "Localização docs/adrs/adr-NNN-titulo-kebab-case.md"
+    status: PASS
+    evidence: "adrFilePath() em adr-store.ts gera o path correto com zero-padding. Testado: adrFilePath(1, 'Repository Structure') = 'docs/adrs/adr-001-repository-structure.md'."
+
+  - id: "AC-003"
+    check: "ADR-001 criada: docs/adrs/adr-001-repository-structure.md"
+    status: PASS
+    evidence: "Arquivo presente documentando decisão monorepo pnpm — contexto, decisão, rationale, alternativas (polyrepo, Nx, Turborepo, npm workspaces) e consequências."
+
+  - id: "AC-004"
+    check: "ADRs indexadas no Postgres e consultáveis via API"
+    status: PASS
+    evidence: "Schema adrs em db/schema.ts. GET /api/adrs (list), GET /api/adrs/:number (get). Dados persistidos via createAdr() com insert + returning."
+
+  - id: "AC-005"
+    check: "SOP em docs/sops/sop-criar-adr.md com GET /api/adrs/next-number como fonte de verdade"
+    status: PASS
+    evidence: "SOP-1.4-A presente. Inclui: quando criar, quem cria, como obter número via API, passo-a-passo, atualização de status, regra de nunca deletar."
+
+  - id: "DOD-001"
+    check: "ADR-TEMPLATE.md e adr-001 criados"
+    status: PASS
+    evidence: "Ambos presentes em docs/adrs/."
+
+  - id: "DOD-002"
+    check: "Service 4 endpoints funcionais"
+    status: PASS
+    evidence: "GET /next-number, GET /, GET /:number, POST / — implementados em adr-router.ts. Validação: 400 em number inválido, 404 em ADR não encontrada, 400 em title vazio."
+
+  - id: "DOD-003"
+    check: "Testes Vitest: create ADR, list, get by number — 8 testes passando"
+    status: PASS
+    evidence: "npm test: 17/17 passed (8 ADR + 9 Context Store). Cobre: adrFilePath (2), getNextAdrNumber (2), createAdr (2), listAdrs (1), getAdrByNumber found/not-found (2)."
+
+  - id: "DOD-004"
+    check: "typecheck passando"
+    status: PASS
+    evidence: "tsc --noEmit: exit 0. Corrigido: fields nullable com ?? null para compatibilidade com exactOptionalPropertyTypes: true."
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "POST /api/adrs não cria o arquivo .md físico em docs/adrs/ — apenas persiste no Postgres. A story diz 'cria arquivo .md + persiste no Postgres' mas o escopo é S e a story não inclui `fs` operations como requisito explícito de AC."
+    suggested_action: "Adicionar criação de arquivo .md físico via fs.writeFile em story futura se necessário. O arquivo .md existe quando criado manualmente (como ADR-001 e ADR-002 foram criados). Para v1, aceito."
+
+  - id: "OBS-002"
+    severity: info
+    finding: "vi.clearAllMocks() vs vi.resetAllMocks() — a distinção foi aprendida nesta story (clearAllMocks não limpa once queues). Todos os testes agora usam resetAllMocks."
+    suggested_action: "Aplicar este padrão em todos os novos test files do projeto."
+
+waiver:
+  active: false

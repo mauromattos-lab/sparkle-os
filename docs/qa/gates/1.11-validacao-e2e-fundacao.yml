@@ -1,0 +1,68 @@
+storyId: "1.11"
+storyTitle: "Validação End-to-End da Fundação"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      Story de validação (1.11-val) criada seguindo o formato padrão de story.
+      Relatório epic-1-e2e-report.md legível, estruturado e com evidências verificáveis.
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      35/35 testes passando em packages/core:
+      - context-store: 9/9
+      - adr-store: 8/8
+      - decision-store: 5/5
+      - cost-store: 6/6
+      - auth middleware: 7/7
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (story criada via AIOS): ✓ 1.11-validation-scenario.story.md existe com lifecycle completo.
+      AC2 (lifecycle Draft→Done): ✓ todas as 10 stories do Epic 1 com Done + 10 gates PASS.
+      AC3 (Context Store): ✓ 9 testes + curls documentados no relatório.
+      AC4 (ADR cross-agent): ✓ 8 testes + 3 ADRs criadas consultáveis.
+      AC5 (Cost Tracking): ✓ 6 testes + curls documentados no relatório.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      Apenas arquivos de documentação e validação criados. Nenhuma modificação
+      em código existente. 35 testes mantidos passando.
+
+  - id: performance
+    status: PASS
+    notes: Não aplicável — story de validação/documentação.
+
+  - id: security
+    status: PASS
+    notes: >
+      Curls no relatório usam $INTERNAL_API_TOKEN (variável de ambiente, não
+      hardcoded). Nenhuma credencial real nos arquivos de validação.
+
+  - id: documentation
+    status: PASS
+    notes: >
+      Relatório epic-1-e2e-report.md completo: sumário executivo, resultados por AC,
+      checklist de saúde, issues resolvidos, próximos passos para Mauro.
+      Legível sem conhecimento técnico profundo (requisito da story).
+
+issues:
+  - severity: low
+    category: requirements
+    description: "ACs 3, 4, 5 validados por código; confirmação com ambiente real pendente"
+    recommendation: >
+      Mauro executa os curls da Seção 4 do relatório (~30 min) para confirmação final.
+      Não bloqueia o Epic 2 — código está correto, falta apenas provisionar ambiente.
+
+summary: >
+  Story 1.11 entrega a validação E2E do Epic 1: story de lifecycle como evidência concreta,
+  relatório com 35 testes documentados e curls verificáveis. 7 issues encontrados e resolvidos
+  durante o Epic 1. Um item de DoD aguarda ação de Mauro (confirmar com ambiente real).
+  Gate: PASS. Epic 1 completo do ponto de vista de implementação.

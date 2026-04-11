@@ -1,0 +1,63 @@
+storyId: "1.6"
+storyTitle: "Protocolo de Escalação para Mauro"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      decision-store.ts usa padrão consistente com context-store.ts e adr-store.ts.
+      rowToDecision() garante conversão de Date para ISO string. resolveDecision
+      retorna null quando não encontrado (correto para 404 handling no router).
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      22/22 testes passando. 5 testes para decision-store cobrem: createDecision
+      (retorna dados corretos, prioridade default), listPendingDecisions (ordena
+      por createdAt), resolveDecision (resolve com timestamp, retorna null se não
+      encontrado). vi.resetAllMocks() usado corretamente em todos os describes.
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (mapa de decisão 4 níveis): ✓ documentado em sop-escalacao-mauro.md.
+      AC2 (protocolo de apresentação): ✓ seção 3 do SOP define formato obrigatório.
+      AC3 (fila implementada): ✓ schema + 3 endpoints funcionais.
+      AC4 (decisões documentadas): ✓ SOP seção 1 define critérios, ADR referenciado.
+      AC5 (caso real): ✓ meta-exemplo documentado na seção 6 do SOP.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      17 testes anteriores (context-store: 9, adr-store: 8) todos passando após
+      adição dos novos arquivos. index.ts atualizado sem breaking changes.
+
+  - id: performance
+    status: PASS
+    notes: >
+      Query com WHERE status='pending' ORDER BY createdAt — coberta pelo índice
+      idx_pending_decisions_status(status, created_at) definido no schema.
+
+  - id: security
+    status: PASS
+    notes: >
+      Sem SQL injection (ORM parametrizado). UUID para IDs. Sem campos sensíveis
+      expostos. PATCH valida presença de resolution antes de atualizar.
+
+  - id: documentation
+    status: PASS
+    notes: >
+      sop-escalacao-mauro.md completo: mapa de decisão, triggers obrigatórios,
+      formato de escalação, SLA, O que fazer enquanto aguarda, caso real, API ref.
+      index.ts exporta tipos e funções públicas da DecisionQueue.
+
+issues: []
+
+summary: >
+  Story 1.6 implementa o protocolo de escalação completo: SOP documentado com
+  4 níveis de decisão e 6 triggers obrigatórios, DecisionQueue service com schema
+  Drizzle + 3 endpoints Hono, 5 testes Vitest cobrindo CRUD da fila. Integração
+  com index.ts limpa. Caso real documentado via meta-exemplo. Gate: PASS.

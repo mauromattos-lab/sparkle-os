@@ -1,0 +1,69 @@
+schema: 1
+story: "1.1"
+title: "Estrutura do Repositório SparkleOS"
+gate: PASS
+status_reason: "Todos os 5 ACs verificados e implementados. Estrutura monorepo pnpm conforme arquitetura, README documentado, .gitignore completo, commit na branch main realizado."
+reviewer: "Quinn"
+updated: "2026-04-11T12:30:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "Estrutura de pastas monorepo pnpm"
+    status: PASS
+    evidence: "packages/{core,brain,shared}, organs/zenya, apps/piloting, infra/ — todos presentes e confirmados"
+
+  - id: "AC-002"
+    check: "README documenta propósito de cada diretório"
+    status: PASS
+    evidence: "README.md contém tabela de estrutura, tabela de tech stack, descrição de cada diretório com propósito"
+
+  - id: "AC-003"
+    check: ".gitignore cobre Node.js, pnpm, TypeScript e Coolify"
+    status: PASS
+    evidence: "node_modules (2x), .env (3x), .aios/ (1x), dist/ (1x), *.tsbuildinfo, .pnpm-store/ — todos cobertos"
+
+  - id: "AC-004"
+    check: "Primeiro commit na branch main com pnpm-workspace.yaml"
+    status: PASS
+    evidence: "commit 07f79c7 — 1182 arquivos, branch main, pnpm-workspace.yaml incluso"
+
+  - id: "AC-005"
+    check: "organs/zenya/ existe como placeholder"
+    status: PASS
+    evidence: "organs/zenya/package.json presente com nome @sparkle-os/organ-zenya"
+
+  - id: "DOD-001"
+    check: "pnpm-workspace.yaml declara packages/*, apps/*, organs/*"
+    status: PASS
+    evidence: "Todas as 3 entradas presentes no arquivo"
+
+  - id: "DOD-002"
+    check: "packages/shared tsconfig.json extende tsconfig.base.json"
+    status: PASS
+    evidence: 'extends: "../../tsconfig.base.json" — confirmado'
+
+  - id: "STRUCT-001"
+    check: "docs/adrs/ e docs/sops/ criados"
+    status: PASS
+    evidence: "Ambos presentes com .gitkeep"
+
+  - id: "STRUCT-002"
+    check: "infra/ criado com .gitkeep"
+    status: PASS
+    evidence: "infra/.gitkeep presente"
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "tsconfig.base.json usa 'module: NodeNext' — correto para Node 22, mas apps/piloting precisará de tsconfig próprio com configurações Next.js quando implementado"
+    suggested_action: "Nenhuma ação necessária agora. @dev verifica ao implementar Story apps/piloting (Epic 4)"
+
+  - id: "OBS-002"
+    severity: low
+    finding: ".aiox-core/ foi incluído no commit inicial com 1182 arquivos. Para projetos maiores, isso pode aumentar o tamanho do repositório significativamente."
+    suggested_action: "Avaliar em Story 1.2 se .aiox-core/node_modules/ deve ser adicionado ao .gitignore"
+
+waiver:
+  active: false

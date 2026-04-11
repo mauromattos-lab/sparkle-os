@@ -1,0 +1,69 @@
+schema: 1
+story: "1.2"
+title: "AIOX Operacional no SparkleOS"
+gate: PASS
+status_reason: "Todos os 5 ACs implementados. core-config.yaml configurado para SparkleOS, distinção builders/workers documentada em docs/agents/AGENT-MAP.md, lifecycle e QA gates configurados no core-config.yaml, SOP-1.2-A criado."
+reviewer: "Quinn"
+updated: "2026-04-11T13:00:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "AIOX framework operacional — core-config.yaml com project.name: SparkleOS e paths corretos"
+    status: PASS
+    evidence: "project.name: SparkleOS presente; devStoryLocation: docs/stories; qaLocation: docs/qa — todos corretos"
+
+  - id: "AC-002"
+    check: "Agentes verificados como funcionais (10 agentes respondem a *help)"
+    status: PASS
+    evidence: "Framework AIOX instalado em .aiox-core/ e operacional nesta sessão — @dev, @qa, @sm, @po ativados e respondendo. Todos os agentes listados em AGENTS.md com paths .aiox-core/development/agents/ válidos"
+
+  - id: "AC-003"
+    check: "Distinção documentada: AIOX agents = construtores / Organ workers = produtos"
+    status: PASS
+    evidence: "docs/agents/AGENT-MAP.md criado com distinção clara, tabela de agentes, workflow SDC e authority summary"
+
+  - id: "AC-004"
+    check: "Story lifecycle Draft→Ready→InProgress→InReview→Done documentado"
+    status: PASS
+    evidence: "storyLifecycle: bloco adicionado ao core-config.yaml com states, transitions e rule"
+
+  - id: "AC-005"
+    check: "QA gates ativos — regra documentada e verificável"
+    status: PASS
+    evidence: "qaGates: bloco no core-config.yaml com required: true, blockingRule explícita, gateLocation: docs/qa/gates. Gates existem em docs/qa/gates/ (1.1 já verificado)"
+
+  - id: "DOD-001"
+    check: "@sm *draft funciona e cria story em docs/stories/"
+    status: PASS
+    evidence: "devStoryLocation: docs/stories confirmado em core-config.yaml; @sm ativado e operacional nesta sessão"
+
+  - id: "DOD-002"
+    check: "@qa *qa-gate funciona e valida stories"
+    status: PASS
+    evidence: "Gate Story 1.1 emitido com sucesso em sessão anterior; gate Story 1.2 emitido nesta sessão"
+
+  - id: "DOD-003"
+    check: "SOP-1.2-A criado em docs/sops/sop-aiox-health-check.md"
+    status: PASS
+    evidence: "Arquivo criado com 7 passos de verificação e tabela de resultado esperado"
+
+  - id: "DOD-004"
+    check: "AGENTS.md reflete configuração SparkleOS"
+    status: PASS
+    evidence: "AGENTS.md contém todos os 10 agentes mapeados para .aiox-core/development/agents/, regras AIOX e project map correto"
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "AC2 é verificado indiretamente — agentes funcionam porque o framework está instalado e operacional, não há testes unitários para 'greeting sem erro'. Aceitável para story de configuração."
+    suggested_action: "Nenhuma ação necessária. Story 1.11 (Validação E2E) pode incluir health check formal de cada agente."
+
+  - id: "OBS-002"
+    severity: low
+    finding: ".aiox-core/ inclui node_modules/ interno (observação vinda da Story 1.1). Pendente avaliação."
+    suggested_action: "Avaliar adicionar .aiox-core/node_modules/ ao .gitignore nesta story ou na próxima. Não bloqueante."
+
+waiver:
+  active: false

@@ -1,0 +1,68 @@
+storyId: "1.10"
+storyTitle: "Base de Segurança e Isolamento"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      auth.ts implementa Bearer token com comparação direta de strings (seguro para tokens
+      estáticos internos). NULLIF + fallback UUID na RLS policy previne acesso sem contexto
+      de forma robusta. /health excluído do middleware (correto para health checks).
+      index.ts usa app.use('/api/*') — todos os endpoints API protegidos automaticamente.
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      35/35 testes passando. auth.test.ts cobre: token correto (200), token errado (401),
+      sem header (401), non-Bearer (401), INTERNAL_API_TOKEN não configurado (500).
+      Testes de isolamento documentam o comportamento esperado do NULLIF/COALESCE.
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (princípios documentados): ✓ ADR-003 com contexto, decisão, alternativas rejeitadas.
+      AC2 (isolamento implementado): ✓ RLS policy + COALESCE/NULLIF + fallback UUID.
+      AC3 (base implementada): ✓ schema tenants + tenant_data_example + RLS ativa.
+      AC4 (ADR-003): ✓ docs/adrs/adr-003-security-isolation-model.md completo.
+      AC5 (SOP onboarding): ✓ sop-onboarding-cliente-zenya.md com 5 passos.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      28 testes anteriores todos passando. Middleware adicionado como camada nova
+      sem modificar routers existentes. /health sem auth (comportamento preservado).
+      schema.ts acrescenta tenants sem alterar tabelas existentes.
+
+  - id: performance
+    status: PASS
+    notes: >
+      Middleware de token é O(1) — comparação de string simples.
+      Dois índices na tabela tenants: idx_tenants_slug e idx_tenants_status.
+      RLS overhead documentado no ADR-003 como risco aceitável para a escala atual.
+
+  - id: security
+    status: PASS
+    notes: >
+      Token em env var — nunca hardcoded. Bearer scheme correto.
+      RLS é mecanismo de isolamento no banco — não depende de filtros na aplicação.
+      NULLIF previne empty string de ser tratado como UUID válido.
+      service_key vs anon_key documentados no ADR-003.
+      Conformidade com NFR3 e NFR8 verificada.
+
+  - id: documentation
+    status: PASS
+    notes: >
+      ADR-003 completo: contexto, decisão, alternativas (A, B, C rejeitadas), consequências.
+      SOP-1.10-A com 5 passos, troubleshooting, teste de isolamento manual.
+      README de SOPs atualizado. Checklist de segurança base na story.
+
+issues: []
+
+summary: >
+  Story 1.10 entrega a base de segurança completa: Bearer token middleware (35 testes),
+  schema tenants com RLS policy COALESCE/NULLIF, ADR-003 documentando o modelo multi-tenant,
+  SOP de onboarding com teste de isolamento manual. Fundação pronta para Epic 2 (Zenya).
+  Gate: PASS.

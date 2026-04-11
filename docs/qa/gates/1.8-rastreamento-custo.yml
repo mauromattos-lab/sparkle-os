@@ -1,0 +1,65 @@
+storyId: "1.8"
+storyTitle: "Rastreamento de Custo por Operação"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      cost-store.ts usa padrão consistente com stores anteriores (rowToEvent, rowToDecision).
+      numeric Drizzle type evita float imprecision para valores financeiros.
+      getBudgetStatus usa sql template para SUM direto no Postgres.
+      buildDateRange centraliza lógica de período sem duplicação.
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      28/28 testes passando (6 novos). Cobrem: recordCost (retorna evento, throws se vazio),
+      getCostSummary (agrega por operationType), getCostByAgent (agrupa e ordena desc),
+      getBudgetStatus (percentUsed e isAlertTriggered). vi.resetAllMocks() em todos.
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (tipos rastreados): ✓ OperationType inclui llm_input, llm_output, embedding,
+      web_search, storage_read, storage_write.
+      AC2 (por agente): ✓ agentId em todo evento, getCostByAgent disponível.
+      AC3 (agregação por período): ✓ daily, weekly, monthly em getCostSummary.
+      AC4 (via API para Epic 4): ✓ 4 endpoints Hono funcionais.
+      AC5 (SOP): ✓ sop-gestao-custos.md com 5 passos completos.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      22 testes anteriores todos passando. index.ts atualizado sem breaking changes.
+      schema.ts acrescenta costEvents sem alterar tabelas existentes.
+
+  - id: performance
+    status: PASS
+    notes: >
+      Dois índices: idx_cost_events_agent_created (agentId, createdAt) cobre getCostByAgent;
+      idx_cost_events_created (createdAt) cobre getCostSummary. Fire-and-forget documentado
+      no SOP para não bloquear fluxo principal.
+
+  - id: security
+    status: PASS
+    notes: >
+      Sem SQL injection (ORM parametrizado + sql template seguro).
+      MONTHLY_BUDGET_USD lido de env — não hardcoded.
+      Sem dados sensíveis nos cost events (metadata é Record<string, unknown> genérico).
+
+  - id: documentation
+    status: PASS
+    notes: >
+      sop-gestao-custos.md completo: como verificar custo, identificar operações caras,
+      otimizações padrão, threshold de alerta com ação, como registrar nova operação.
+      Tabela de preços de referência 2026 incluída. README de SOPs atualizado.
+
+issues: []
+
+summary: >
+  Story 1.8 entrega CostTracking service completo: schema NUMERIC, 4 endpoints Hono,
+  6 testes (28 total), budget status com threshold 90%, SOP com preços de referência e
+  guia de otimização. Pronto para consumo pela Interface de Pilotagem no Epic 4. Gate: PASS.

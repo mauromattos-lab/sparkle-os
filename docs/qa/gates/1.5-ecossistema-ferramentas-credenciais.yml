@@ -1,0 +1,61 @@
+storyId: "1.5"
+storyTitle: "Ecossistema de Ferramentas, Pesquisa e Credenciais"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      Story documental. Sem código de aplicação. Arquivos de template e SOPs
+      verificados para completude e ausência de credenciais reais.
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      Não aplicável — story documental. Verificação substituta:
+      .env.example arquivos verificados (sem valores reais), .gitignore
+      verificado com padrão .env.* e !.env.example.
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (MCPs verificados): ✓ EXA e Context7 documentados com caminhos de acesso.
+      AC2 (credenciais mapeadas): ✓ tabela por serviço com variável e responsável.
+      AC3 (estratégia definida): ✓ .env local + Coolify para produção documentado.
+      AC4 (protocolo pesquisa): ✓ sop-pesquisa-agentes.md com critérios EXA/Context7.
+      AC5 (mapa de acesso): ✓ tabela agente × credencial/MCP.
+      AC6 (custo rastreável): ✓ integração com Story 1.8 documentada no SOP.
+      AC7 (ferramentas futuras): ✓ Apify e Playwright documentados como disponíveis.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      Apenas arquivos de documentação e templates criados. .gitignore atualizado
+      de forma compatível (adiciona regras sem remover existentes).
+
+  - id: performance
+    status: PASS
+    notes: Não aplicável — documental.
+
+  - id: security
+    status: PASS
+    notes: >
+      .env.example sem valores reais confirmado. .gitignore protege .env.*
+      e permite apenas .env.example. Mapa de acesso por agente documenta
+      restrições (ex: @analyst sem credenciais de serviço).
+
+  - id: documentation
+    status: PASS
+    notes: >
+      sop-credenciais.md e sop-pesquisa-agentes.md criados. Ambos documentam
+      casos de uso reais e workflows acionáveis. Known issue Docker MCP Toolkit
+      referenciada para transparência.
+
+issues: []
+
+summary: >
+  Story 1.5 entrega o ecossistema de credenciais e ferramentas: .env.example para
+  core e piloting, .gitignore atualizado, SOPs de credenciais e pesquisa, mapa de
+  acesso por agente. Story documental com todos os ACs verificados. Gate: PASS.

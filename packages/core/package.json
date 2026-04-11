@@ -6,12 +6,35 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "dev": "node --watch dist/index.js",
+    "dev": "node --watch --experimental-transform-types src/index.ts",
     "build": "tsc",
     "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.36.0",
+    "eslint": "^10.2.0",
+    "hono": "^4.6.0",
+    "ioredis": "^5.4.1",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "drizzle-kit": "^0.28.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^2.1.0"
   }
 }

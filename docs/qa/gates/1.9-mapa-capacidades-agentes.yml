@@ -1,0 +1,59 @@
+storyId: "1.9"
+storyTitle: "Mapa de Capacidades dos Agentes"
+reviewedBy: "@qa (Quinn)"
+reviewedAt: "2026-04-11"
+gate: PASS
+
+checks:
+  - id: code-review
+    status: PASS
+    notes: >
+      Story documental. Sem código de aplicação. AGENT-MAP.md revisado para
+      precisão e consistência com agent-authority.md.
+
+  - id: unit-tests
+    status: PASS
+    notes: >
+      Não aplicável — story documental. Verificação substituta: todas as 10
+      linhas da tabela de agentes têm as 5 colunas preenchidas sem campos em branco.
+
+  - id: acceptance-criteria
+    status: PASS
+    notes: >
+      AC1 (agentes documentados): ✓ 10 agentes com escopo, ferramentas, restrições.
+      AC2 (MCPs e restrições): ✓ coluna "Restrições / NÃO pode" preenchida para todos,
+      tabela "Ferramentas por Agente" cruzada.
+      AC3 (distinção construtor/worker): ✓ seção dedicada com explicação clara.
+      AC4 (processo de atualização): ✓ sop-atualizar-agent-map.md com 6 passos.
+      AC5 (consultável): ✓ docs/agents/AGENT-MAP.md com localização padrão.
+
+  - id: no-regressions
+    status: PASS
+    notes: >
+      AGENT-MAP.md expandido preservando todo o conteúdo da Story 1.2
+      (distinção builders/workers, workflow SDC, authority summary).
+      Conteúdo anterior enriquecido, não substituído.
+
+  - id: performance
+    status: PASS
+    notes: Não aplicável — documental.
+
+  - id: security
+    status: PASS
+    notes: >
+      Sem credenciais ou segredos no documento. Restrições de autoridade
+      documentadas corretamente (git push exclusivo ao @devops).
+
+  - id: documentation
+    status: PASS
+    notes: >
+      AGENT-MAP.md com 6 seções bem estruturadas. Cruzamento com
+      agent-authority.md e sop-credenciais.md referenciados explicitamente.
+      SOP de manutenção completo com troubleshooting.
+
+issues: []
+
+summary: >
+  Story 1.9 expande o AGENT-MAP.md com 10 agentes construtores (escopo, ferramentas,
+  restrições), tabela de ferramentas cruzada, delegação/handoffs e distinção
+  construtor/worker clara. SOP de manutenção com 6 passos. Gate: PASS.
