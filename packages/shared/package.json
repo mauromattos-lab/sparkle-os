@@ -1,0 +1,16 @@
+{
+  "name": "@sparkle-os/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SparkleOS Shared — TypeScript types and contracts shared across packages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  }
+}

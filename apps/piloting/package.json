@@ -1,0 +1,15 @@
+{
+  "name": "@sparkle-os/app-piloting",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SparkleOS Piloting Interface — Mauro's operational cockpit (Next.js 15)",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "clean": "rimraf .next out"
+  }
+}

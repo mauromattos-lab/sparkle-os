@@ -1,0 +1,14 @@
+{
+  "name": "@sparkle-os/organ-zenya",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zenya Nucleus — WhatsApp AI attendant adapter (n8n + Chatwoot + Z-API)",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  }
+}

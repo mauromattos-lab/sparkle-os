@@ -1,0 +1,21 @@
+{
+  "name": "sparkle-os",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SparkleOS — AI-native operating system for Sparkle agency",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @sparkle-os/core dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean && rimraf node_modules"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@sparkle-os/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SparkleOS Core — Context Store, ADR Registry, Internal API",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "node --watch dist/index.js",
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  }
+}
