@@ -16,12 +16,12 @@
 | [2.1](./2.1.story.md) | Inventário dos Fluxos n8n da Zenya | ✅ Done | P1 — Blocker | Epic 1 | @analyst | @pm |
 | [2.2](./2.2.story.md) | Preservação e Versionamento do IP da Zenya | ✅ Done | P1 | Epic 1 | @analyst | @pm |
 | [2.3](./2.3.story.md) | Integração Formal da Zenya como Núcleo | ✅ Done | P1 | 2.1, 2.2 | @architect | @pm |
-| [2.4](./2.4.story.md) | Processo de Provisionamento de Novo Cliente Zenya | Draft | P2 | 2.1, 2.3 | @dev | @architect |
-| [2.5](./2.5.story.md) | Protocolo de Melhoria Incremental dos Fluxos | Draft | P2 | 2.1, 2.3 | @architect | @pm |
-| [2.6](./2.6.story.md) | Baseline de Performance da Zenya | Draft | P2 | 2.1, 2.3 | @analyst | @pm |
-| [2.7](./2.7.story.md) | Isolamento de Dados por Cliente na Zenya | Draft | P2 | 2.1, 2.3 | @data-engineer | @dev |
-| [2.8](./2.8.story.md) | Base de Conhecimento Operacional da Zenya | Draft | P2 | 2.1, 2.3 | @analyst | @pm |
-| [2.9](./2.9.story.md) | Protocolo de Erro e Fallback da Zenya | Draft | P3 | 2.1, 2.3 | @dev | @architect |
+| [2.4](./2.4.story.md) | Processo de Provisionamento de Novo Cliente Zenya | 🔄 InReview | P2 | 2.1, 2.3 | @dev | @architect |
+| [2.5](./2.5.story.md) | Protocolo de Melhoria Incremental dos Fluxos | 🔄 InReview | P2 | 2.1, 2.3 | @architect | @pm |
+| [2.6](./2.6.story.md) | Baseline de Performance da Zenya | 🔄 InReview | P2 | 2.1, 2.3 | @analyst | @pm |
+| [2.7](./2.7.story.md) | Isolamento de Dados por Cliente na Zenya | 🚧 InProgress | P2 | 2.1, 2.3, 2.4 | @data-engineer | @dev |
+| [2.8](./2.8.story.md) | Base de Conhecimento Operacional da Zenya | 🔄 InReview | P2 | 2.1, 2.3 | @analyst | @pm |
+| [2.9](./2.9.story.md) | Protocolo de Erro e Fallback da Zenya | ✅ Ready | P3 | 2.1, 2.3 | @dev | @architect |
 
 ---
 
