@@ -1,0 +1,113 @@
+import type { ZenyaFlow } from '../types/flow.js';
+
+// 15 fluxos Zenya Prime — IDs confirmados via Story 2.1
+// Fonte: docs/zenya/FLOW-INVENTORY.md
+export const ZENYA_FLOWS: ZenyaFlow[] = [
+  {
+    id: 'G0ormrjMIPrTEnVH',
+    name: '00. Configurações',
+    category: 'setup',
+    status: 'inactive',
+    description: 'Configurações globais e variáveis compartilhadas entre fluxos',
+  },
+  {
+    id: 'r3C1FMc6NIi6eCGI',
+    name: '01. Secretária v3',
+    category: 'atendimento',
+    status: 'active',
+    description: 'Fluxo principal de atendimento — recebe mensagens via webhook Chatwoot e orquestra a resposta da Zenya',
+    dependencies: ['10. Buscar ou criar contato', '07. Quebrar e enviar mensagens'],
+  },
+  {
+    id: 'zq8qPZtQL2Q7Tzeq',
+    name: '02. Baixar arquivo Drive',
+    category: 'utilitário',
+    status: 'active',
+    description: 'Baixa arquivos do Google Drive para envio ao cliente',
+  },
+  {
+    id: 'm38f7b7y48GP5auB',
+    name: '03. Buscar janelas Calendar',
+    category: 'utilitário',
+    status: 'active',
+    description: 'Consulta disponibilidade no Google Calendar para agendamentos',
+  },
+  {
+    id: 'FVo76xNYRmjevsqu',
+    name: '04. Criar evento Calendar',
+    category: 'utilitário',
+    status: 'active',
+    description: 'Cria eventos de agendamento no Google Calendar',
+  },
+  {
+    id: '51kVwiW28a6orNRy',
+    name: '04.1 Atualizar agendamento',
+    category: 'utilitário',
+    status: 'active',
+    description: 'Atualiza ou remarca eventos existentes no Google Calendar',
+  },
+  {
+    id: 'ttMFxQ2UsIpW1HKt',
+    name: '05. Escalar humano',
+    category: 'handoff',
+    status: 'active',
+    description: 'Transfere o atendimento para humano quando a IA não consegue resolver',
+  },
+  {
+    id: 'inc8gUNWJXDv3O3i',
+    name: '06. Integração Asaas',
+    category: 'utilitário',
+    status: 'active',
+    description: 'Integração com Asaas para gestão de cobranças e pagamentos',
+  },
+  {
+    id: '4GWd6qHwbJr3qLUP',
+    name: '07. Quebrar e enviar mensagens',
+    category: 'atendimento',
+    status: 'active',
+    description: 'Divide respostas longas em múltiplas mensagens com delay humanizado',
+  },
+  {
+    id: 'SJi5jJ6dQgxcq1fX',
+    name: '08. Agente Assistente Interno',
+    category: 'admin',
+    status: 'active',
+    description: 'Assistente interno para Mauro — consultas, relatórios e operações administrativas',
+  },
+  {
+    id: 'YlXyQ785worYXwOk',
+    name: '09. Desmarcar e enviar alerta',
+    category: 'notificação',
+    status: 'active',
+    description: 'Cancela agendamentos e envia alertas de cancelamento ao cliente',
+  },
+  {
+    id: 'rFkbWlj1xUJ1rzAb',
+    name: '10. Buscar ou criar contato',
+    category: 'utilitário',
+    status: 'active',
+    description: 'Sub-workflow reutilizado — busca contato existente no Chatwoot ou cria novo. Chamado 7 vezes por outros fluxos.',
+    dependencies: [],
+  },
+  {
+    id: 'HLRubTvQRsV2GNJc',
+    name: '11. Agente de Lembretes',
+    category: 'notificação',
+    status: 'active',
+    description: 'Envia lembretes de agendamento para clientes via WhatsApp',
+  },
+  {
+    id: 'Be8SBYrcZcydYD1f',
+    name: '12. Gestão de ligações',
+    category: 'atendimento',
+    status: 'active',
+    description: 'Gerencia solicitações de ligação telefônica dos clientes',
+  },
+  {
+    id: 'lOBBe477Rvb0zCCs',
+    name: '13. Agente de Recuperação',
+    category: 'atendimento',
+    status: 'inactive',
+    description: 'Reengajamento de clientes inativos — em desenvolvimento',
+  },
+];
