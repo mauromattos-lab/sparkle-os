@@ -30,6 +30,9 @@ Thumbs.db
 .claude/settings.local.json
 .aiox/install-log.txt
 
+# Zenya raw exports (n8n workflows/executions — dados operacionais, podem conter dados sensíveis)
+docs/zenya/raw/
+
 # SparkleOS additions
 # AIOS Runtime — session state, handoffs, decision logs (gitignored)
 .aios/
