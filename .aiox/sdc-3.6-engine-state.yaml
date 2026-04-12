@@ -1,0 +1,35 @@
+engine_state:
+  workflow_id: story-development-cycle
+  instance_id: sdc-3.6-engine-20260412003
+  status: completed
+  current_step_index: 4
+  current_phase: Done
+  last_completed_step: review
+  action_steps_completed: 4
+  action_steps_total: 4
+  step_outputs:
+    create:
+      story_file: "docs/stories/3.6.story.md"
+      story_id: "3.6"
+      story_status: "Draft"
+    validate:
+      validation_report: "GO — 10/10"
+      story_status: "Ready"
+    implement:
+      commit: "f291c8c"
+      story_status: "Ready for Review"
+      tests: "57/57 brain + 12/12 brain-client"
+      typecheck: "0 errors"
+    review:
+      verdict: "PASS"
+      reviewer: "@architect (Aria)"
+      story_status: "Done"
+  step_results:
+    create: {status: completed}
+    validate: {status: completed, score: 10}
+    implement: {status: completed, commit: f291c8c}
+    review: {status: completed, verdict: PASS}
+  elicitation_responses:
+    create:
+      story_target: "3.6 — Ingestão de Conhecimento Externo"
+      dev_execution_mode: "YOLO"

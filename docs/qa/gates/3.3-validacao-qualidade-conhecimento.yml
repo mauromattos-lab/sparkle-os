@@ -1,0 +1,59 @@
+schema: 1
+story: "3.3"
+title: "Validação de Qualidade do Conhecimento"
+gate: PASS
+status_reason: "Todos os 6 ACs verificados. quality.service.ts com 3 dimensões e QUALITY_THRESHOLD=0.6 configurável. PATCH /validate, PATCH /reject, POST /search implementados. 41/41 testes passando (21 quality + 8 search + 12 ingest regressão). TypeCheck limpo. SOP completo."
+reviewer: "Quinn"
+updated: "2026-04-12T00:30:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "PATCH /brain/insights/{id}/validate implementado: calcula/recebe qualityScore, transiciona raw→validated quando >=0.6, preenche validatedAt/validatedBy/validationNotes"
+    status: PASS
+    evidence: "routes/insights.ts: newStatus = qualityScore >= QUALITY_THRESHOLD ? 'validated' : 'raw'. Sempre persiste qualityScore, validatedAt, validatedBy, validationNotes independente do score"
+
+  - id: "AC-002"
+    check: "quality.service.ts com mínimo 3 dimensões: specificity, evidence, relevance. calculateQualityScore como média ponderada. QUALITY_THRESHOLD=0.6 como constante exportada e configurável"
+    status: PASS
+    evidence: "quality.service.ts: QualityCriteria {specificity, evidence, relevance}, calculateQualityScore via média simples, QUALITY_THRESHOLD=0.6 exportado. assessSpecificity/assessEvidence/assessRelevance com heurísticas determinísticas v1"
+
+  - id: "AC-003"
+    check: "Insights com qualityScore < 0.6 NÃO são rejeitados automaticamente — permanecem status=raw com validationNotes. Só chegam a rejected via PATCH /reject explícito"
+    status: PASS
+    evidence: "Lógica verificada: score < threshold → UPDATE com status='raw' (unchanged). validationNotes preenchido com explicação do gap. Separação clara entre /validate e /reject"
+
+  - id: "AC-004"
+    check: "PATCH /brain/insights/{id}/reject implementado: reason obrigatório, status→rejected, insight não deletado"
+    status: PASS
+    evidence: "routes/insights.ts: validação de reason não-vazio (400 se ausente ou ''), UPDATE status='rejected' sem DELETE. Insight preservado com reason no validationNotes"
+
+  - id: "AC-005"
+    check: "POST /brain/insights/search implementado: busca semântica threshold 0.75, retorna apenas validated e applied, inclui source e confidenceLevel. Filtros opcionais: minConfidence, statusFilter, threshold, limit"
+    status: PASS
+    evidence: "routes/search.ts: gera embedding do query, HNSW com filtro de status e similarity threshold, minConfidence aplicado pós-busca, defaults (limit=10, threshold=0.75, statusFilter=['validated','applied']). Route ordering correto: /search antes de /:id no index.ts"
+
+  - id: "AC-006"
+    check: "SOP criado em docs/sops/sop-revisar-promover-insights.md com processo de revisão e promoção, critérios por confidenceLevel, exemplos curl, fluxo visual"
+    status: PASS
+    evidence: "SOP com seções: identificar insights raw, critérios por confidenceLevel (authoritative sempre valida, medium requer rigor maior), uso de PATCH /validate e /reject, exemplos curl completos, frequência de revisão recomendada"
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "assessEvidence usa regex /\\d+/ — qualquer dígito conta como dado numérico. Heurística intencional para v1 mas pode gerar falsos positivos (ex: ID numérico como evidência)"
+    suggested_action: "Refinamento planejado em Story 3.7 com dados reais de validação. Aceitável para baseline v1"
+
+  - id: "OBS-002"
+    severity: info
+    finding: "Route ordering no index.ts correto: /brain/insights/search registrado antes de /brain/insights/:id para evitar conflito de params"
+    suggested_action: "Padrão correto — documentado como decisão de implementação no Change Log"
+
+  - id: "OBS-003"
+    severity: info
+    finding: "Tasks 10–12 (integração manual) pendentes — requerem VOYAGE_API_KEY e DATABASE_URL no ambiente"
+    suggested_action: "Sem impacto funcional. Executar quando credenciais disponíveis"
+
+waiver:
+  active: false

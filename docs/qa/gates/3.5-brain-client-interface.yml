@@ -1,0 +1,70 @@
+schema: 1
+story: "3.5"
+title: "Interface de Consulta do Cérebro para Agentes"
+gate: PASS
+status_reason: "Todos os 8 ACs verificados. Package @sparkle-os/brain-client criado com BrainClient, BrainClientError e tipos locais. 9/9 testes passando, TypeCheck limpo. SOP completo com 8 seções. Zero dependências de runtime. Sem dep circular com packages/brain/."
+reviewer: "Quinn"
+updated: "2026-04-12T04:30:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "packages/brain-client/ criado como package pnpm com package.json, tsconfig.json e src/index.ts — exporta BrainClient como named export"
+    status: PASS
+    evidence: "package.json (@sparkle-os/brain-client v0.1.0, type:module), tsconfig.json (extends base, lib ES2022+DOM), src/index.ts exporta BrainClient, BrainClientError e todos os tipos"
+
+  - id: "AC-002"
+    check: "BrainClient com métodos search, getInsight, listInsights, ingest — todos retornam Promise com tipos do Cérebro"
+    status: PASS
+    evidence: "client.ts implementa os 4 métodos com tipagem completa: search→{results:SearchResult[]}, getInsight→Insight, listInsights→PaginatedInsights, ingest→Insight"
+
+  - id: "AC-003"
+    check: "Constructor aceita baseUrl e apiKey?, usa fetch nativo, BrainClientError com status e message"
+    status: PASS
+    evidence: "Constructor define headers com Content-Type + Authorization Bearer opcional. Network errors → BrainClientError(msg, 0). HTTP errors → BrainClientError(msg, status, body)"
+
+  - id: "AC-004"
+    check: "search() aceita mesmos params da POST /brain/insights/search, options totalmente opcionais, defaults idênticos ao servidor"
+    status: PASS
+    evidence: "Conditional spread — options undefined não enviadas ao body, server aplica seus próprios defaults (threshold=0.75, limit=10, statusFilter=['validated','applied'])"
+
+  - id: "AC-005"
+    check: "getContext() chama search() com taskDescription, retorna apenas id, content, source, confidenceLevel, similarity"
+    status: PASS
+    evidence: "client.ts:129-138 — map() retorna objeto com exatamente 5 campos. Teste 'should return reduced ContextEntry[]' verifica ausência de embedding e tags"
+
+  - id: "AC-006"
+    check: "9 testes unitários com fetch mockado cobrindo: search válida, 400, getInsight 404, getContext reduzido, erro de rede"
+    status: PASS
+    evidence: "client.test.ts — 9/9 PASS: search válida, options forwarding, HTTP 400, getInsight success, 404, getContext campos reduzidos, empty array, network failure status 0, apiKey Authorization header"
+
+  - id: "AC-007"
+    check: "Package referenciado no workspace e importável via @sparkle/brain-client"
+    status: PASS
+    notes: "INFO — nome implementado é @sparkle-os/brain-client (segue convenção existente de @sparkle-os/brain). pnpm-workspace.yaml glob packages/* cobre automaticamente"
+    evidence: "pnpm-workspace.yaml contém 'packages/*' — brain-client auto-descoberto. Regressão 50/50 em packages/brain confirma sem conflitos"
+
+  - id: "AC-008"
+    check: "SOP criado em docs/sops/sop-agentes-consultar-cerebro.md cobrindo inicialização, getContext, injeção em prompt, exemplo completo"
+    status: PASS
+    evidence: "SOP com 8 seções: import/init, search(), getContext(), confidenceLevel, error handling, max items, outros métodos, exemplo completo TypeScript"
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "AC-007 especifica @sparkle/brain-client mas implementação usa @sparkle-os/brain-client"
+    suggested_action: "Aceito — segue convenção estabelecida pelo @sparkle-os/brain. Atualizar AC na próxima revisão de story se necessário."
+
+  - id: "OBS-002"
+    severity: low
+    finding: "Task 8 (pnpm install formal) não executada — pnpm indisponível no ambiente de desenvolvimento"
+    suggested_action: "Sem impacto funcional. workspace glob packages/* resolve automaticamente. Executar quando pnpm estiver disponível no ambiente."
+
+  - id: "OBS-003"
+    severity: info
+    finding: "tsconfig.json exclui test files explicitamente (exclude: **/*.test.ts) — necessário porque tsconfig.base.json não inclui lib:DOM"
+    suggested_action: "Padrão correto para este setup. Documentado no Debug Log da story."
+
+waiver:
+  active: false

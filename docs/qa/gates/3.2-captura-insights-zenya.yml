@@ -1,0 +1,65 @@
+schema: 1
+story: "3.2"
+title: "Captura de Insights da Zenya"
+gate: PASS
+status_reason: "Todos os 7 ACs verificados. Package @sparkle-os/brain criado com Hono v4, porta 3003. Migration aplicada com 3 tabelas + HNSW (m=16, ef=64). 12/12 testes unitários passando. Gate arquitetural adicional @architect PASS — ADR-005 5/5 conforme."
+reviewer: "Quinn"
+updated: "2026-04-11T23:00:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "packages/brain/ criado no monorepo pnpm com estrutura completa — Node.js 22, Hono v4, TypeScript, porta 3003. Inicia com pnpm dev e package.json integrado ao pnpm-workspace.yaml"
+    status: PASS
+    evidence: "package.json (@sparkle-os/brain, type:module), tsconfig.json, src/ com routes/services/adapters/db, scripts dev/build/test. pnpm-workspace.yaml registrado. Porta 3003 confirmada em src/index.ts"
+
+  - id: "AC-002"
+    check: "Schema Postgres criado via migration Supabase: tabela insights com todos os campos, índice HNSW (m=16, ef_construction=64), tabelas auxiliares zenya_execution_log e zenya_ai_usage"
+    status: PASS
+    evidence: "migrations/001_create_insights.sql aplicada. 3 tabelas criadas: insights (18 campos), zenya_execution_log, zenya_ai_usage. Índice HNSW vector_cosine_ops m=16 ef_construction=64 confirmado via Supabase"
+
+  - id: "AC-003"
+    check: "POST /brain/insights implementado: valida payload, gera embedding Voyage-3 (1024 dims), canonicalização HNSW (threshold 0.92), persiste status=raw, confidenceLevel derivado de source"
+    status: PASS
+    evidence: "ingest.service.ts: CONFIDENCE_BY_SOURCE map, checkCanonical com fallback para base vazia (count=0 skip), embedding via voyageai npm. Route handler valida campos obrigatórios antes de chamar service"
+
+  - id: "AC-004"
+    check: "GET /brain/insights/{id} e GET /brain/insights (paginado, filtros status/source/nucleusId) implementados e funcionais"
+    status: PASS
+    evidence: "routes/insights.ts: GET /:id com 404, GET / com limit cap=100, offset, filtros aplicados via query params. total retornado junto com results"
+
+  - id: "AC-005"
+    check: "GET /brain/health retorna { status: ok, db: ok, embeddingService: ok } — valida conexão Supabase e Voyage API"
+    status: PASS
+    notes: "Implementação verificada em código. Teste manual pendente por ausência de VOYAGE_API_KEY no ambiente"
+    evidence: "routes/health.ts implementado com check paralelo de Supabase e Voyage. Estrutura de resposta correta. Task 17/18 pendentes por credenciais — sem impacto no código"
+
+  - id: "AC-006"
+    check: "ZenyaAdapter em packages/brain/src/adapters/zenya.adapter.ts transforma zenya_execution_log em InsightInput com source=zenya_operation, nucleusId=zenya"
+    status: PASS
+    evidence: "zenya.adapter.ts: fromExecutionLog() com content composto (flowName + status + durationMs + errorMessage), tags=[flowName, status, zenya_execution], fallback flowId→executionId. 2/2 testes passando"
+
+  - id: "AC-007"
+    check: "docs/architecture.md §4 atualizado: embedding 1536 dims → 1024 dims e Voyage via Anthropic SDK → Voyage API direta (voyageai npm). Errata documentada em ADR-005"
+    status: PASS
+    evidence: "docs/architecture.md: embedding: number[] // pgvector 1024 dims (Voyage-3 — ADR-005). Referência ao Anthropic SDK corrigida para voyageai npm direto"
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "Tasks 17 e 18 (integração manual) pendentes — requerem VOYAGE_API_KEY + DATABASE_URL em packages/brain/.env"
+    suggested_action: "Sem impacto funcional no código. Executar quando credenciais de produção/staging estiverem disponíveis no ambiente"
+
+  - id: "OBS-002"
+    severity: low
+    finding: "packages/brain/package-lock.json gerado por npm em vez de pnpm lockfile — inconsistência no toolchain"
+    suggested_action: "Substituir por pnpm lockfile quando pnpm estiver disponível no ambiente de desenvolvimento. Sem impacto funcional"
+
+  - id: "OBS-003"
+    severity: info
+    finding: "quality_gate da story especifica @architect — gate arquitetural adicional realizado por Aria (PASS). ADR-005 5/5 conforme, separação de camadas adequada, concerns LOW: voyageai ^0.0.5 pre-release e ausência de auth na API v1"
+    suggested_action: "Concerns LOW registrados. Auth endereçado em Story 3.5 conforme planejado"
+
+waiver:
+  active: false

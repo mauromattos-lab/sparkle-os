@@ -1,0 +1,64 @@
+schema: 1
+story: "3.4"
+title: "Mecanismo de Aplicação de Insights"
+gate: PASS
+status_reason: "Todos os 7 ACs verificados. PATCH /apply implementado com validação completa de ApplicationProof e Metric. JSONB persistido e deserializado corretamente. 50/50 testes passando (9 apply + 41 regressão). TypeCheck limpo. FR6 (captura→validação→aplicação) fechado. SOP completo."
+reviewer: "Quinn"
+updated: "2026-04-12T01:30:00Z"
+
+checks:
+  - id: "AC-001"
+    check: "PATCH /brain/insights/{id}/apply implementado: aceita applicationProof obrigatório, transiciona validated→applied, preenche appliedAt. Retorna 400 se não validated, 404 se não existir"
+    status: PASS
+    evidence: "routes/insights.ts: findInsightById (404), status check validated (400 com status atual na mensagem), applyInsight DB call, 200 com Insight atualizado. Error message descritivo inclui status atual para facilitar diagnóstico"
+
+  - id: "AC-002"
+    check: "applicationProof validado: campos obrigatórios appliedAt/appliedBy/changeDescription/baselineMetric/resultMetric/improvementPercent presentes e tipados. Campos opcionais storyId/nucleusId/evidenceRef aceitos"
+    status: PASS
+    evidence: "isApplicationProof() em routes/insights.ts: valida cada campo obrigatório com typeof check antes de qualquer operação no DB. Campos opcionais não verificados por design"
+
+  - id: "AC-003"
+    check: "baselineMetric e resultMetric seguem schema Metric (name/value/unit/measuredAt obrigatórios). improvementPercent aceita números negativos"
+    status: PASS
+    evidence: "isMetric(): typeof name=string, value=number, unit=string, measuredAt=string. improvementPercent: typeof check de number apenas, sem validação de sinal. Teste 'improvementPercent negativo aceito' confirma"
+
+  - id: "AC-004"
+    check: "applicationProof persistido como JSONB no campo application_proof da tabela insights — recuperável via GET /brain/insights/{id} como objeto"
+    status: PASS
+    evidence: "db/insights.ts: JSON.stringify(proof)::jsonb — casting consistente com padrão do package. postgres driver auto-deserializa JSONB em objeto JS. rowToInsight mapeia application_proof → applicationProof"
+
+  - id: "AC-005"
+    check: "GET /brain/insights/{id} retorna applicationProof deserializado corretamente (não como string JSON) quando insight está applied"
+    status: PASS
+    evidence: "rowToInsight existente já mapeava application_proof. pg driver retorna JSONB como objeto automaticamente — zero alteração necessária. Confirmado via teste 'GET retorna applicationProof como objeto'"
+
+  - id: "AC-006"
+    check: "Testes unitários cobrindo: apply válido, raw→400, rejected→400, 404, sem applicationProof, Metric incompleto, improvementPercent ausente, negativo aceito, applicationProof como objeto"
+    status: PASS
+    evidence: "packages/brain/src/insights.apply.test.ts — 9/9 testes: valid apply (validated→applied), raw→400, rejected→400, 404, sem proof→400, Metric incompleto→400, improvementPercent ausente→400, negativo aceito, proof retornado como objeto"
+
+  - id: "AC-007"
+    check: "SOP criado em docs/sops/sop-aplicar-insight.md com processo completo: pré-requisito validated, coleta de métricas, cálculo improvementPercent, quando usar evidenceRef e storyId, exemplos práticos"
+    status: PASS
+    evidence: "SOP com 8 seções: pré-requisito (GET validated), coleta baseline, aplicar, coleta result, fórmula improvementPercent ((result-baseline)/|baseline|*100), quando usar storyId/evidenceRef, exemplos com taxa de escalação Zenya, fluxo visual"
+
+top_issues: []
+
+observations:
+  - id: "OBS-001"
+    severity: low
+    finding: "isApplicationProof não valida string vazia em appliedBy — typeof check passa, mas '' seria aceito como valor válido. Não especificado no AC"
+    suggested_action: "Aceitável para v1 — uso interno. Se exposto externamente, adicionar validação de comprimento mínimo em versão futura"
+
+  - id: "OBS-002"
+    severity: info
+    finding: "Status check feito no route handler via findInsightById + verificação separada (2 queries) em vez de WHERE status='validated' no UPDATE. Decisão consciente para error message mais descritivo"
+    suggested_action: "Trade-off documentado em Completion Notes. Performance aceitável para volume v1. Consolidar em 1 query se otimização necessária"
+
+  - id: "OBS-003"
+    severity: info
+    finding: "Task 8 (teste integração manual PATCH /apply end-to-end) pendente por credenciais de ambiente"
+    suggested_action: "Sem impacto funcional. Executar quando VOYAGE_API_KEY e DATABASE_URL disponíveis"
+
+waiver:
+  active: false

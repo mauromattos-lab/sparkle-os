@@ -1,0 +1,39 @@
+engine_state:
+  workflow_id: story-development-cycle
+  instance_id: sdc-3.8-engine-20260412002
+  status: blocked_environment
+  current_step_index: 3
+  current_phase: QA Review
+  last_completed_step: implement
+  action_steps_completed: 3
+  action_steps_total: 4
+  step_outputs:
+    create:
+      story_file: "docs/stories/3.8.story.md"
+      story_id: "3.8"
+      story_status: "Draft"
+    validate:
+      validation_report: "GO — 10/10"
+      story_status: "Ready"
+    implement:
+      commit: "d130e44"
+      story_status: "Ready for Review"
+      artifacts:
+        - "docs/dna/mauro-dna.md"
+        - "docs/dna/load-mauro-dna.ts"
+        - "docs/sops/sop-dna-mauro.md"
+    review:
+      verdict: "CONCERNS"
+      reviewer: "@pm (Morgan)"
+      story_status: "InReview"
+      blocking_reason: "ACs 3, 4, 5 require live Supabase + Voyage AI — not available in current environment"
+      unblocking_action: "Run: npx tsx docs/dna/load-mauro-dna.ts with BRAIN_API_URL + BRAIN_API_KEY configured"
+  step_results:
+    create: {status: completed}
+    validate: {status: completed, score: 10}
+    implement: {status: completed}
+    review: {status: concerns, reviewer: "@pm", verdict: "CONCERNS"}
+  elicitation_responses:
+    create:
+      story_target: "3.8 — DNA de Mauro"
+      dev_execution_mode: "YOLO"
