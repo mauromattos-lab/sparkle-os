@@ -1,6 +1,6 @@
 # Epic 3 — Cérebro Coletivo v1
 
-**Status:** InProgress — 8/9 Done (3.8 InReview aguarda ambiente)  
+**Status:** ✅ Done — 9/9 stories concluídas  
 **Criado por:** Morgan (@pm)  
 **Data:** 2026-04-11  
 **Fonte:** `docs/prd.md` §Epic 3  
@@ -21,7 +21,7 @@
 | [3.5](./3.5.story.md) | Interface de Consulta do Cérebro para Agentes | ✅ Done | P2 | 3.1, 3.2 | @dev | @architect |
 | [3.6](./3.6.story.md) | Ingestão de Conhecimento Externo | ✅ Done | P3 | 3.1, 3.5 | @dev | @architect |
 | [3.7](./3.7.story.md) | Ciclo de Vida do Conhecimento | ✅ Done | P3 | 3.1, 3.2, 3.3 | @dev | @architect |
-| [3.8](./3.8.story.md) | DNA de Mauro | ⏳ InReview | P2 | 3.1, 3.5 | @analyst | @pm |
+| [3.8](./3.8.story.md) | DNA de Mauro | ✅ Done | P2 | 3.1, 3.5 | @analyst | @pm |
 | [3.9](./3.9.story.md) | Dashboard do Cérebro (coordenado com Epic 4) | ✅ Done | P3 | 3.1–3.7 | @dev | @architect |
 
 ---
@@ -93,7 +93,7 @@ Fase 5 — Visibilidade (P3 — Gate final, coordena com Epic 4):
 - [ ] Story 3.5 Done — interface de consulta disponível e funcional para todos os agentes
 - [x] Story 3.6 Done — agentes e Mauro conseguem ingerir conhecimento externo
 - [x] Story 3.7 Done — ciclo de vida ativo, conhecimento obsoleto não polui o Cérebro
-- [ ] Story 3.8 Done — DNA de Mauro co-criado, filtros de raciocínio ativos *(InReview — aguarda ambiente Supabase)*
+- [x] Story 3.8 Done — DNA de Mauro co-criado, 17 insights ingeridos no Supabase, filtros de raciocínio ativos
 - [x] Story 3.9 Done — dashboard do Cérebro integrado com Epic 4
 - [ ] Ciclo completo validado end-to-end: insight capturado → validado → aplicado → melhoria mensurável documentada
 
