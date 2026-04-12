@@ -1,0 +1,25 @@
+schema: 1
+story: '5.2'
+gate: CONCERNS
+status_reason: 'Todos os 7 ACs implementados e testados (113/113 testes). Concerns são tech debt não-bloqueantes: XSS potencial em tool interna e ambiguidade semântica no status de rejeição.'
+reviewer: 'Quinn'
+updated: '2026-04-12T00:00:00Z'
+top_issues:
+  - id: 'SEC-001'
+    severity: medium
+    finding: 'Campos AI (title, bodyPreview, imageDesc, pinCopy) e rejectionNote interpolados diretamente no HTML SSR sem sanitização. Risco prático baixo (tool interna, single-user), mas padrão inseguro para crescimento futuro.'
+    suggested_action: 'Adicionar função htmlEscape() para sanitizar campos antes de interpolação. Prioridade baixa enquanto tool for single-user/interna.'
+  - id: 'ARCH-001'
+    severity: medium
+    finding: 'rejectPost() seta status para "gerando" — mesmo valor que o guard do scheduler (getPendingPostForToday) usa para bloquear re-execução diária. Post rejeitado hoje impede re-geração no mesmo dia.'
+    suggested_action: 'Documentar comportamento intencional ou adicionar status "rejeitado" ao enum PostStatus para diferenciar semântica.'
+  - id: 'MNT-001'
+    severity: low
+    finding: 'TODO em handleApprove() para trigger da pipeline de publicação (Stories 5.3/5.4) — sem indicador visual para Mauro de que publicação ainda não é automática.'
+    suggested_action: 'Adicionar aviso visível no painel informando que aprovação ativa publicação apenas após Stories 5.3/5.4.'
+waiver:
+  active: false
+tech_debt_notes:
+  - 'SEC-001: htmlEscape() a ser adicionado quando tool crescer para multi-cliente'
+  - 'ARCH-001: comportamento do scheduler com rejeição a ser documentado/decidido em Epic 5 review'
+  - 'MNT-001: UX melhorada em Story 5.3 quando publicação for real'
