@@ -22,11 +22,13 @@ app.route('/brain/insights', insightsRouter);
 // 404 fallback
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 
-const port = parseInt(process.env['BRAIN_PORT'] ?? '3003', 10);
-
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`[brain] Collective Brain running on port ${info.port}`);
-});
-
 export { app };
+
+// Start server only when running as main module (not during tests)
+if (process.env['VITEST'] === undefined) {
+  const port = parseInt(process.env['BRAIN_PORT'] ?? '3003', 10);
+  serve({ fetch: app.fetch, port }, (info) => {
+    console.log(`[brain] Collective Brain running on port ${info.port}`);
+  });
+}
 export type { Insight, InsightInput, InsightSource, InsightStatus, ConfidenceLevel } from './types/insight.js';
