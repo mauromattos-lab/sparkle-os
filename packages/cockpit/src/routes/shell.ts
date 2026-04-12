@@ -10,6 +10,7 @@ export interface ShellOptions {
 }
 
 const NAV_PANELS = [
+  { id: 'session', label: 'Resumo ★', href: '/cockpit/session', featured: true },
   { id: 'overview', label: 'Visão Geral', href: '/cockpit/' },
   { id: 'agents', label: 'Agentes', href: '/cockpit/agents' },
   { id: 'decisions', label: 'Decisões', href: '/cockpit/decisions' },
@@ -17,7 +18,6 @@ const NAV_PANELS = [
   { id: 'brain', label: 'Cérebro', href: '/cockpit/brain' },
   { id: 'costs', label: 'Custos', href: '/cockpit/costs' },
   { id: 'progress', label: 'Progresso', href: '/cockpit/progress' },
-  { id: 'summary', label: 'Resumo', href: '/cockpit/summary' },
 ];
 
 export function renderShell(opts: ShellOptions): string {
@@ -25,11 +25,15 @@ export function renderShell(opts: ShellOptions): string {
 
   const navItems = NAV_PANELS.map((panel) => {
     const isActive = panel.id === opts.activePanel;
+    const isFeatured = 'featured' in panel && panel.featured === true;
     const badge =
       panel.id === 'decisions' && decisionCount > 0
         ? ` <span class="nav-badge">${decisionCount}</span>`
         : '';
-    return `<a href="${panel.href}" class="nav-item${isActive ? ' active' : ''}">${panel.label}${badge}</a>`;
+    const classes = ['nav-item', isActive ? 'active' : '', isFeatured ? 'nav-item--featured' : '']
+      .filter(Boolean)
+      .join(' ');
+    return `<a href="${panel.href}" class="${classes}">${panel.label}${badge}</a>`;
   }).join('\n');
 
   return `<!DOCTYPE html>
@@ -95,6 +99,16 @@ export function renderShell(opts: ShellOptions): string {
       background: #2d3748;
       color: #fff;
       border-left-color: #4299e1;
+    }
+    .nav-item--featured {
+      color: #f6ad55;
+      font-weight: 600;
+    }
+    .nav-item--featured:hover {
+      color: #fbd38d;
+    }
+    .nav-item--featured.active {
+      border-left-color: #f6ad55;
     }
     .nav-section {
       font-size: 0.65rem;

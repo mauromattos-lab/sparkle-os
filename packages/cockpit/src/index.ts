@@ -10,6 +10,7 @@ import { renderShell } from './routes/shell.js';
 import { agentsRouter } from './routes/agents.js';
 import { renderCosts } from './routes/costs.js';
 import { zenyaRouter } from './routes/zenya.js';
+import { renderSession } from './routes/session.js';
 
 const app = new Hono();
 
@@ -35,10 +36,12 @@ app.get('/cockpit/costs', renderCosts);
 // Decisions panel — Story 4.3
 app.get('/cockpit/decisions', renderDecisions);
 
-// Placeholder routes for future panels (Stories 4.7–4.8)
+// Session summary panel — Story 4.8
+app.get('/cockpit/session', renderSession);
+
+// Placeholder routes for future panels (Story 4.7)
 const placeholderPanels = [
   { path: '/cockpit/progress', label: 'Progresso', story: '4.7' },
-  { path: '/cockpit/summary', label: 'Resumo', story: '4.8' },
 ];
 
 for (const panel of placeholderPanels) {
