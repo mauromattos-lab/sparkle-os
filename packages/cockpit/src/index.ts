@@ -12,6 +12,7 @@ import { renderCosts } from './routes/costs.js';
 import { zenyaRouter } from './routes/zenya.js';
 import { renderEpicsPanel } from './routes/epics.js';
 import { renderSession } from './routes/session.js';
+import { renderContentEngine, handleApprove, handleReject } from './routes/content-engine.js';
 
 const app = new Hono();
 
@@ -42,6 +43,11 @@ app.get('/cockpit/progress', renderEpicsPanel);
 
 // Session summary panel — Story 4.8
 app.get('/cockpit/session', renderSession);
+
+// Content Engine panel — Story 5.2
+app.get('/cockpit/content', renderContentEngine);
+app.post('/cockpit/content/approve/:id', handleApprove);
+app.post('/cockpit/content/reject/:id', handleReject);
 
 // 404 fallback
 app.notFound((c) => c.json({ error: 'Not found' }, 404));

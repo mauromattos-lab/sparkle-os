@@ -11,6 +11,7 @@ export interface ShellOptions {
 
 const NAV_PANELS = [
   { id: 'session', label: 'Resumo ★', href: '/cockpit/session', featured: true },
+  { id: 'content', label: 'Content Engine', href: '/cockpit/content' },
   { id: 'overview', label: 'Visão Geral', href: '/cockpit/' },
   { id: 'agents', label: 'Agentes', href: '/cockpit/agents' },
   { id: 'decisions', label: 'Decisões', href: '/cockpit/decisions' },
