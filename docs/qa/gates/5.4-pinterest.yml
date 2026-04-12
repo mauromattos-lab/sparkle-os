@@ -1,0 +1,68 @@
+storyId: "5.4"
+storyTitle: "Integração Pinterest"
+reviewer: "Quinn (@qa)"
+reviewDate: "2026-04-12"
+verdict: PASS
+
+checks:
+  - name: code_review
+    status: PASS
+    notes: >
+      extractDriveFileId usa regex para dois padrões de URL do Drive (/d/{id}/ e ?id=).
+      publishToPinterest: env-check → extract fileId → download base64 → POST pin.
+      Falha em qualquer step de imagem resulta em erro_pin sem throw, preservando
+      independência do blog. mediaSource é null-checked antes do POST.
+
+  - name: unit_tests
+    status: PASS
+    notes: >
+      9 testes cobrindo: extractDriveFileId (3 variações de URL), env missing,
+      imageDriveUrl null, Drive download retorna null, success com pin_publicado + pinUrl,
+      body contents (board_id/title/link/media_source.source_type), API error 422 → erro_pin.
+      Todos passando.
+
+  - name: acceptance_criteria
+    status: PASS
+    notes: >
+      AC1: POST /v5/pins após aprovação (via orchestrator) ✅
+      AC2: image_base64, título, description (pinCopy + pinHashtags), link (blogUrl) ✅
+      AC3: board_id via PINTEREST_BOARD_ID ✅
+      AC4: status pin_publicado + pinUrl (https://pinterest.com/pin/{id}) ✅
+      AC5: falha → erro_pin sem bloquear blog (orchestrator usa .catch()) ✅
+      AC6: PINTEREST_ACCESS_TOKEN + PINTEREST_BOARD_ID ✅
+
+  - name: no_regressions
+    status: PASS
+    notes: >
+      38/38 testes do content-engine passando. Pinterest step é completamente
+      independente — erro não afeta status do blog. Cockpit não importa Pinterest
+      diretamente.
+
+  - name: performance
+    status: PASS
+    notes: >
+      2 chamadas HTTP sequenciais (Drive download + Pinterest POST). Execução
+      não-bloqueante no pipeline. Sem caching de token (trade-off documentado como
+      tech debt aceitável para MVP com frequência baixa).
+
+  - name: security
+    status: PASS
+    notes: >
+      Bearer token via Authorization header ✅. Sem logging de token ✅.
+      Credenciais via env vars ✅. Dados de imagem como base64 no body JSON —
+      padrão aceito pela Pinterest API v5 ✅. Sem exposição de secrets em erros ✅.
+
+  - name: documentation
+    status: PASS
+    notes: >
+      Comentário de cabeçalho documenta comportamento não-bloqueante. Story file
+      atualizada com File List e Completion Notes.
+
+issues: []
+
+summary: >
+  Story 5.4 entregue conforme especificado. AC5 (non-blocking) é o requisito
+  mais crítico e está corretamente implementado: publishToPinterest nunca lança
+  exceção não capturada — todos os caminhos de erro atualizam status para erro_pin
+  e retornam. O publication-orchestrator adiciona uma camada adicional de .catch()
+  para proteção. Aprovado sem ressalvas.

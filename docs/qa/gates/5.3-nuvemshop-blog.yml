@@ -1,0 +1,65 @@
+storyId: "5.3"
+storyTitle: "Integração NuvemShop Blog"
+reviewer: "Quinn (@qa)"
+reviewDate: "2026-04-12"
+verdict: PASS
+
+checks:
+  - name: code_review
+    status: PASS
+    notes: >
+      markdownToHtml usa regex bem delimitadas. publishToNuvemShop segue padrão
+      env-check → convert → fetch image → POST article. Error handling cobre
+      falha de rede e API error separadamente. Truncamento a 200 chars nos erros
+      evita flooding de logs. getNuvemShopImageUrl usa encodeURIComponent para topic.
+
+  - name: unit_tests
+    status: PASS
+    notes: >
+      8 testes cobrindo: env missing → erro_publicacao, success path com blogUrl,
+      body contents (title/content/meta_description em PT), API error → erro_publicacao,
+      getNuvemShopImageUrl (ok=false, sem images, com image URL). Todos passando.
+
+  - name: acceptance_criteria
+    status: PASS
+    notes: >
+      AC1: POST /blogs/{blogId}/articles após aprovação ✅
+      AC2: título, HTML, meta_description, image_url (quando disponível) ✅
+      AC3: busca por tópico no catálogo com fallback para produto mais recente ✅
+      AC4: status publicado + blogUrl ✅
+      AC5: status erro_publicacao com mensagem descritiva ✅
+      AC6: NUVEMSHOP_ACCESS_TOKEN + NUVEMSHOP_USER_ID + NUVEMSHOP_BLOG_ID ✅
+
+  - name: no_regressions
+    status: PASS
+    notes: >
+      113/113 testes do cockpit passando. Mock de triggerPublication em
+      content-engine.test.ts previne efeitos colaterais. 38/38 testes do
+      content-engine passando.
+
+  - name: performance
+    status: PASS
+    notes: >
+      Operação assíncrona única. Sem loops ou N+1 queries. Executa em background
+      (fire-and-forget do cockpit). Aceitável para frequência baixa (1x/dia).
+
+  - name: security
+    status: PASS
+    notes: >
+      Credenciais via env vars ✅. encodeURIComponent previne URL injection ✅.
+      markdownToHtml sem sanitização HTML — aceitável pois conteúdo é gerado por
+      agente interno (não input de usuário externo). Sem hardcoded secrets ✅.
+
+  - name: documentation
+    status: PASS
+    notes: >
+      Comentários de cabeçalho explicam propósito e limitações. Story file
+      atualizada com File List e Completion Notes.
+
+issues: []
+
+summary: >
+  Story 5.3 entregue conforme especificado. publishToNuvemShop cobre o fluxo
+  completo de aprovação → publicação → erro com tratamento independente por
+  etapa. O defaulting de NUVEMSHOP_BLOG_ID para '1' é documentado e aceitável
+  para MVP. Nenhum issue que bloquei aprovação.

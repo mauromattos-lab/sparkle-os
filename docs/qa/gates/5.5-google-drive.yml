@@ -1,0 +1,89 @@
+storyId: "5.5"
+storyTitle: "Integração Google Drive"
+reviewer: "Quinn (@qa)"
+reviewDate: "2026-04-12"
+verdict: PASS
+
+checks:
+  - name: code_review
+    status: PASS
+    notes: >
+      buildJwt implementa JWT RS256 manualmente via crypto.createSign — correto
+      para Service Account sem SDK pesado. getGoogleAccessToken faz token exchange
+      via oauth2.googleapis.com/token. selectDriveImage e getDriveImageAsBase64
+      fazem env-check com fallback null em vez de throw. listDriveImages usa
+      parâmetros seguros (URLSearchParams) e ordena por createdTime desc.
+
+  - name: unit_tests
+    status: PASS
+    notes: >
+      10 testes cobrindo: buildJwt (estrutura JWT, header RS256, payload com scope),
+      listDriveImages (lista files, empty folder, 403 error), selectDriveImage (sem env,
+      topic keyword match, fallback para mais recente), getDriveImageAsBase64 (base64
+      round-trip, sem env → null). Uso de generateKeyPairSync para chave RSA real em
+      testes — solução correta após bug de fake PEM. Todos passando.
+
+  - name: acceptance_criteria
+    status: PASS
+    notes: >
+      AC1: acesso via Google Drive API v3 files.list com folderId ✅
+      AC2: seleção por keyword no nome do arquivo + fallback para mais recente ✅
+      AC3: imagem disponibilizada para Story 5.4 via getDriveImageAsBase64 ✅
+      AC4: pasta vazia → retorna null + console.warn (sem bloqueio) ✅
+      AC5: GOOGLE_DRIVE_FOLDER_ID + GOOGLE_SERVICE_ACCOUNT_KEY via env ✅
+      Nota: AC4 menciona "registra aviso no Cockpit" — implementado como console.warn.
+      O Cockpit verá imageDriveUrl=null e o status de erro virá do step de Pinterest.
+      Aceitável para MVP.
+
+  - name: no_regressions
+    status: PASS
+    notes: >
+      38/38 testes content-engine passando. scheduler.test.ts e pipeline-runner.test.ts
+      atualizados com imageDriveUrl: null. drive-client é importado apenas por
+      publication-orchestrator e pinterest-publisher — sem impacto em outros módulos.
+
+  - name: performance
+    status: PASS
+    notes: >
+      pageSize: 20 limita listagem a 20 imagens — suficiente para uso atual.
+      Token não é cacheado (novo token por publicação) — tech debt aceitável para
+      baixa frequência (1x/dia). Sem operações síncronas bloqueantes.
+
+  - name: security
+    status: PASS
+    notes: >
+      JWT assinado com RSA-SHA256 via Node.js crypto (sem deps externas) ✅.
+      Scope limitado a drive.readonly ✅. Service Account key como JSON em env var
+      (padrão Google Cloud) ✅. Access token não logado ✅. arrayBuffer corretamente
+      scoped com .slice() para evitar exposição do pool do Node.js ✅.
+
+  - name: documentation
+    status: PASS
+    notes: >
+      Migração 0007_image_drive_url.sql com comment descritivo. Story file
+      atualizada com todos os arquivos novos e modificados.
+
+migration:
+  file: "packages/core/migrations/0007_image_drive_url.sql"
+  verdict: SAFE
+  notes: >
+    ADD COLUMN IF NOT EXISTS image_drive_url TEXT — idempotente, aditiva,
+    sem NOT NULL sem default, não quebra rows existentes. COMMENT adicionado.
+
+issues:
+  - severity: low
+    category: requirements
+    description: >
+      AC4 especifica "registra aviso no Cockpit" mas implementação usa apenas
+      console.warn. O status do post não é atualizado para indicar ausência de imagem
+      no Drive — o usuário vê isso implicitamente via ausência de pin (erro_pin).
+    recommendation: >
+      Considerar adicionar um status ou campo de aviso quando Drive não retorna
+      imagem. Não bloqueia aprovação — comportamento funcional está correto.
+
+summary: >
+  Story 5.5 entregue com implementação sólida de JWT manual para Service Account
+  (sem SDK Google pesado). selectDriveImage cobre topic matching e fallback.
+  getDriveImageAsBase64 retorna null graciosamente quando credenciais ausentes.
+  Migração segura e idempotente. Um issue de severidade LOW sobre AC4 (aviso no
+  Cockpit vs console.warn) documentado mas não bloqueia aprovação.
