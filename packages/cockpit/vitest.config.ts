@@ -1,6 +1,13 @@
 import { defineConfig } from 'vitest/config';
+import { resolve } from 'node:path';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Point @sparkle-os/core to its TypeScript source so tests work without a build
+      '@sparkle-os/core': resolve(__dirname, '../core/src/index.ts'),
+    },
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],

@@ -4,6 +4,7 @@
 
 import type { Context } from 'hono';
 import { getSystemHealth, type ServiceStatus, type IntegrationHealth } from '../services/health.service.js';
+import { getDecisionsCount } from '../services/decisions.service.js';
 import { renderShell } from './shell.js';
 
 const BRAIN_URL = process.env['BRAIN_URL'] ?? 'http://localhost:3003';
@@ -62,7 +63,10 @@ function getSOP(serviceName: string, status: ServiceStatus): string {
 }
 
 export async function renderOverview(c: Context): Promise<Response> {
-  const health = await getSystemHealth(BRAIN_URL);
+  const [health, decisionCount] = await Promise.all([
+    getSystemHealth(BRAIN_URL),
+    getDecisionsCount(),
+  ]);
   const lastUpdated = new Date(health.checkedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
   const integrationsHtml = health.integrations
@@ -85,11 +89,26 @@ export async function renderOverview(c: Context): Promise<Response> {
       Sistema ${statusLabel(health.overall)}
     </span>`;
 
+  const decisionSummaryHtml =
+    decisionCount > 0
+      ? `<div class="cards" style="margin-bottom:0">
+          <div class="card" style="border-left:4px solid #e53e3e">
+            <div class="card-label">Decisões Pendentes</div>
+            <div class="card-value" style="color:#c53030">${decisionCount}</div>
+            <div style="font-size:0.75rem;color:#718096;margin-top:6px">
+              <a href="/cockpit/decisions" style="color:#3182ce;text-decoration:none">Ver fila de decisões &rarr;</a>
+            </div>
+          </div>
+        </div>`
+      : '';
+
   const content = `
     <div class="main-header">
       <h1>Visão Geral do SparkleOS</h1>
       <div class="subtitle">Última atualização: ${lastUpdated} &nbsp;|&nbsp; ${overallStatusHtml}</div>
     </div>
+
+    ${decisionSummaryHtml}
 
     <div class="integration-grid">
       ${integrationsHtml}
@@ -101,5 +120,5 @@ export async function renderOverview(c: Context): Promise<Response> {
     </div>
   `;
 
-  return c.html(renderShell({ title: 'Visão Geral', activePanel: 'overview', content }));
+  return c.html(renderShell({ title: 'Visão Geral', activePanel: 'overview', content, decisionCount }));
 }

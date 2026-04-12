@@ -5,6 +5,8 @@ export interface ShellOptions {
   title: string;
   activePanel: string;
   content: string;
+  /** Number of pending decisions — shown as badge in sidebar nav link. 0 = no badge. */
+  decisionCount?: number;
 }
 
 const NAV_PANELS = [
@@ -19,9 +21,15 @@ const NAV_PANELS = [
 ];
 
 export function renderShell(opts: ShellOptions): string {
+  const decisionCount = opts.decisionCount ?? 0;
+
   const navItems = NAV_PANELS.map((panel) => {
     const isActive = panel.id === opts.activePanel;
-    return `<a href="${panel.href}" class="nav-item${isActive ? ' active' : ''}">${panel.label}</a>`;
+    const badge =
+      panel.id === 'decisions' && decisionCount > 0
+        ? ` <span class="nav-badge">${decisionCount}</span>`
+        : '';
+    return `<a href="${panel.href}" class="nav-item${isActive ? ' active' : ''}">${panel.label}${badge}</a>`;
   }).join('\n');
 
   return `<!DOCTYPE html>
@@ -95,6 +103,18 @@ export function renderShell(opts: ShellOptions): string {
       letter-spacing: .1em;
       color: #4a5568;
       padding: 16px 20px 6px;
+    }
+    .nav-badge {
+      display: inline-block;
+      background: #e53e3e;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 1px 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+      line-height: 1.4;
     }
 
     /* Main content */
