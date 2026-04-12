@@ -1,0 +1,29 @@
+# [NOME DO CLIENTE] — Content Engine Client Config
+# Story 5.6: Onboarding de Cliente
+#
+# INSTRUÇÕES DE PREENCHIMENTO:
+# 1. Copie esta pasta para clients/{client-id}/
+# 2. Preencha os campos abaixo
+# 3. Preencha o client-context.md com a voz e contexto da marca
+# 4. Configure as variáveis de ambiente no servidor
+# 5. Execute: pnpm --filter @sparkle-os/content-engine run dev
+#
+# Credenciais são lidas via variáveis de ambiente (NÃO armazenar aqui).
+# Env vars necessárias:
+#   NUVEMSHOP_ACCESS_TOKEN   — token de acesso NuvemShop (Tiendanube)
+#   NUVEMSHOP_USER_ID        — ID do usuário NuvemShop
+#   NUVEMSHOP_BLOG_ID        — ID do blog (default: 1)
+#   PINTEREST_ACCESS_TOKEN   — token de acesso Pinterest API v5
+#   PINTEREST_BOARD_ID       — ID do board de destino
+#   GOOGLE_DRIVE_FOLDER_ID   — ID da pasta compartilhada do Drive
+#   GOOGLE_SERVICE_ACCOUNT_KEY — JSON da service account (minificado, 1 linha)
+#
+# Para múltiplos clientes com credenciais diferentes, use prefixo:
+#   CLIENTE_NUVEMSHOP_ACCESS_TOKEN etc.
+# e atualize o publication-orchestrator para ler o prefixo correto.
+
+clientId: PREENCHER   # ID único, slug em lowercase (ex: nova-marca)
+name: PREENCHER       # Nome completo do cliente (ex: Nova Marca Ltda)
+squadPath: squads/aeo-squad-plaka  # Squad a usar (manter até squad dedicado criado)
+scheduleTime: "0 8 * * *"         # Cron: quando rodar (0 8 = 8h Brasília)
+brandVoice: PREENCHER # Tom da marca (ex: informal-descontraido, tecnico-preciso)

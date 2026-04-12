@@ -10,6 +10,17 @@ vi.mock('./pipeline-runner.js', () => ({
   runDailyPipeline: vi.fn(),
 }));
 
+// Mock client-config (scheduler uses listClientIds)
+vi.mock('./client-config.js', () => ({
+  loadClientConfig: vi.fn().mockResolvedValue({
+    clientId: 'plaka',
+    name: 'Plaka Acessórios',
+    squadPath: 'squads/aeo-squad-plaka',
+    scheduleTime: '0 8 * * *',
+  }),
+  listClientIds: vi.fn().mockResolvedValue(['plaka']),
+}));
+
 import { getPendingPostForToday } from '@sparkle-os/core';
 import { runDailyPipeline } from './pipeline-runner.js';
 import { runPipelineWithGuard } from './scheduler.js';

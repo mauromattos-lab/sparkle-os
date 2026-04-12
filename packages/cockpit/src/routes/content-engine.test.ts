@@ -126,6 +126,22 @@ describe('GET /cockpit/content', () => {
     expect(html).toContain('Publicado');
   });
 
+  it('AC4: shows clientId badge in pending post and history', async () => {
+    mockGetPending.mockResolvedValue(BASE_POST);
+    mockGetRecent.mockResolvedValue([
+      { ...BASE_POST, id: 'post-old', status: 'publicado', publishedAt: new Date('2026-04-10T10:00:00Z').toISOString() },
+    ]);
+
+    const res = await app.fetch(new Request('http://localhost/cockpit/content'));
+    const html = await res.text();
+
+    // clientId badge should appear (at least twice: pending + history row)
+    const matches = html.match(/plaka/g) ?? [];
+    expect(matches.length).toBeGreaterThanOrEqual(2);
+    // History table should have a Cliente column header
+    expect(html).toContain('Cliente');
+  });
+
   it('includes Content Engine in sidebar navigation', async () => {
     mockGetPending.mockResolvedValue(null);
 

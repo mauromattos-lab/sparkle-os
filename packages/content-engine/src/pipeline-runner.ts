@@ -2,8 +2,10 @@
 // Sage → Lyra → Rex → (revisão se necessário) → Vista
 
 import Anthropic from '@anthropic-ai/sdk';
+import { join } from 'path';
 import { createContentPost, updateContentPost } from '@sparkle-os/core';
 import { loadAgentPrompt, loadTaskPrompt, loadSquadContext } from './agent-loader.js';
+import { loadClientConfig } from './client-config.js';
 
 const MODEL = process.env['CONTENT_ENGINE_MODEL'] ?? 'claude-sonnet-4-6';
 const MAX_REVISION_ITERATIONS = 2;
@@ -23,10 +25,11 @@ async function callAgent(
   agentName: string,
   taskName: string,
   userMessage: string,
+  squadRoot?: string,
 ): Promise<string> {
   const [systemPrompt, taskPrompt] = await Promise.all([
-    loadAgentPrompt(agentName),
-    loadTaskPrompt(taskName),
+    loadAgentPrompt(agentName, squadRoot),
+    loadTaskPrompt(taskName, squadRoot),
   ]);
 
   const client = getClient();
@@ -90,15 +93,20 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
   const postId = post.id;
 
   try {
-    // Carrega contexto do squad
-    const { plakaContext, postsHistory } = await loadSquadContext();
+    // Carrega configuração do cliente (AC3: squad path parametrizado)
+    const clientConfig = await loadClientConfig(clientId);
+    const squadRoot = join(process.cwd(), clientConfig.squadPath);
+
+    // Carrega contexto do cliente (AC2: usa client-context.md em vez de plaka-context.md)
+    const { clientContext, postsHistory } = await loadSquadContext(clientId);
 
     // --- Step 1: Sage define o tópico ---
     console.log(`[content-engine] [${postId}] Step 1: Sage — daily briefing`);
     const briefingOutput = await callAgent(
       'sage',
       'daily-briefing',
-      `Data atual: ${today}\n\nHistórico de posts:\n${postsHistory}\n\nContexto da marca:\n${plakaContext}`,
+      `Data atual: ${today}\n\nHistórico de posts:\n${postsHistory}\n\nContexto da marca:\n${clientContext}`,
+      squadRoot,
     );
 
     const topic = extractBriefingTopic(briefingOutput);
@@ -109,7 +117,8 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
     const postOutput = await callAgent(
       'lyra',
       'write-post',
-      `Briefing do dia:\n${briefingOutput}\n\nVoz e contexto da Plaka:\n${plakaContext}\n\nHistórico de posts:\n${postsHistory}`,
+      `Briefing do dia:\n${briefingOutput}\n\nVoz e contexto da marca (${clientConfig.name}):\n${clientContext}\n\nHistórico de posts:\n${postsHistory}`,
+      squadRoot,
     );
 
     // --- Step 3: Rex valida (iteração 1) ---
@@ -118,6 +127,7 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
       'rex',
       'validate-post',
       `Post para validar (iteração 1 de ${MAX_REVISION_ITERATIONS}):\n\n${postOutput}`,
+      squadRoot,
     );
 
     let finalPost = postOutput;
@@ -133,6 +143,7 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
         'lyra',
         'rewrite-post',
         `Post original:\n${postOutput}\n\nFeedback do Rex:\n${feedback}\n\nReescreva incorporando o feedback. Iteração ${iterationCount} de ${MAX_REVISION_ITERATIONS}.`,
+        squadRoot,
       );
 
       // --- Step 5: Rex revalida ---
@@ -141,6 +152,7 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
         'rex',
         'validate-post',
         `Post revisado para validar (iteração 2 de ${MAX_REVISION_ITERATIONS}):\n\n${revisedPost}`,
+        squadRoot,
       );
       finalPost = revisedPost;
     }
@@ -174,6 +186,7 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
       'vista',
       'curate-visual',
       `Post aprovado:\n${finalPost}\n\nBriefing original:\n${briefingOutput}`,
+      squadRoot,
     ).catch((err) => {
       // Vista pode falhar se Drive não estiver configurado — não bloqueia
       console.warn(`[content-engine] [${postId}] Vista falhou (não bloqueante): ${String(err)}`);

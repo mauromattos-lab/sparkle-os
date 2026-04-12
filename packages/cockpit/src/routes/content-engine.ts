@@ -39,6 +39,10 @@ function formatDate(iso: string): string {
   });
 }
 
+function clientBadge(clientId: string): string {
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:600;background:#edf2f7;color:#4a5568;border:1px solid #e2e8f0">${clientId}</span>`;
+}
+
 function buildPendingPostHtml(post: ContentPost): string {
   const title = post.title ?? '(título ainda sendo gerado)';
   const meta = post.meta ?? '';
@@ -91,7 +95,10 @@ function buildPendingPostHtml(post: ContentPost): string {
   return `
     <div style="background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:24px;border-left:4px solid #3182ce">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:20px">
-        <h2 style="font-size:1.15rem;font-weight:700;color:#2d3748">Post do dia — ${formatDate(post.createdAt)}</h2>
+        <div style="display:flex;align-items:center;gap:8px">
+          <h2 style="font-size:1.15rem;font-weight:700;color:#2d3748">Post do dia — ${formatDate(post.createdAt)}</h2>
+          ${clientBadge(post.clientId)}
+        </div>
         ${statusBadge(post.status)}
       </div>
 
@@ -145,7 +152,8 @@ function buildHistoryHtml(posts: ContentPost[]): string {
       const published = p.publishedAt ? formatDate(p.publishedAt) : '—';
       return `
       <tr style="border-top:1px solid #edf2f7">
-        <td style="padding:10px 12px;font-size:0.85rem;color:#2d3748;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</td>
+        <td style="padding:10px 12px;font-size:0.85rem;color:#2d3748;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</td>
+        <td style="padding:10px 12px">${clientBadge(p.clientId)}</td>
         <td style="padding:10px 12px">${statusBadge(p.status)}</td>
         <td style="padding:10px 12px;font-size:0.8rem;color:#718096">${formatDate(p.createdAt)}</td>
         <td style="padding:10px 12px;font-size:0.8rem;color:#718096">${published}</td>
@@ -162,6 +170,7 @@ function buildHistoryHtml(posts: ContentPost[]): string {
         <thead>
           <tr style="background:#f7fafc">
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Título</th>
+            <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Cliente</th>
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Status</th>
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Criado</th>
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Publicado</th>

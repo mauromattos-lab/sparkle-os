@@ -11,8 +11,19 @@ vi.mock('./agent-loader.js', () => ({
   loadAgentPrompt: vi.fn().mockResolvedValue('# Agent Prompt\nVocê é um agente AEO.'),
   loadTaskPrompt: vi.fn().mockResolvedValue('## Task\nExecute esta tarefa.'),
   loadSquadContext: vi.fn().mockResolvedValue({
-    plakaContext: '# Plaka Context\nSemi-joias do Rio.',
+    clientContext: '# Client Context\nSemi-joias do Rio.',
     postsHistory: '# Posts History\nNenhum post ainda.',
+  }),
+}));
+
+// Mock client-config
+vi.mock('./client-config.js', () => ({
+  loadClientConfig: vi.fn().mockResolvedValue({
+    clientId: 'plaka',
+    name: 'Plaka Acessórios',
+    squadPath: 'squads/aeo-squad-plaka',
+    scheduleTime: '0 8 * * *',
+    brandVoice: 'especialista-acessivel',
   }),
 }));
 
