@@ -7,6 +7,7 @@ import { renderOverview } from './routes/overview.js';
 import { renderBrainPanel } from './routes/brain.js';
 import { renderShell } from './routes/shell.js';
 import { agentsRouter } from './routes/agents.js';
+import { zenyaRouter } from './routes/zenya.js';
 
 const app = new Hono();
 
@@ -23,10 +24,12 @@ app.get('/cockpit/brain', renderBrainPanel);
 // Agent activity panel — Story 4.2
 app.route('/cockpit/agents', agentsRouter);
 
-// Placeholder routes for future panels (Stories 4.3–4.4, 4.6–4.8)
+// Zenya nucleus panel — Story 4.4
+app.route('/cockpit/zenya', zenyaRouter);
+
+// Placeholder routes for future panels (Stories 4.3, 4.6–4.8)
 const placeholderPanels = [
   { path: '/cockpit/decisions', label: 'Decisões', story: '4.3' },
-  { path: '/cockpit/zenya', label: 'Zenya', story: '4.4' },
   { path: '/cockpit/costs', label: 'Custos', story: '4.6' },
   { path: '/cockpit/progress', label: 'Progresso', story: '4.7' },
   { path: '/cockpit/summary', label: 'Resumo', story: '4.8' },
