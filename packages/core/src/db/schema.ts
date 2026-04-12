@@ -120,3 +120,47 @@ export const tenants = pgTable(
 
 export type TenantRow = typeof tenants.$inferSelect;
 export type InsertTenant = typeof tenants.$inferInsert;
+
+// --- Content Posts (Content Engine — Epic 5) ---
+
+export const POST_STATUSES = [
+  'gerando',
+  'aguardando_aprovacao',
+  'aprovado',
+  'publicado',
+  'escalado',
+  'erro',
+] as const;
+
+export type PostStatus = (typeof POST_STATUSES)[number];
+
+export const contentPosts = pgTable(
+  'content_posts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: text('client_id').notNull().default('plaka'),
+    status: text('status').$type<PostStatus>().notNull().default('gerando'),
+    topic: text('topic'),
+    title: text('title'),
+    meta: text('meta'),
+    bodyPreview: text('body_preview'),
+    bodyFull: text('body_full'),
+    imageDesc: text('image_desc'),
+    pinCopy: text('pin_copy'),
+    pinHashtags: text('pin_hashtags'),
+    blogUrl: text('blog_url'),
+    pinUrl: text('pin_url'),
+    errorMsg: text('error_msg'),
+    rejectionNote: text('rejection_note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('idx_content_posts_status_created').on(t.status, t.createdAt),
+    index('idx_content_posts_client_created').on(t.clientId, t.createdAt),
+  ],
+);
+
+export type ContentPostRow = typeof contentPosts.$inferSelect;
+export type InsertContentPost = typeof contentPosts.$inferInsert;

@@ -3,6 +3,7 @@ import { contextRouter } from './context/context-router.js';
 import { adrRouter } from './adr/adr-router.js';
 import { decisionRouter } from './decisions/decision-router.js';
 import { costRouter } from './costs/cost-router.js';
+import { contentRouter } from './content/content-router.js';
 import { requireInternalToken } from './middleware/auth.js';
 
 const app = new Hono();
@@ -16,6 +17,7 @@ app.route('/api/context', contextRouter);
 app.route('/api/adrs', adrRouter);
 app.route('/api/decisions', decisionRouter);
 app.route('/api/costs', costRouter);
+app.route('/api/content', contentRouter);
 
 export { app };
 export type { AgentContext, SaveContextInput, WorkState, DecisionEntry } from './context/types.js';
@@ -27,3 +29,12 @@ export { createDecision, listPendingDecisions, resolveDecision } from './decisio
 export type { CostEvent, RecordCostInput, CostSummary, AgentCostSummary, BudgetStatus } from './costs/types.js';
 export { recordCost, getCostSummary, getCostByAgent, getBudgetStatus } from './costs/cost-store.js';
 export { requireInternalToken } from './middleware/auth.js';
+export type { ContentPost, PostStatus, CreateContentPostInput, UpdateContentPostInput } from './content/types.js';
+export {
+  createContentPost,
+  updateContentPost,
+  getContentPost,
+  listContentPosts,
+  getPendingPostForToday,
+  getRecentPosts,
+} from './content/content-store.js';
