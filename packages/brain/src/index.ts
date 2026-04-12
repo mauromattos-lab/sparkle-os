@@ -7,12 +7,16 @@ import { insightsRouter } from './routes/insights.js';
 import { healthRouter } from './routes/health.js';
 import { searchRouter } from './routes/search.js';
 import { lifecycleRouter } from './routes/lifecycle.js';
+import { dashboardRouter } from './routes/dashboard.js';
+import { dashboardUiRouter } from './routes/dashboard-ui.js';
 
 const app = new Hono();
 
 app.route('/brain/health', healthRouter);
 app.route('/brain/insights/search', searchRouter);
 app.route('/brain/lifecycle', lifecycleRouter);
+app.route('/brain/dashboard', dashboardRouter);
+app.route('/brain/dashboard', dashboardUiRouter);
 app.route('/brain/insights', insightsRouter);
 
 // 404 fallback
