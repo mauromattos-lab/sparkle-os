@@ -1,0 +1,221 @@
+# ============================================================
+# Epic 4 — Interface de Pilotagem v1
+# Execution Plan — Wave-Based Parallel Development
+#
+# Criado por: Morgan (@pm)
+# Data: 2026-04-12
+# Template: epic-orchestration.yaml
+# ============================================================
+
+execution:
+  epicId: EPIC-4
+  epicName: "Interface de Pilotagem v1"
+  epicIndex: docs/stories/EPIC-4-INDEX.md
+  storyBasePath: docs/stories
+  template: epic-orchestration
+
+  # ──────────────────────────────────────────────────────────
+  # STORIES
+  # ──────────────────────────────────────────────────────────
+
+  stories:
+    "4.1":
+      file: 4.1.story.md
+      title: "Dashboard do Sistema"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, pattern_validation, api_contract]
+      branch: feat/4.1-dashboard-shell
+      complexity: medium
+      priority: P1-blocker
+      key_files:
+        - packages/cockpit/src/index.ts
+        - packages/cockpit/src/routes/dashboard.ts
+        - packages/cockpit/package.json
+
+    "4.2":
+      file: 4.2.story.md
+      title: "Atividade e Rastreabilidade dos Agentes"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, pattern_validation]
+      branch: feat/4.2-agent-activity
+      complexity: medium
+      priority: P2
+      key_files:
+        - packages/cockpit/src/routes/agents.ts
+        - packages/cockpit/src/services/agent-activity.service.ts
+
+    "4.3":
+      file: 4.3.story.md
+      title: "Fila de Decisões de Mauro"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, pattern_validation]
+      branch: feat/4.3-decisions-queue
+      complexity: medium
+      priority: P2
+      key_files:
+        - packages/cockpit/src/routes/decisions.ts
+        - packages/cockpit/src/services/decisions.service.ts
+
+    "4.4":
+      file: 4.4.story.md
+      title: "Painel do Núcleo Zenya"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, integration_validation]
+      branch: feat/4.4-zenya-panel
+      complexity: medium
+      priority: P2
+      key_files:
+        - packages/cockpit/src/routes/zenya.ts
+        - packages/cockpit/src/services/zenya.service.ts
+
+    "4.5":
+      file: 4.5.story.md
+      title: "Painel do Cérebro Coletivo"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, api_contract, integration_validation]
+      branch: feat/4.5-brain-panel
+      complexity: low
+      priority: P2
+      key_files:
+        - packages/cockpit/src/routes/brain.ts
+        - packages/cockpit/src/services/brain.service.ts
+      notes: "Consome GET /brain/dashboard da Story 3.9 — API já disponível"
+
+    "4.6":
+      file: 4.6.story.md
+      title: "Rastreamento de Custos"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, pattern_validation]
+      branch: feat/4.6-cost-tracking
+      complexity: medium
+      priority: P2
+      key_files:
+        - packages/cockpit/src/routes/costs.ts
+        - packages/cockpit/src/services/costs.service.ts
+
+    "4.7":
+      file: 4.7.story.md
+      title: "Progresso de Épicos e Stories"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, pattern_validation]
+      branch: feat/4.7-epic-progress
+      complexity: low
+      priority: P3
+      key_files:
+        - packages/cockpit/src/routes/epics.ts
+        - packages/cockpit/src/services/stories-parser.service.ts
+
+    "4.8":
+      file: 4.8.story.md
+      title: "Resumo de Sessão para Mauro"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [code_review, pattern_validation]
+      branch: feat/4.8-session-summary
+      complexity: medium
+      priority: P3
+      key_files:
+        - packages/cockpit/src/routes/session.ts
+        - packages/cockpit/src/services/session-summary.service.ts
+
+  # ──────────────────────────────────────────────────────────
+  # WAVES
+  # ──────────────────────────────────────────────────────────
+
+  waves:
+
+    - number: 1
+      name: "Shell do Cockpit"
+      parallel: false
+      stories: ["4.1"]
+      dependencies: []
+      rationale: "Blocker — toda a estrutura base (package, routing, layout) precisa existir antes dos painéis"
+      gate:
+        agent: "@architect"
+        focus: |
+          - Estrutura do package packages/cockpit/ corretamente scaffolded
+          - Routing e navegação entre painéis funcionando
+          - Nenhum dado hard-coded ou falso
+          - Padrão de projeto seguido (Hono + ESM, como packages/brain/)
+      merge:
+        order: ["feat/4.1-dashboard-shell"]
+        conflict_risk: low
+        notes: "Único branch na wave — sem conflito"
+      tag: wave-1-cockpit-shell
+
+    - number: 2
+      name: "Painéis Core"
+      parallel: true
+      stories: ["4.2", "4.3", "4.4", "4.5", "4.6"]
+      dependencies: [1]
+      rationale: "Todos dependem do shell (4.1) mas são independentes entre si — podem ser desenvolvidos em paralelo"
+      gate:
+        agent: "@architect"
+        focus: |
+          - Cada painel consome dados reais (não mock)
+          - Integração com Brain API (4.5) funcionando
+          - Nenhum painel quebra os outros (CSS/JS isolation)
+          - Navegação entre painéis funcional no conjunto
+      merge:
+        order:
+          - feat/4.5-brain-panel
+          - feat/4.2-agent-activity
+          - feat/4.4-zenya-panel
+          - feat/4.6-cost-tracking
+          - feat/4.3-decisions-queue
+        conflict_risk: medium
+        notes: "Branches editam arquivos diferentes (routes e services isolados por painel) — conflito esperado só em arquivos de configuração compartilhados"
+      tag: wave-2-core-panels
+
+    - number: 3
+      name: "Progresso e Resumo"
+      parallel: true
+      stories: ["4.7", "4.8"]
+      dependencies: [1, 2]
+      rationale: "4.7 e 4.8 dependem dos painéis core estarem prontos para referenciar dados corretamente"
+      gate:
+        agent: "@architect"
+        focus: |
+          - Parser de stories (4.7) lê docs/stories/ corretamente
+          - Resumo de sessão (4.8) consome dados reais de todas as fontes
+          - Cockpit completo funciona end-to-end sem erros
+      merge:
+        order:
+          - feat/4.7-epic-progress
+          - feat/4.8-session-summary
+        conflict_risk: low
+        notes: "Branches são independentes entre si"
+      tag: wave-3-progress-summary
+
+  # ──────────────────────────────────────────────────────────
+  # FINAL GATE
+  # ──────────────────────────────────────────────────────────
+
+  final_gate:
+    agent: "@architect"
+    tag: epic-4-complete
+    focus: |
+      Epic-level sign-off para Epic 4 — Interface de Pilotagem v1:
+
+      1. Cockpit acessível em http://localhost:3004 (ou porta configurada)
+      2. Todos os 8 painéis carregam sem erros
+      3. Dados reais em todos os painéis (Brain API, stories parser, custos)
+      4. Mauro consegue entender o estado do SparkleOS em < 2 minutos
+      5. Definition of Done do EPIC-4-INDEX.md: todos os checkboxes atendidos
+      6. Nenhuma regressão nos testes do packages/brain/
+
+  # ──────────────────────────────────────────────────────────
+  # RETROSPECTIVE
+  # ──────────────────────────────────────────────────────────
+
+  retrospective:
+    agent: "@pm"
+    format: brief
+    focus: "O que funcionou bem nas waves paralelas, o que otimizar no Epic 5"
