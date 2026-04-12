@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { renderOverview } from './routes/overview.js';
 import { renderBrainPanel } from './routes/brain.js';
+import { renderDecisions } from './routes/decisions.js';
 import { renderShell } from './routes/shell.js';
 import { agentsRouter } from './routes/agents.js';
 import { renderCosts } from './routes/costs.js';
@@ -31,9 +32,11 @@ app.route('/cockpit/zenya', zenyaRouter);
 // Costs panel — Story 4.6
 app.get('/cockpit/costs', renderCosts);
 
-// Placeholder routes for future panels (Stories 4.3, 4.7–4.8)
+// Decisions panel — Story 4.3
+app.get('/cockpit/decisions', renderDecisions);
+
+// Placeholder routes for future panels (Stories 4.7–4.8)
 const placeholderPanels = [
-  { path: '/cockpit/decisions', label: 'Decisões', story: '4.3' },
   { path: '/cockpit/progress', label: 'Progresso', story: '4.7' },
   { path: '/cockpit/summary', label: 'Resumo', story: '4.8' },
 ];
