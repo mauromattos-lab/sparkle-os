@@ -1,0 +1,72 @@
+storyId: "5.6"
+storyTitle: "Onboarding de Cliente"
+reviewer: "Quinn (@qa)"
+reviewDate: "2026-04-12"
+verdict: PASS
+
+checks:
+  - name: code_review
+    status: PASS
+    notes: >
+      parseConfigYaml: parser flat sem deps externas — correto para o formato simples
+      do config. loadClientConfig com fallbacks seguros para todos os campos.
+      listClientIds exclui dirs com prefixo '_' (template excluído corretamente).
+      Scheduler cria um cron por cliente dinamicamente. agent-loader passa squadRoot
+      parametrizado para loadAgentPrompt/loadTaskPrompt.
+
+  - name: unit_tests
+    status: PASS
+    notes: >
+      6 testes client-config: AC1 (parse completo), AC3 (fallbacks), quoted scheduleTime,
+      erro ENOENT → Client config not found, listClientIds (2 casos).
+      Pipeline-runner e scheduler tests atualizados com mocks corretos.
+      Cockpit: teste AC4 verifica clientId badge + coluna Cliente.
+      158/158 testes passando (44 content-engine + 114 cockpit).
+
+  - name: acceptance_criteria
+    status: PASS
+    notes: >
+      AC1: clients/{clientId}/config.yaml com clientId, name, squadPath, scheduleTime,
+           brandVoice. Credenciais documentadas como env vars nos comentários ✅
+      AC2: loadSquadContext(clientId) carrega clients/{clientId}/client-context.md
+           em vez de data/plaka-context.md hardcoded ✅
+      AC3: listClientIds() auto-descobre clientes. Scheduler cria cron por cliente.
+           Novo cliente = criar config.yaml + client-context.md, zero código ✅
+      AC4: clientBadge() no post pendente + coluna "Cliente" na tabela histórico ✅
+      AC5: clients/_template/client-context.md com todas as seções para Mauro preencher ✅
+
+  - name: no_regressions
+    status: PASS
+    notes: >
+      158/158 testes passando. Fallback default 'plaka' preserva comportamento anterior.
+      plaka-context.md no squad permanece intacto (não removido). Nova função
+      loadSquadContext(clientId='plaka') retorna dados compatíveis com o anterior.
+
+  - name: performance
+    status: PASS
+    notes: >
+      readdir + readFile por cliente na startup — custo único, não por publicação.
+      Número esperado de clientes: < 20. Sem impacto em runtime do pipeline.
+
+  - name: security
+    status: PASS
+    notes: >
+      Credenciais NÃO armazenadas no config.yaml — apenas documentadas como env vars ✅.
+      clientId vem de readdir (filesystem, não user input) — sem path traversal ✅.
+      parseConfigYaml strips quotes mas não executa código ✅.
+
+  - name: documentation
+    status: PASS
+    notes: >
+      clients/plaka/config.yaml bem comentado com lista de env vars necessárias.
+      clients/_template/config.yaml com instruções passo-a-passo para Mauro.
+      Story file completo com todos os arquivos novos e modificados documentados.
+
+issues: []
+
+summary: >
+  Story 5.6 transforma o Content Engine de sistema Plaka-específico para plataforma
+  multi-cliente. A arquitetura é simples e correta: auto-discovery via filesystem,
+  parser YAML minimal sem deps, backward-compatible via fallbacks. Onboarding de
+  novo cliente requer apenas criar 2 arquivos — sem alterar código (AC3 atendido).
+  Aprovado sem ressalvas.
