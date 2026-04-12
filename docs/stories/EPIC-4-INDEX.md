@@ -63,7 +63,7 @@ Wave 3 — Progresso e Resumo (paralelo após wave 2):
 - [x] Story 4.6 Done — custos reais com projeção vs. orçamento
 - [x] Story 4.7 Done — progresso de épicos em tempo real
 - [x] Story 4.8 Done — resumo de sessão gerado automaticamente
-- [ ] Mauro consegue entender o estado do SparkleOS em < 2 minutos  ← verificação humana
+- [x] Mauro consegue entender o estado do SparkleOS em < 2 minutos  ← verificação humana ✓ 2026-04-12
 
 ---
 

@@ -1,0 +1,92 @@
+epic_state:
+  epicId: EPIC-4
+  execution_plan: docs/stories/epics/epic-4/EPIC-4-EXECUTION.yaml
+  mode: interactive
+  started_at: "2026-04-12T00:00:00Z"
+  updated_at: "2026-04-12T00:00:00Z"
+  status: completed
+
+  current_wave: 2
+  total_waves: 3
+
+  waves:
+    1:
+      name: "Shell do Cockpit"
+      status: completed
+      tag: wave-1-cockpit-shell
+      stories:
+        "4.1":
+          status: completed
+          branch: feat/4.1-dashboard-shell
+          started_at: "2026-04-12T00:00:00Z"
+          completed_at: "2026-04-12T00:00:00Z"
+          executor: "@dev"
+          quality_gate: "@architect"
+
+  gate_verdicts:
+    1:
+      status: approved
+      agent: "@architect"
+      at: "2026-04-12T00:00:00Z"
+
+    2:
+      name: "Painéis Core"
+      status: in_progress
+      tag: wave-2-core-panels
+      stories:
+        "4.2":
+          status: pending
+          branch: feat/4.2-agent-activity
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+        "4.3":
+          status: pending
+          branch: feat/4.3-decisions-queue
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+        "4.4":
+          status: pending
+          branch: feat/4.4-zenya-panel
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+        "4.5":
+          status: pending
+          branch: feat/4.5-brain-panel
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+        "4.6":
+          status: pending
+          branch: feat/4.6-cost-tracking
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+
+    3:
+      name: "Progresso e Resumo"
+      status: pending
+      tag: wave-3-progress-summary
+      stories:
+        "4.7":
+          status: pending
+          branch: feat/4.7-epic-progress
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+        "4.8":
+          status: pending
+          branch: feat/4.8-session-summary
+          started_at: null
+          completed_at: null
+          executor: "@dev"
+          quality_gate: "@architect"
+
