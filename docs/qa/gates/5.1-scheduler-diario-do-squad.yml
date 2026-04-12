@@ -1,0 +1,34 @@
+schema: 1
+story: '5.1'
+gate: PASS
+status_reason: 'Issue HIGH (Drizzle column keys) resolvido em commit 64dd8d2. Todos os 6 ACs implementados e verificados. Issues MEDIUM/LOW documentados como tech debt no ciclo anterior.'
+reviewer: 'Quinn'
+updated: '2026-04-12T00:00:00Z'
+top_issues:
+  - id: 'REL-001'
+    severity: medium
+    finding: 'getPendingPostForToday usa setHours(0,0,0,0) com timezone do servidor, não America/Sao_Paulo'
+    suggested_action: 'Refatorar com date-fns-tz ou TZ=America/Sao_Paulo no processo para corrigir guard AC5 em produção UTC'
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Teste AC4 em pipeline-runner.test.ts realiza requisição HTTP real à Anthropic (não mockada)'
+    suggested_action: 'Mockar cliente Anthropic com vi.mock para tornar teste determinístico em CI'
+  - id: 'SEC-001'
+    severity: low
+    finding: 'agent-loader.ts:9 sem sanitização de path — potencial path traversal latente'
+    suggested_action: 'Adicionar validação de path com lista allowlist de agents conhecidos'
+  - id: 'MNT-001'
+    severity: low
+    finding: 'content-router.ts:24 usa parseInt sem fallback para NaN'
+    suggested_action: 'Adicionar validação: const limit = parseInt(req.query.limit) || 20'
+waiver:
+  active: false
+tech_debt_notes:
+  - 'REL-001, TEST-001, SEC-001, MNT-001 documentados — tratamento no backlog do Epic 5 ou Epic 6'
+previous_review:
+  date: '2026-04-12'
+  verdict: 'CONCERNS'
+  resolved_issues:
+    - id: 'HIGH-001'
+      description: 'updateContentPost usava snake_case como chaves Drizzle — campos silenciosamente ignorados'
+      fixed_in_commit: '64dd8d2'
