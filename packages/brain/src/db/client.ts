@@ -1,29 +1,39 @@
-// Postgres client — raw SQL for pgvector compatibility
-import postgres from 'postgres';
+// Supabase client — uses REST API over HTTPS (replaces postgres.js direct connection)
+// Reason: direct Postgres port 5432 may be blocked by network/firewall.
+// The Supabase JS client communicates via HTTPS/443 which is always open.
 
-let _sql: ReturnType<typeof postgres> | null = null;
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-export function getSql(): ReturnType<typeof postgres> {
-  if (!_sql) {
-    const url = process.env['DATABASE_URL'];
-    if (!url) {
-      throw new Error('DATABASE_URL environment variable is not set');
+let _client: SupabaseClient | null = null;
+
+export function getSupabase(): SupabaseClient {
+  if (!_client) {
+    const url = process.env['SUPABASE_URL'];
+    const key = process.env['SUPABASE_SERVICE_KEY'];
+    if (!url || !key) {
+      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set');
     }
-    _sql = postgres(url, {
-      max: 10,
-      idle_timeout: 20,
-      connect_timeout: 30,
+    _client = createClient(url, key, {
+      auth: { persistSession: false },
     });
   }
-  return _sql;
+  return _client;
 }
 
 export async function checkDbHealth(): Promise<boolean> {
   try {
-    const sql = getSql();
-    await sql`SELECT 1`;
-    return true;
+    const sb = getSupabase();
+    const { error } = await sb.from('insights').select('id').limit(1);
+    return !error;
   } catch {
     return false;
   }
+}
+
+// Legacy alias — kept so existing imports don't break during transition
+// @deprecated use getSupabase() instead
+export function getSql(): never {
+  throw new Error(
+    'getSql() removed — use getSupabase() from db/client.ts. Direct postgres connection replaced by Supabase REST API.',
+  );
 }
