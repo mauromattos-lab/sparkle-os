@@ -1,0 +1,107 @@
+squad:
+  name: aeo-squad-plaka
+  description: "Time de agentes AEO especializado em semi jóias — Plaka Acessórios"
+  domain: aeo-content-plaka
+
+analysis:
+  entities:
+    - Post AEO
+    - Briefing Editorial
+    - Tópico / Pergunta Central
+    - FAQ
+    - Semi Joia
+    - Cuidados
+    - Qualidade
+    - Estilo e Ocasião
+    - Pinterest Pin
+    - Voz da Marca Plaka
+  workflows:
+    - daily-briefing
+    - write-post
+    - rewrite-post
+    - validate-post
+    - daily-content
+  integrations:
+    - EXA Web Search (pesquisa de tendências e perguntas reais)
+    - NuvemShop Blog API (publicação de posts)
+    - Pinterest API (publicação de pins)
+    - Google Drive (imagens cedidas pela Luiza)
+  stakeholders:
+    - Luiza Plaka (cliente — dona da Plaka Acessórios)
+    - Mauro (operador do SparkleOS)
+
+recommendations:
+  agents:
+    - id: sage
+      role: "Pesquisadora e Estrategista AEO — define o que escrever e por quê"
+      commands: [daily-briefing, research-topic, trending-topics]
+      confidence: 0.95
+      user_added: false
+      user_modified: false
+
+    - id: lyra
+      role: "Redatora AEO especializada em semi jóias e lifestyle carioca"
+      commands: [write-post, rewrite-post]
+      confidence: 0.95
+      user_added: false
+      user_modified: false
+
+    - id: rex
+      role: "Revisor de Qualidade AEO — garante que cada post merece ser citado por uma IA"
+      commands: [validate-post, approve-post, request-revision]
+      confidence: 0.90
+      user_added: false
+      user_modified: false
+
+  tasks:
+    - name: daily-briefing
+      agent: sage
+      entrada: [data_atual, historico_posts, sazonalidade]
+      saida: [topico, pergunta_central, angulo, palavras_chave, justificativa]
+      confidence: 0.95
+
+    - name: research-topic
+      agent: sage
+      entrada: [topico_candidato]
+      saida: [interesse_estimado, gap_concorrentes, fontes_referencia]
+      confidence: 0.88
+
+    - name: write-post
+      agent: lyra
+      entrada: [briefing, voz_plaka, historico_posts]
+      saida: [titulo, corpo, faq, meta_description, cta]
+      confidence: 0.95
+
+    - name: rewrite-post
+      agent: lyra
+      entrada: [post_rejeitado, feedback_rex]
+      saida: [post_revisado]
+      confidence: 0.80
+
+    - name: validate-post
+      agent: rex
+      entrada: [post, checklist_aeo, checklist_marca_plaka]
+      saida: [veredicto, feedback, iteration_count]
+      confidence: 0.92
+
+  additions_by_craft:
+    - path: data/plaka-context.md
+      reason: "Sage e Lyra precisam da voz, coleções e DNA da marca como fonte de verdade"
+    - path: data/posts-history.md
+      reason: "Evitar repetição de tópicos — Lyra precisa saber o que já foi escrito"
+    - path: checklists/aeo-quality-checklist.md
+      reason: "Rex precisa de critérios AEO explícitos e objetivos"
+    - path: workflows/daily-content.yaml
+      reason: "Pipeline com tratamento de falha — max 2 revisões, depois escalação para Mauro"
+
+  template: basic
+  config_mode: extend
+
+metadata:
+  created_at: "2026-04-12T00:00:00Z"
+  source_docs:
+    - "Pesquisa @analyst — AEO + Plaka + mercado semi jóias Brasil"
+    - "Sessão de design com @aios-master (Orion)"
+  user_adjustments: 4
+  overall_confidence: 0.92
+  designed_by: Craft (@squad-creator)

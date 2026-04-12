@@ -1,0 +1,54 @@
+name: aeo-squad-plaka
+version: 1.0.0
+description: "Time de agentes AEO especializado em semi jóias — Plaka Acessórios"
+author: SparkleOS AIOX Agents
+license: UNLICENSED
+slashPrefix: aeo-plaka
+
+aiox:
+  minVersion: "2.1.0"
+  type: squad
+
+components:
+  agents:
+    - agents/sage.md
+    - agents/lyra.md
+    - agents/rex.md
+    - agents/vista.md
+  tasks:
+    - tasks/daily-briefing.md
+    - tasks/research-topic.md
+    - tasks/write-post.md
+    - tasks/rewrite-post.md
+    - tasks/validate-post.md
+    - tasks/curate-visual.md
+    - tasks/register-post.md
+  workflows:
+    - workflows/daily-content.yaml
+  checklists:
+    - checklists/aeo-quality-checklist.md
+  templates: []
+  tools: []
+  scripts: []
+
+config:
+  extends: extend
+  client: Plaka Acessórios
+  domain: semi-joias
+  language: pt-BR
+  tone: especialista-acessivel
+  market: Brasil
+
+dependencies:
+  integrations:
+    - exa-web-search
+    - nuvemshop-blog-api
+    - pinterest-api
+  squads: []
+
+tags:
+  - aeo
+  - content
+  - semi-joias
+  - plaka
+  - ecommerce

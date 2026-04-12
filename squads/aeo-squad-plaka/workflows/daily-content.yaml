@@ -1,0 +1,129 @@
+name: daily-content
+description: "Pipeline diária de geração de conteúdo AEO para a Plaka Acessórios"
+squad: aeo-squad-plaka
+version: 1.0.0
+
+trigger:
+  type: manual
+  description: "Executar uma vez por dia para gerar o post do blog"
+
+config:
+  max_revision_iterations: 2
+  escalation_target: Mauro
+  language: pt-BR
+  output_format: markdown
+
+steps:
+  - id: step-1-briefing
+    name: "Sage define o tópico do dia"
+    agent: sage
+    task: daily-briefing
+    inputs:
+      data_atual: "{{today}}"
+      historico_posts: "{{file:data/posts-history.md}}"
+      sazonalidade: "{{context.sazonalidade}}"
+    outputs:
+      briefing: "{{step-1-briefing.output}}"
+    on_failure: STOP
+
+  - id: step-2-write
+    name: "Lyra escreve o post"
+    agent: lyra
+    task: write-post
+    depends_on: [step-1-briefing]
+    inputs:
+      briefing: "{{step-1-briefing.briefing}}"
+      voz_plaka: "{{file:data/plaka-context.md}}"
+      historico_posts: "{{file:data/posts-history.md}}"
+    outputs:
+      post: "{{step-2-write.output}}"
+    on_failure: STOP
+
+  - id: step-3-validate
+    name: "Rex valida o post"
+    agent: rex
+    task: validate-post
+    depends_on: [step-2-write]
+    inputs:
+      post: "{{step-2-write.post}}"
+      iteration_count: 1
+    outputs:
+      veredicto: "{{step-3-validate.veredicto}}"
+      feedback: "{{step-3-validate.feedback}}"
+
+  - id: step-4-revision
+    name: "Lyra reescreve se necessário"
+    agent: lyra
+    task: rewrite-post
+    depends_on: [step-3-validate]
+    condition: "{{step-3-validate.veredicto}} == 'REVISAO'"
+    inputs:
+      post_rejeitado: "{{step-2-write.post}}"
+      feedback_rex: "{{step-3-validate.feedback}}"
+      iteration_count: 2
+    outputs:
+      post_revisado: "{{step-4-revision.output}}"
+
+  - id: step-5-revalidate
+    name: "Rex valida a revisão"
+    agent: rex
+    task: validate-post
+    depends_on: [step-4-revision]
+    condition: "{{step-4-revision.ran}} == true"
+    inputs:
+      post: "{{step-4-revision.post_revisado}}"
+      iteration_count: 2
+    outputs:
+      veredicto_final: "{{step-5-revalidate.veredicto}}"
+
+  - id: step-6-escalation
+    name: "Escalar para Mauro se max iterações atingido"
+    type: notification
+    depends_on: [step-5-revalidate]
+    condition: "{{step-5-revalidate.veredicto_final}} == 'ESCALADO'"
+    action:
+      notify: Mauro
+      message: "Post do dia precisa de revisão manual. Resumo: {{step-5-revalidate.output}}"
+
+  - id: step-7-visual
+    name: "Vista seleciona imagem e cria pin"
+    agent: vista
+    task: curate-visual
+    depends_on: [step-3-validate, step-5-revalidate]
+    condition: "{{veredicto}} starts_with 'APROVADO'"
+    inputs:
+      post_aprovado: "{{post_final}}"
+      briefing: "{{step-1-briefing.briefing}}"
+    outputs:
+      post_com_imagem: "{{step-7-visual.post_final}}"
+      pin: "{{step-7-visual.pin}}"
+
+  - id: step-8-register
+    name: "Sage registra post no histórico"
+    agent: sage
+    task: register-post
+    depends_on: [step-7-visual]
+    inputs:
+      post_aprovado: "{{step-7-visual.post_com_imagem}}"
+      briefing: "{{step-1-briefing.briefing}}"
+      data_publicacao: "{{today}}"
+
+  - id: step-9-publish-ready
+    name: "Post pronto para publicação"
+    type: output
+    depends_on: [step-8-register]
+    action:
+      output_post: "{{step-7-visual.post_com_imagem}}"
+      output_pin: "{{step-7-visual.pin}}"
+      message: "Post + pin prontos. Publicar no blog NuvemShop e no Pinterest."
+
+flow_diagram: |
+  Sage (briefing)
+      ↓
+  Lyra (escreve)
+      ↓
+  Rex (valida)
+      ↓ REVISAO
+  Lyra (reescreve) → Rex (revalida)
+      ↓ APROVADO               ↓ ESCALADO
+  Pronto para publicar    → Notifica Mauro
