@@ -2,7 +2,7 @@ markdownExploder: true
 project:
   name: SparkleOS
   type: greenfield
-  installedAt: '2026-04-11T05:58:21.215Z'
+  installedAt: '2026-04-12T03:56:23.715Z'
   version: 2.1.0
 user_profile: bob
 ide:
@@ -104,32 +104,6 @@ boundary:
     - .aiox-core/development/agents/*/MEMORY.md
     - .aiox-core/core/config/schemas/**
     - .aiox-core/core/config/template-overrides.js
-storyLifecycle:
-  states:
-    - Draft
-    - Ready
-    - InProgress
-    - InReview
-    - Done
-  transitions:
-    Draft->Ready: '@po *validate-story-draft (GO decision)'
-    Ready->InProgress: '@dev *develop starts implementation'
-    InProgress->InReview: '@dev marks complete, @qa begins review'
-    InReview->Done: '@qa PASS formal gate verdict'
-  rule: 'No story may be marked Done without explicit @qa PASS gate verdict'
-  gateFile: 'docs/qa/gates/{storyId}-{slug}.yml'
-
-qaGates:
-  required: true
-  blockingRule: 'MUST have gate: PASS or gate: WAIVED in docs/qa/gates/ before Done'
-  gateLocation: docs/qa/gates
-  reviewer: '@qa (Quinn)'
-  verdicts:
-    - PASS
-    - CONCERNS
-    - FAIL
-    - WAIVED
-
 agentIdentity:
   greeting:
     contextDetection: true

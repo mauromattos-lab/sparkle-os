@@ -228,7 +228,7 @@ interface Insight {
   source: 'zenya_operation' | 'agent_research' | 'mauro_input';
   nucleusId: string | null;
   content: string;
-  embedding: number[];      // pgvector 1536 dims
+  embedding: number[];      // pgvector 1024 dims (Voyage-3 — corrigido em ADR-005)
   status: 'raw' | 'validated' | 'applied' | 'rejected';
   qualityScore: number | null;
   validationNotes: string | null;
@@ -758,7 +758,7 @@ apps/core/src/
 apps/brain/src/
 ├── routes/insights.ts         # Pipeline completo
 └── services/
-    ├── embedder.ts            # Voyage via Anthropic SDK
+    ├── embedder.ts            # Voyage API direta (voyageai npm — ADR-005)
     ├── validator.ts           # Validação de qualidade
     └── searcher.ts            # pgvector cosine similarity > 0.75
 ```

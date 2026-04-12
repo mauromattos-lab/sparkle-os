@@ -6,12 +6,32 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "dev": "node --watch dist/index.js",
+    "dev": "node --watch --experimental-transform-types src/index.ts",
     "build": "tsc",
     "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "hono": "^4.6.0",
+    "postgres": "^3.4.4",
+    "voyageai": "^0.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
   }
 }
