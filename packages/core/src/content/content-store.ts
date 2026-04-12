@@ -51,17 +51,17 @@ export async function updateContentPost(
   if (input.topic !== undefined) values['topic'] = input.topic;
   if (input.title !== undefined) values['title'] = input.title;
   if (input.meta !== undefined) values['meta'] = input.meta;
-  if (input.bodyPreview !== undefined) values['body_preview'] = input.bodyPreview;
-  if (input.bodyFull !== undefined) values['body_full'] = input.bodyFull;
-  if (input.imageDesc !== undefined) values['image_desc'] = input.imageDesc;
-  if (input.pinCopy !== undefined) values['pin_copy'] = input.pinCopy;
-  if (input.pinHashtags !== undefined) values['pin_hashtags'] = input.pinHashtags;
-  if (input.blogUrl !== undefined) values['blog_url'] = input.blogUrl;
-  if (input.pinUrl !== undefined) values['pin_url'] = input.pinUrl;
-  if (input.errorMsg !== undefined) values['error_msg'] = input.errorMsg;
-  if (input.rejectionNote !== undefined) values['rejection_note'] = input.rejectionNote;
-  if (input.approvedAt !== undefined) values['approved_at'] = input.approvedAt;
-  if (input.publishedAt !== undefined) values['published_at'] = input.publishedAt;
+  if (input.bodyPreview !== undefined) values['bodyPreview'] = input.bodyPreview;
+  if (input.bodyFull !== undefined) values['bodyFull'] = input.bodyFull;
+  if (input.imageDesc !== undefined) values['imageDesc'] = input.imageDesc;
+  if (input.pinCopy !== undefined) values['pinCopy'] = input.pinCopy;
+  if (input.pinHashtags !== undefined) values['pinHashtags'] = input.pinHashtags;
+  if (input.blogUrl !== undefined) values['blogUrl'] = input.blogUrl;
+  if (input.pinUrl !== undefined) values['pinUrl'] = input.pinUrl;
+  if (input.errorMsg !== undefined) values['errorMsg'] = input.errorMsg;
+  if (input.rejectionNote !== undefined) values['rejectionNote'] = input.rejectionNote;
+  if (input.approvedAt !== undefined) values['approvedAt'] = input.approvedAt;
+  if (input.publishedAt !== undefined) values['publishedAt'] = input.publishedAt;
 
   const [row] = await db
     .update(schema.contentPosts)
