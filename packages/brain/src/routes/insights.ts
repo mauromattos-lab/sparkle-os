@@ -160,6 +160,8 @@ insightsRouter.get('/', async (c) => {
   const nucleusId = c.req.query('nucleusId');
   const page = parseInt(c.req.query('page') ?? '1', 10);
   const limit = parseInt(c.req.query('limit') ?? '20', 10);
+  // Story 3.7: exclude archived by default; pass includeArchived=true to include them
+  const includeArchived = c.req.query('includeArchived') === 'true';
 
   const validStatuses: InsightStatus[] = ['raw', 'validated', 'applied', 'rejected'];
   if (statusParam && !validStatuses.includes(statusParam as InsightStatus)) {
@@ -176,6 +178,7 @@ insightsRouter.get('/', async (c) => {
       ...(nucleusId ? { nucleusId } : {}),
       page: isNaN(page) ? 1 : page,
       limit: isNaN(limit) ? 20 : limit,
+      includeArchived,
     });
     return c.json(result);
   } catch (err) {
