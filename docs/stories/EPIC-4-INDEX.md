@@ -1,6 +1,6 @@
 # Epic 4 — Interface de Pilotagem v1
 
-**Status:** ✅ Pronto para Execução — 8/8 stories Ready (aguardando @pm *execute-epic)  
+**Status:** ✅ Done — 8/8 stories implementadas e aprovadas pelo @architect  
 **Criado por:** Morgan (@pm)  
 **Data:** 2026-04-12  
 **Fonte:** `docs/prd.md` §Epic 4  
@@ -55,15 +55,15 @@ Wave 3 — Progresso e Resumo (paralelo após wave 2):
 
 ## Definition of Done do Epic 4
 
-- [ ] Story 4.1 Done — cockpit funcionando, navegação entre painéis, zero dados falsos
-- [ ] Story 4.2 Done — atividade de agentes rastreável
-- [ ] Story 4.3 Done — fila de decisões funcional com contexto suficiente
-- [ ] Story 4.4 Done — painel Zenya com dados reais
-- [ ] Story 4.5 Done — painel Cérebro consumindo API do Brain
-- [ ] Story 4.6 Done — custos reais com projeção vs. orçamento
-- [ ] Story 4.7 Done — progresso de épicos em tempo real
-- [ ] Story 4.8 Done — resumo de sessão gerado automaticamente
-- [ ] Mauro consegue entender o estado do SparkleOS em < 2 minutos
+- [x] Story 4.1 Done — cockpit funcionando, navegação entre painéis, zero dados falsos
+- [x] Story 4.2 Done — atividade de agentes rastreável
+- [x] Story 4.3 Done — fila de decisões funcional com contexto suficiente
+- [x] Story 4.4 Done — painel Zenya com dados reais
+- [x] Story 4.5 Done — painel Cérebro consumindo API do Brain
+- [x] Story 4.6 Done — custos reais com projeção vs. orçamento
+- [x] Story 4.7 Done — progresso de épicos em tempo real
+- [x] Story 4.8 Done — resumo de sessão gerado automaticamente
+- [ ] Mauro consegue entender o estado do SparkleOS em < 2 minutos  ← verificação humana
 
 ---
 
