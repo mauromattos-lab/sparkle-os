@@ -3,7 +3,11 @@
 
 import { execSync } from 'child_process';
 import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -75,7 +79,7 @@ export function getAgentActivity(): CommitEntry[] {
   try {
     const output = execSync('git log --format="%H|%aN|%s|%ci" -20', {
       encoding: 'utf8',
-      cwd: process.cwd(),
+      cwd: REPO_ROOT,
     });
 
     const lines = output.trim().split('\n').filter(Boolean);
@@ -107,7 +111,7 @@ export function getAgentActivity(): CommitEntry[] {
 // ---------------------------------------------------------------------------
 
 const STORY_FILENAME_RE = /^\d+\.\d+\.story\.md$/;
-const STORIES_DIR = join(process.cwd(), 'docs', 'stories');
+const STORIES_DIR = join(REPO_ROOT, 'docs', 'stories');
 
 /**
  * Reads all story files and parses their frontmatter.

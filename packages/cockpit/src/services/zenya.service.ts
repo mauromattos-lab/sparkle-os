@@ -2,7 +2,10 @@
 // Used by the Zenya panel to display Zenya nucleus operational status
 
 import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,7 +126,7 @@ function parseFrontmatter(content: string): Record<string, string> {
 // ---------------------------------------------------------------------------
 
 const STORY_FILENAME_RE = /^\d+\.\d+\.story\.md$/;
-const STORIES_DIR = join(process.cwd(), 'docs', 'stories');
+const STORIES_DIR = join(__dirname, '..', '..', '..', '..', 'docs', 'stories');
 
 /**
  * Filters story files by epic prefix (e.g. "2." for Epic 2)

@@ -2,8 +2,11 @@
 // Used by the Epic Progress panel to display epic-level completion stats
 
 import { readdir, readFile } from 'fs/promises';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { parseFrontmatter } from '../lib/frontmatter.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,7 +39,7 @@ export interface EpicProgress {
 // ---------------------------------------------------------------------------
 
 const STORY_FILENAME_RE = /^\d+\.\d+\.story\.md$/;
-const STORIES_DIR = join(process.cwd(), 'docs', 'stories');
+const STORIES_DIR = join(__dirname, '..', '..', '..', '..', 'docs', 'stories');
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------
