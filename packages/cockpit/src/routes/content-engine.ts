@@ -11,6 +11,7 @@ import {
   rejectPost,
   type ContentPost,
 } from '../services/content-engine.service.js';
+import { triggerPublication } from '@sparkle-os/content-engine/publisher';
 import { renderShell } from './shell.js';
 
 // Status labels for display (AC6)
@@ -201,7 +202,10 @@ export async function handleApprove(c: Context): Promise<Response> {
   const id = c.req.param('id') ?? '';
   try {
     await approvePost(id);
-    // TODO: trigger publication pipeline (Stories 5.3 + 5.4) once implemented
+    // Trigger publication pipeline (Stories 5.3 + 5.4 + 5.5) — fire and forget
+    void triggerPublication(id).catch((err: unknown) => {
+      console.error('[content-engine] Publication pipeline failed:', err);
+    });
   } catch (err) {
     console.error('[content-engine] Approve failed:', err);
   }

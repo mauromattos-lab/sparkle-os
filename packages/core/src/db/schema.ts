@@ -130,6 +130,9 @@ export const POST_STATUSES = [
   'publicado',
   'escalado',
   'erro',
+  'erro_publicacao',
+  'erro_pin',
+  'pin_publicado',
 ] as const;
 
 export type PostStatus = (typeof POST_STATUSES)[number];
@@ -148,6 +151,7 @@ export const contentPosts = pgTable(
     imageDesc: text('image_desc'),
     pinCopy: text('pin_copy'),
     pinHashtags: text('pin_hashtags'),
+    imageDriveUrl: text('image_drive_url'),
     blogUrl: text('blog_url'),
     pinUrl: text('pin_url'),
     errorMsg: text('error_msg'),

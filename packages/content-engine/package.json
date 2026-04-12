@@ -10,6 +10,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./publisher": {
+      "import": "./dist/publication-orchestrator.js",
+      "types": "./dist/publication-orchestrator.d.ts"
     }
   },
   "scripts": {

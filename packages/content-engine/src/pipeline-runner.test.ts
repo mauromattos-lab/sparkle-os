@@ -34,6 +34,7 @@ const basePost = {
   imageDesc: null,
   pinCopy: null,
   pinHashtags: null,
+  imageDriveUrl: null,
   blogUrl: null,
   pinUrl: null,
   errorMsg: null,

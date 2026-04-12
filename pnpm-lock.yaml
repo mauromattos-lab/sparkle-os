@@ -96,6 +96,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.0
         version: 1.19.13(hono@4.12.12)
+      '@sparkle-os/content-engine':
+        specifier: workspace:*
+        version: link:../content-engine
       '@sparkle-os/core':
         specifier: workspace:*
         version: link:../core

@@ -15,6 +15,11 @@ vi.mock('@sparkle-os/core', async (importOriginal) => {
   };
 });
 
+// Mock publication pipeline so cockpit tests don't trigger real publishers
+vi.mock('@sparkle-os/content-engine/publisher', () => ({
+  triggerPublication: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Also mock fetch for overview panel (used by other routes in same app)
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
@@ -37,6 +42,7 @@ const BASE_POST = {
   imageDesc: 'Foto da linha Plaka Hidratante — fundo branco limpo',
   pinCopy: 'Sua pele merece cuidado extra no inverno ❄️',
   pinHashtags: '#skincare #inverno #Plaka',
+  imageDriveUrl: null,
   blogUrl: null,
   pinUrl: null,
   errorMsg: null,

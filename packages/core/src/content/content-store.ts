@@ -15,6 +15,7 @@ function rowToPost(row: typeof schema.contentPosts.$inferSelect): ContentPost {
     imageDesc: row.imageDesc ?? null,
     pinCopy: row.pinCopy ?? null,
     pinHashtags: row.pinHashtags ?? null,
+    imageDriveUrl: row.imageDriveUrl ?? null,
     blogUrl: row.blogUrl ?? null,
     pinUrl: row.pinUrl ?? null,
     errorMsg: row.errorMsg ?? null,
@@ -56,6 +57,7 @@ export async function updateContentPost(
   if (input.imageDesc !== undefined) values['imageDesc'] = input.imageDesc;
   if (input.pinCopy !== undefined) values['pinCopy'] = input.pinCopy;
   if (input.pinHashtags !== undefined) values['pinHashtags'] = input.pinHashtags;
+  if (input.imageDriveUrl !== undefined) values['imageDriveUrl'] = input.imageDriveUrl;
   if (input.blogUrl !== undefined) values['blogUrl'] = input.blogUrl;
   if (input.pinUrl !== undefined) values['pinUrl'] = input.pinUrl;
   if (input.errorMsg !== undefined) values['errorMsg'] = input.errorMsg;

@@ -6,6 +6,8 @@ export default defineConfig({
     alias: {
       // Point @sparkle-os/core to its TypeScript source so tests work without a build
       '@sparkle-os/core': resolve(__dirname, '../core/src/index.ts'),
+      // Point content-engine publisher subpath to source
+      '@sparkle-os/content-engine/publisher': resolve(__dirname, '../content-engine/src/publication-orchestrator.ts'),
     },
   },
   test: {

@@ -14,6 +14,7 @@ export interface ContentPost {
   imageDesc: string | null;
   pinCopy: string | null;
   pinHashtags: string | null;
+  imageDriveUrl: string | null;
   blogUrl: string | null;
   pinUrl: string | null;
   errorMsg: string | null;
@@ -38,6 +39,7 @@ export interface UpdateContentPostInput {
   imageDesc?: string;
   pinCopy?: string;
   pinHashtags?: string;
+  imageDriveUrl?: string;
   blogUrl?: string;
   pinUrl?: string;
   errorMsg?: string;
