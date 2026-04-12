@@ -10,6 +10,7 @@ import { renderShell } from './routes/shell.js';
 import { agentsRouter } from './routes/agents.js';
 import { renderCosts } from './routes/costs.js';
 import { zenyaRouter } from './routes/zenya.js';
+import { renderEpicsPanel } from './routes/epics.js';
 
 const app = new Hono();
 
@@ -35,28 +36,23 @@ app.get('/cockpit/costs', renderCosts);
 // Decisions panel — Story 4.3
 app.get('/cockpit/decisions', renderDecisions);
 
-// Placeholder routes for future panels (Stories 4.7–4.8)
-const placeholderPanels = [
-  { path: '/cockpit/progress', label: 'Progresso', story: '4.7' },
-  { path: '/cockpit/summary', label: 'Resumo', story: '4.8' },
-];
+// Epic progress panel — Story 4.7
+app.get('/cockpit/progress', renderEpicsPanel);
 
-for (const panel of placeholderPanels) {
-  const { path, label, story } = panel;
-  app.get(path, (c) => {
-    const content = `
-      <div class="main-header">
-        <h1>${label}</h1>
-        <div class="subtitle">Painel em desenvolvimento</div>
-      </div>
-      <div class="placeholder">
-        <h2>${label}</h2>
-        <p>Este painel será implementado na Story ${story}.</p>
-      </div>
-    `;
-    return c.html(renderShell({ title: label, activePanel: label.toLowerCase(), content }));
-  });
-}
+// Placeholder route for future panel (Story 4.8)
+app.get('/cockpit/summary', (c) => {
+  const content = `
+    <div class="main-header">
+      <h1>Resumo</h1>
+      <div class="subtitle">Painel em desenvolvimento</div>
+    </div>
+    <div class="placeholder">
+      <h2>Resumo</h2>
+      <p>Este painel será implementado na Story 4.8.</p>
+    </div>
+  `;
+  return c.html(renderShell({ title: 'Resumo', activePanel: 'summary', content }));
+});
 
 // 404 fallback
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
