@@ -11,6 +11,7 @@ import { agentsRouter } from './routes/agents.js';
 import { renderCosts } from './routes/costs.js';
 import { zenyaRouter } from './routes/zenya.js';
 import { renderEpicsPanel } from './routes/epics.js';
+import { renderSession } from './routes/session.js';
 
 const app = new Hono();
 
@@ -39,20 +40,8 @@ app.get('/cockpit/decisions', renderDecisions);
 // Epic progress panel — Story 4.7
 app.get('/cockpit/progress', renderEpicsPanel);
 
-// Placeholder route for future panel (Story 4.8)
-app.get('/cockpit/summary', (c) => {
-  const content = `
-    <div class="main-header">
-      <h1>Resumo</h1>
-      <div class="subtitle">Painel em desenvolvimento</div>
-    </div>
-    <div class="placeholder">
-      <h2>Resumo</h2>
-      <p>Este painel será implementado na Story 4.8.</p>
-    </div>
-  `;
-  return c.html(renderShell({ title: 'Resumo', activePanel: 'summary', content }));
-});
+// Session summary panel — Story 4.8
+app.get('/cockpit/session', renderSession);
 
 // 404 fallback
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
