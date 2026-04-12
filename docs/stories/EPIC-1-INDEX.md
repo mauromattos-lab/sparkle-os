@@ -1,6 +1,6 @@
 # Epic 1 — Fundação: Habitat, Processo e Arsenal
 
-**Status:** Draft  
+**Status:** ✅ Done — 11/11 stories implementadas  
 **Criado por:** @sm (River)  
 **Data:** 2026-04-11  
 **Objetivo:** Estabelecer tudo que os agentes AIOS precisam para operar dentro do SparkleOS com excelência.
