@@ -188,7 +188,7 @@ async function uploadLogo(baseUrl: string, token: string): Promise<string> {
 
   const form = new FormData();
   form.append('file', logoBlob, 'logo-plaka.webp');
-  form.append('purpose', 'site_logo');
+  form.append('purpose', 'image');
   form.append('ref', 'logo-plaka');
 
   console.log('  Enviando logo para Ghost Admin API...');
