@@ -156,6 +156,9 @@ function buildHistoryHtml(posts: ContentPost[]): string {
     .map((p) => {
       const title = p.title ?? '(sem título)';
       const published = p.publishedAt ? formatDate(p.publishedAt) : '—';
+      const blogLink = p.blogUrl
+        ? `<a href="${p.blogUrl}" target="_blank" rel="noopener" style="font-size:0.75rem;color:#3182ce;text-decoration:none;font-weight:600" title="${p.blogUrl}">↗ Ghost</a>`
+        : '—';
       return `
       <tr style="border-top:1px solid #edf2f7">
         <td style="padding:10px 12px;font-size:0.85rem;color:#2d3748;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</td>
@@ -163,6 +166,7 @@ function buildHistoryHtml(posts: ContentPost[]): string {
         <td style="padding:10px 12px">${statusBadge(p.status)}</td>
         <td style="padding:10px 12px;font-size:0.8rem;color:#718096">${formatDate(p.createdAt)}</td>
         <td style="padding:10px 12px;font-size:0.8rem;color:#718096">${published}</td>
+        <td style="padding:10px 12px;text-align:center">${blogLink}</td>
       </tr>`;
     })
     .join('');
@@ -180,6 +184,7 @@ function buildHistoryHtml(posts: ContentPost[]): string {
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Status</th>
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Criado</th>
             <th style="padding:10px 12px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Publicado</th>
+            <th style="padding:10px 12px;text-align:center;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#718096">Blog</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>

@@ -1,10 +1,11 @@
-// Publication Orchestrator — Stories 5.3 + 5.4 + 5.5
+// Publication Orchestrator — Stories 5.3 + 5.4 + 5.5 + 6.2
 // Coordinates the full publication pipeline triggered after post approval
-// Order: Drive image selection → NuvemShop blog → Pinterest pin (non-blocking)
+// Order: Drive image selection → Ghost blog → Pinterest pin (non-blocking)
+// Note: NuvemShop publisher mantido no código — remoção na Story 6.4
 
 import { getContentPost, updateContentPost } from '@sparkle-os/core';
 import { selectDriveImage } from './drive-client.js';
-import { publishToNuvemShop } from './nuvemshop-publisher.js';
+import { publishToGhost } from './ghost-publisher.js';
 import { publishToPinterest } from './pinterest-publisher.js';
 
 export async function triggerPublication(postId: string): Promise<void> {
@@ -32,8 +33,8 @@ export async function triggerPublication(postId: string): Promise<void> {
   const postWithImage = await getContentPost(postId);
   if (!postWithImage) return;
 
-  // Step 2 (Story 5.3): Publish to NuvemShop blog
-  await publishToNuvemShop(postWithImage);
+  // Step 2 (Story 6.2): Publish to Ghost CMS (substituiu NuvemShop da Story 5.3)
+  await publishToGhost(postWithImage);
 
   // Re-fetch to get blogUrl for the Pinterest pin link
   const postWithBlog = await getContentPost(postId);

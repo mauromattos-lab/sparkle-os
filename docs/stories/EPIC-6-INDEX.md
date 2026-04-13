@@ -1,6 +1,6 @@
 # Epic 6 — Canal de Blog AEO (Ghost CMS)
 
-**Status:** 🟡 Draft — aguardando validação @po
+**Status:** 🟢 Em andamento — Stories 6.1 ✅ 6.2 ✅ Done
 **Criado por:** Morgan (@pm)
 **Data:** 2026-04-13
 **Fonte:** Análise técnica Atlas (@analyst) + limitação descoberta na Nuvemshop API
@@ -26,10 +26,11 @@ A Story 5.3 implementou `POST /blogs/{blog_id}/articles` — endpoint que **não
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|------------|------------|----------|
-| [6.1](./6.1.story.md) | PoC: Ghost CMS na VPS | Draft | P1 — Blocker | — | @dev |
-| [6.2](./6.2.story.md) | Ghost Publisher no Content Engine | Draft | P1 | 6.1 | @dev |
+| [6.1](./6.1.story.md) | PoC: Ghost CMS na VPS | ✅ Done | P1 — Blocker | — | @dev |
+| [6.2](./6.2.story.md) | Ghost Publisher no Content Engine | ✅ Done | P1 | 6.1 | @dev |
 | [6.3](./6.3.story.md) | Estrutura AEO no Conteúdo Gerado | Draft | P2 | 6.2 | @dev |
 | [6.4](./6.4.story.md) | Deprecação do NuvemShop Blog Publisher | Draft | P3 | 6.2 | @dev |
+| [6.5](./6.5.story.md) | Tema Ghost com Identidade Visual Plaka | Draft | P2 | 6.2 | @ux-design-expert + @dev |
 
 ---
 
@@ -51,7 +52,16 @@ Wave 3 — Qualidade AEO (após 6.2):
         → JSON-LD, Schema BlogPosting, bloco FAQ
   6.4 — Deprecação NuvemShop Blog Publisher
         → Remove dead code da 5.3, atualiza Cockpit
+
+Wave 4 — Identidade Visual (paralelo, pode rodar antes de 6.3/6.4):
+  6.5 — Tema Ghost com Identidade Visual Plaka
+        → Pesquisa @analyst + design @ux-design-expert + implementação @dev
+        → Blog com cara premium — potencialmente mais polido que a própria loja
 ```
+
+> **Estratégia de ponte:** enquanto 6.2–6.5 são desenvolvidas, Mauro posta manualmente
+> no Ghost (`http://187.77.37.88:2368/ghost`) para validar conteúdo e estratégia AEO
+> na prática, sem esperar automação completa.
 
 ---
 
@@ -94,3 +104,5 @@ Se Ghost CMS na VPS não for viável (infra, DNS, custo), fallback para:
 - Integração com Zenya SAC para dados de perguntas frequentes — Epic 7
 - Multi-cliente para blog (apenas Plaka neste epic)
 - Geração de imagens por IA — evolução futura
+- Analytics de performance do blog (tráfego, posições AEO) — Epic 7
+- Configuração DNS `blog.plakaacessorios.com` — depende de acesso ao Google Domains (bloqueante externo)
