@@ -10,7 +10,7 @@ interface NuvemShopProduct {
 }
 
 const NUVEMSHOP_API = (userId: string) =>
-  `https://api.tiendanube.com/v1/${userId}/products?per_page=10&sort_by=updated_at&sort_direction=desc`;
+  `https://api.tiendanube.com/v1/${userId}/products?per_page=10`;
 
 async function fetchProducts(): Promise<NuvemShopProduct[] | null> {
   const accessToken = process.env['NUVEMSHOP_ACCESS_TOKEN'];

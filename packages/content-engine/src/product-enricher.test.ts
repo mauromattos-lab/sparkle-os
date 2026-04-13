@@ -54,7 +54,7 @@ describe('fetchClientProducts', () => {
     expect(result).toContain('Colar Gotas Eye Banhado à Prata');
   });
 
-  it('AC1: busca endpoint correto com per_page=10 e sort_by=updated_at', async () => {
+  it('AC1: busca endpoint correto com per_page=10', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => PRODUCTS_FIXTURE });
 
     await fetchClientProducts();
@@ -62,7 +62,6 @@ describe('fetchClientProducts', () => {
     const url = mockFetch.mock.calls[0]![0] as string;
     expect(url).toContain('/v1/1447473/products');
     expect(url).toContain('per_page=10');
-    expect(url).toContain('sort_by=updated_at');
   });
 
   it('AC4: inclui apenas produtos publicados (filtra published=false)', async () => {
