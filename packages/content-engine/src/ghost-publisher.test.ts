@@ -1,4 +1,4 @@
-// ghost-publisher.test.ts — Stories 6.2 + 6.3
+// ghost-publisher.test.ts — Stories 6.2 + 6.3 + 6.7
 // Testes unitários com mock da Ghost API
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -517,6 +517,108 @@ describe('buildJsonLd — Story 6.3 expansão', () => {
     expect(ld).toContain('BlogPosting');
     expect(ld).toContain('Plaka Acessórios');
     expect(ld).not.toContain('FAQPage');
+  });
+});
+
+// ─── Story 6.7 — buildJsonLd com ImageObject ──────────────────────────────────
+
+describe('buildJsonLd — Story 6.7 ImageObject', () => {
+  it('AC4: inclui ImageObject quando imageUrl fornecida', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', {
+      imageUrl: 'https://cdn.plaka.com.br/produto.jpg',
+    });
+    expect(ld).toContain('"@type": "ImageObject"');
+    expect(ld).toContain('"url": "https://cdn.plaka.com.br/produto.jpg"');
+  });
+
+  it('AC4: inclui description no ImageObject quando imageAlt fornecida', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', {
+      imageUrl: 'https://cdn.plaka.com.br/produto.jpg',
+      imageAlt: 'pulseira de couro marrom com fecho dourado',
+    });
+    expect(ld).toContain('"description": "pulseira de couro marrom com fecho dourado"');
+  });
+
+  it('AC4: omite ImageObject quando imageUrl ausente (retrocompatibilidade)', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z');
+    expect(ld).not.toContain('ImageObject');
+  });
+
+  it('AC4: JSON-LD com ImageObject é JSON válido', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', {
+      imageUrl: 'https://cdn.plaka.com.br/produto.jpg',
+      imageAlt: 'pulseira de couro',
+    });
+    const inner = ld.replace(/<script[^>]*>/, '').replace('</script>', '').trim();
+    expect(() => JSON.parse(inner)).not.toThrow();
+  });
+});
+
+// ─── Story 6.7 — publishToGhost com feature_image ────────────────────────────
+
+describe('publishToGhost — Story 6.7 feature image', () => {
+  it('AC3: envia feature_image quando featureImageUrl fornecida', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(basePost, 'https://cdn.plaka.com.br/produto.jpg');
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<Record<string, unknown>> };
+    expect(body.posts[0]?.['feature_image']).toBe('https://cdn.plaka.com.br/produto.jpg');
+  });
+
+  it('AC3: envia feature_image_alt quando post.imageDesc presente', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(
+      { ...basePost, imageDesc: 'pulseira de couro marrom com fecho dourado' },
+      'https://cdn.plaka.com.br/produto.jpg',
+    );
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<Record<string, unknown>> };
+    expect(body.posts[0]?.['feature_image_alt']).toBe('pulseira de couro marrom com fecho dourado');
+  });
+
+  it('AC6: publica sem feature_image quando featureImageUrl não fornecida', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(basePost);
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<Record<string, unknown>> };
+    expect(body.posts[0]).not.toHaveProperty('feature_image');
+  });
+
+  it('AC6: publica sem feature_image_alt quando imageDesc é null', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost({ ...basePost, imageDesc: null }, 'https://cdn.plaka.com.br/produto.jpg');
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<Record<string, unknown>> };
+    expect(body.posts[0]).not.toHaveProperty('feature_image_alt');
+  });
+
+  it('AC4: codeinjection_head contém ImageObject quando featureImageUrl fornecida', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(basePost, 'https://cdn.plaka.com.br/produto.jpg');
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<{ codeinjection_head: string }> };
+    expect(body.posts[0]?.codeinjection_head).toContain('ImageObject');
+    expect(body.posts[0]?.codeinjection_head).toContain('https://cdn.plaka.com.br/produto.jpg');
   });
 });
 

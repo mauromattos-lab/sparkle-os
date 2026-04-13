@@ -81,6 +81,8 @@ export interface JsonLdOptions {
   wordCount?: number;
   articleSection?: string;
   faqItems?: Array<{ question: string; answer: string }>;
+  imageUrl?: string;   // AC4 — Story 6.7: ImageObject no BlogPosting
+  imageAlt?: string;   // AC4 — Story 6.7: description do ImageObject
 }
 
 export function buildJsonLd(
@@ -88,7 +90,7 @@ export function buildJsonLd(
   datePublished: string,
   options: JsonLdOptions = {}
 ): string {
-  const { url, wordCount, articleSection, faqItems } = options;
+  const { url, wordCount, articleSection, faqItems, imageUrl, imageAlt } = options;
 
   const blogPosting: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -101,6 +103,15 @@ export function buildJsonLd(
     ...(url ? { url } : {}),
     ...(wordCount !== undefined ? { wordCount } : {}),
     ...(articleSection ? { articleSection } : {}),
+    ...(imageUrl
+      ? {
+          image: {
+            '@type': 'ImageObject',
+            url: imageUrl,
+            ...(imageAlt ? { description: imageAlt } : {}),
+          },
+        }
+      : {}),
   };
 
   const schemas: unknown[] = [blogPosting];
@@ -186,7 +197,7 @@ async function verifyCodeInjection(
 
 // ─── Publisher principal (AC1 + AC2 + AC3 + AC4 + AC5 + AC6) ─────────────────
 
-export async function publishToGhost(post: ContentPost): Promise<void> {
+export async function publishToGhost(post: ContentPost, featureImageUrl?: string): Promise<void> {
   const ghostApiUrl = process.env['GHOST_API_URL'];
   const ghostAdminApiKey = process.env['GHOST_ADMIN_API_KEY'];
 
@@ -223,10 +234,13 @@ export async function publishToGhost(post: ContentPost): Promise<void> {
   const token = buildJwt(keyId, keySecret);
 
   // Story 6.3 — AEO expandido: FAQ + wordCount + articleSection
+  // Story 6.7 — AEO: ImageObject no schema + feature_image + feature_image_alt
   const faqItems = extractFaqItems(bodyHtml);
   const wordCount = estimateWordCount(bodyHtml);
   const jsonLdOptions: JsonLdOptions = { wordCount, faqItems };
   if (post.topic) jsonLdOptions.articleSection = post.topic;
+  if (featureImageUrl) jsonLdOptions.imageUrl = featureImageUrl;
+  if (post.imageDesc) jsonLdOptions.imageAlt = post.imageDesc;
 
   const postBody = {
     posts: [
@@ -236,6 +250,8 @@ export async function publishToGhost(post: ContentPost): Promise<void> {
         html: bodyHtml,
         slug: slugify(title),
         codeinjection_head: buildJsonLd(title, now, jsonLdOptions),
+        ...(featureImageUrl ? { feature_image: featureImageUrl } : {}),
+        ...(post.imageDesc ? { feature_image_alt: post.imageDesc } : {}),
       },
     ],
   };

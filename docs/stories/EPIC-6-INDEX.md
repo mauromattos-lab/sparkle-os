@@ -1,6 +1,6 @@
 # Epic 6 — Canal de Blog AEO (Ghost CMS)
 
-**Status:** ✅ Epic 6 completo — Stories 6.1 ✅ 6.2 ✅ 6.3 ✅ 6.4 ✅ 6.5 ✅
+**Status:** 🔄 Em andamento — Stories 6.1 ✅ 6.2 ✅ 6.3 ✅ 6.4 ✅ 6.5 ✅ 6.6 ✅ 6.7 🔲 Draft
 **Criado por:** Morgan (@pm)
 **Data:** 2026-04-13
 **Fonte:** Análise técnica Atlas (@analyst) + limitação descoberta na Nuvemshop API
@@ -31,6 +31,8 @@ A Story 5.3 implementou `POST /blogs/{blog_id}/articles` — endpoint que **não
 | [6.3](./6.3.story.md) | Estrutura AEO no Conteúdo Gerado | ✅ Done | P2 | 6.2 | @dev |
 | [6.4](./6.4.story.md) | Deprecação do NuvemShop Blog Publisher | ✅ Done | P3 | 6.2 | @dev |
 | [6.5](./6.5.story.md) | Tema Ghost com Identidade Visual Plaka | ✅ Done | P2 | 6.2 | @ux-design-expert + @dev |
+| [6.6](./6.6.story.md) | Enriquecimento do Briefing com Catálogo de Produtos | ✅ Done | P2 | 6.2, 5.6 | @dev |
+| [6.7](./6.7.story.md) | AEO: Feature Image no Ghost Publisher | ✅ Ready | P2 | 6.2, 6.6 | @dev |
 
 ---
 

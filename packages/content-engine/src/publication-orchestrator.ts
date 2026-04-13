@@ -7,6 +7,7 @@ import { getContentPost, updateContentPost } from '@sparkle-os/core';
 import { selectDriveImage } from './drive-client.js';
 import { publishToGhost } from './ghost-publisher.js';
 import { publishToPinterest } from './pinterest-publisher.js';
+import { fetchFirstProductImageUrl } from './product-enricher.js';
 
 export async function triggerPublication(postId: string): Promise<void> {
   const post = await getContentPost(postId);
@@ -33,8 +34,13 @@ export async function triggerPublication(postId: string): Promise<void> {
   const postWithImage = await getContentPost(postId);
   if (!postWithImage) return;
 
-  // Step 2 (Story 6.2): Publish to Ghost CMS (substituiu NuvemShop da Story 5.3)
-  await publishToGhost(postWithImage);
+  // Step 2 (Story 6.2 + 6.7): Publish to Ghost CMS with feature image when available
+  const featureImageUrl = await fetchFirstProductImageUrl().catch((err: unknown) => {
+    console.warn('[publication-orchestrator] Feature image fetch failed (non-blocking):', err);
+    return null;
+  });
+
+  await publishToGhost(postWithImage, featureImageUrl ?? undefined);
 
   // Re-fetch to get blogUrl for the Pinterest pin link
   const postWithBlog = await getContentPost(postId);
