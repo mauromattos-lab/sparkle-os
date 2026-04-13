@@ -1,4 +1,4 @@
-// ghost-publisher.test.ts — Story 6.2
+// ghost-publisher.test.ts — Stories 6.2 + 6.3
 // Testes unitários com mock da Ghost API
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -15,7 +15,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
 // Import após mocks (dinâmico para evitar hoisting issues com vi.mock)
-const { publishToGhost, slugify, buildJsonLd } = await import('./ghost-publisher.js');
+const { publishToGhost, slugify, buildJsonLd, extractFaqItems, estimateWordCount } = await import('./ghost-publisher.js');
 const { updateContentPost } = await import('@sparkle-os/core');
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -369,5 +369,181 @@ describe('publishToGhost — bodyFull vs bodyPreview', () => {
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
     const body = JSON.parse(options.body as string) as { posts: Array<{ html: string }> };
     expect(body.posts[0]?.html).toContain('Conteúdo preview');
+  });
+});
+
+// ─── Story 6.3 — estimateWordCount ───────────────────────────────────────────
+
+describe('estimateWordCount', () => {
+  it('conta palavras removendo tags HTML', () => {
+    const html = '<h2>Título do Post</h2><p>Conteúdo com <strong>três</strong> palavras extras.</p>';
+    expect(estimateWordCount(html)).toBeGreaterThan(0);
+  });
+
+  it('retorna 0 para string vazia', () => {
+    expect(estimateWordCount('')).toBe(0);
+  });
+
+  it('retorna 0 para HTML sem texto', () => {
+    expect(estimateWordCount('<p></p><h2></h2>')).toBe(0);
+  });
+
+  it('conta corretamente texto simples sem tags', () => {
+    expect(estimateWordCount('uma duas três quatro cinco')).toBe(5);
+  });
+});
+
+// ─── Story 6.3 — extractFaqItems ─────────────────────────────────────────────
+
+describe('extractFaqItems', () => {
+  const htmlWithFaq = `
+    <h2>O que são acessórios de cabelo?</h2>
+    <p>Acessórios de cabelo são itens decorativos e funcionais usados para prender, decorar ou estilizar o cabelo de diversas formas.</p>
+    <h2>Quais são os tipos mais populares?</h2>
+    <p>Os tipos mais populares incluem presilhas, tiaras, elásticos coloridos, grampos e faixas de cabelo para diferentes ocasiões.</p>
+    <h2>Como escolher o acessório ideal?</h2>
+    <p>Para escolher o acessório ideal, considere o tipo de cabelo, o estilo do look e a ocasião em que será usado para melhor resultado.</p>
+  `;
+
+  it('AC3: extrai pares FAQ de H2 + parágrafo seguinte', () => {
+    const items = extractFaqItems(htmlWithFaq);
+    expect(items.length).toBe(3);
+  });
+
+  it('AC3: cada item tem question e answer não vazios', () => {
+    const items = extractFaqItems(htmlWithFaq);
+    items.forEach((item) => {
+      expect(item.question.length).toBeGreaterThanOrEqual(10);
+      expect(item.answer.length).toBeGreaterThanOrEqual(20);
+    });
+  });
+
+  it('AC4: retorna [] quando há menos de 3 pares válidos', () => {
+    const htmlInsuficiente = `
+      <h2>Pergunta curta?</h2>
+      <p>Resposta também curta aqui vai.</p>
+      <p>Parágrafo sem heading anterior.</p>
+    `;
+    // Apenas 1 par → extractFaqItems retorna 1 item (não filtra por mínimo)
+    // FAQPage é omitido pelo buildJsonLd quando < 3 itens
+    const items = extractFaqItems(htmlInsuficiente);
+    expect(items.length).toBeLessThan(3);
+  });
+
+  it('AC4: respeita maxItems', () => {
+    const items = extractFaqItems(htmlWithFaq, 2);
+    expect(items.length).toBe(2);
+  });
+
+  it('filtra pares com question < 10 chars', () => {
+    const html = '<h2>Curta?</h2><p>Resposta com mais de vinte caracteres totais aqui.</p>';
+    const items = extractFaqItems(html);
+    expect(items.length).toBe(0);
+  });
+
+  it('funciona com H3 além de H2', () => {
+    const html = `
+      <h3>Qual é a diferença entre presilha e grampo?</h3>
+      <p>Presilhas são maiores e prendem mais cabelo, enquanto grampos são pequenos e discretos para fixar mechas específicas.</p>
+    `;
+    const items = extractFaqItems(html);
+    expect(items.length).toBe(1);
+    expect(items[0]?.question).toContain('presilha');
+  });
+});
+
+// ─── Story 6.3 — buildJsonLd expandido ───────────────────────────────────────
+
+describe('buildJsonLd — Story 6.3 expansão', () => {
+  it('AC2: inclui wordCount quando fornecido', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { wordCount: 850 });
+    expect(ld).toContain('"wordCount": 850');
+  });
+
+  it('AC2: inclui url quando fornecida', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { url: 'http://ghost.example/post/' });
+    expect(ld).toContain('"url": "http://ghost.example/post/"');
+  });
+
+  it('AC2: inclui articleSection quando fornecida', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { articleSection: 'acessórios' });
+    expect(ld).toContain('"articleSection": "acessórios"');
+  });
+
+  it('AC1: inclui FAQPage quando faqItems >= 3', () => {
+    const faqItems = [
+      { question: 'Pergunta um sobre acessórios?', answer: 'Resposta detalhada sobre a pergunta um aqui.' },
+      { question: 'Pergunta dois sobre cabelos?', answer: 'Resposta detalhada sobre a pergunta dois aqui.' },
+      { question: 'Pergunta três sobre produtos?', answer: 'Resposta detalhada sobre a pergunta três aqui.' },
+    ];
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { faqItems });
+    expect(ld).toContain('FAQPage');
+    expect(ld).toContain('Question');
+    expect(ld).toContain('acceptedAnswer');
+  });
+
+  it('AC4: omite FAQPage quando faqItems < 3', () => {
+    const faqItems = [
+      { question: 'Só uma pergunta curta?', answer: 'Resposta detalhada aqui com mais de vinte caracteres.' },
+    ];
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { faqItems });
+    expect(ld).not.toContain('FAQPage');
+  });
+
+  it('AC4: omite FAQPage quando faqItems é vazio', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { faqItems: [] });
+    expect(ld).not.toContain('FAQPage');
+  });
+
+  it('AC5: JSON-LD sem options é JSON válido', () => {
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z');
+    const inner = ld.replace(/<script[^>]*>/, '').replace('</script>', '').trim();
+    expect(() => JSON.parse(inner)).not.toThrow();
+  });
+
+  it('AC5: JSON-LD com FAQPage é JSON válido', () => {
+    const faqItems = [
+      { question: 'Pergunta um sobre acessórios?', answer: 'Resposta um com mais de vinte caracteres.' },
+      { question: 'Pergunta dois sobre cabelos?', answer: 'Resposta dois com mais de vinte caracteres.' },
+      { question: 'Pergunta três sobre produtos?', answer: 'Resposta três com mais de vinte caracteres.' },
+    ];
+    const ld = buildJsonLd('Título', '2026-04-13T08:00:00.000Z', { faqItems });
+    const inner = ld.replace(/<script[^>]*>/, '').replace('</script>', '').trim();
+    expect(() => JSON.parse(inner)).not.toThrow();
+  });
+
+  it('AC7: retrocompatibilidade — sem options funciona como Story 6.2', () => {
+    const ld = buildJsonLd('Meu Post', '2026-04-13T08:00:00.000Z');
+    expect(ld).toContain('BlogPosting');
+    expect(ld).toContain('Plaka Acessórios');
+    expect(ld).not.toContain('FAQPage');
+  });
+});
+
+// ─── Story 6.3 — publishToGhost envia wordCount e articleSection ─────────────
+
+describe('publishToGhost — Story 6.3 AEO expandido', () => {
+  it('inclui wordCount no codeinjection_head quando bodyFull tem conteúdo', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(basePost);
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<{ codeinjection_head: string }> };
+    expect(body.posts[0]?.codeinjection_head).toContain('wordCount');
+  });
+
+  it('inclui articleSection derivado do topic no codeinjection_head', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost({ ...basePost, topic: 'acessórios para cabelo' });
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<{ codeinjection_head: string }> };
+    expect(body.posts[0]?.codeinjection_head).toContain('articleSection');
   });
 });

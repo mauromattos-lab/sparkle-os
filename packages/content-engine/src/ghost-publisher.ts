@@ -1,4 +1,4 @@
-// Ghost Publisher — Story 6.2
+// Ghost Publisher — Stories 6.2 + 6.3
 // Publishes approved content posts to Ghost CMS via Admin API
 // JWT HS256 gerado localmente com node:crypto (sem deps externas)
 // Padrão: pinterest-publisher.ts e nuvemshop-publisher.ts
@@ -39,10 +39,58 @@ export function slugify(text: string): string {
     .slice(0, 100);
 }
 
-// ─── JSON-LD Schema BlogPosting (AC3) ─────────────────────────────────────────
+// ─── AEO helpers (Story 6.3) ──────────────────────────────────────────────────
 
-export function buildJsonLd(title: string, datePublished: string): string {
-  const schema = {
+// Estima wordCount removendo tags HTML e contando palavras
+export function estimateWordCount(html: string): number {
+  const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!text) return 0;
+  return text.split(' ').filter((w) => w.length > 0).length;
+}
+
+// Extrai até maxItems pares FAQ de H2/H3 + parágrafo seguinte do HTML
+export function extractFaqItems(
+  html: string,
+  maxItems = 5
+): Array<{ question: string; answer: string }> {
+  const items: Array<{ question: string; answer: string }> = [];
+
+  // Normaliza quebras de linha para facilitar matching
+  const normalized = html.replace(/\r?\n/g, ' ');
+
+  // Encontra pares heading + parágrafo seguinte
+  const pattern = /<h[23][^>]*>(.*?)<\/h[23]>\s*<p[^>]*>(.*?)<\/p>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(normalized)) !== null && items.length < maxItems) {
+    const question = (match[1] ?? '').replace(/<[^>]+>/g, '').trim();
+    const answer = (match[2] ?? '').replace(/<[^>]+>/g, '').trim();
+
+    if (question.length >= 10 && answer.length >= 20) {
+      items.push({ question, answer });
+    }
+  }
+
+  return items;
+}
+
+// ─── JSON-LD Schema BlogPosting + FAQPage (AC3 Story 6.2, expandido Story 6.3) ─
+
+export interface JsonLdOptions {
+  url?: string;
+  wordCount?: number;
+  articleSection?: string;
+  faqItems?: Array<{ question: string; answer: string }>;
+}
+
+export function buildJsonLd(
+  title: string,
+  datePublished: string,
+  options: JsonLdOptions = {}
+): string {
+  const { url, wordCount, articleSection, faqItems } = options;
+
+  const blogPosting: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     headline: title,
@@ -50,9 +98,34 @@ export function buildJsonLd(title: string, datePublished: string): string {
     publisher: { '@type': 'Organization', name: 'Plaka Acessórios' },
     datePublished,
     inLanguage: 'pt-BR',
+    ...(url ? { url } : {}),
+    ...(wordCount !== undefined ? { wordCount } : {}),
+    ...(articleSection ? { articleSection } : {}),
   };
 
-  return `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`;
+  const schemas: unknown[] = [blogPosting];
+
+  // FAQPage apenas quando há 3+ pares detectados (AC4)
+  if (faqItems && faqItems.length >= 3) {
+    const faqPage = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.answer,
+        },
+      })),
+    };
+    schemas.push(faqPage);
+  }
+
+  // Array de schemas ou schema único (retrocompatibilidade com AC7)
+  const output = schemas.length === 1 ? schemas[0] : schemas;
+
+  return `<script type="application/ld+json">\n${JSON.stringify(output, null, 2)}\n</script>`;
 }
 
 // ─── Ghost Admin API types ────────────────────────────────────────────────────
@@ -149,6 +222,12 @@ export async function publishToGhost(post: ContentPost): Promise<void> {
   const now = new Date().toISOString();
   const token = buildJwt(keyId, keySecret);
 
+  // Story 6.3 — AEO expandido: FAQ + wordCount + articleSection
+  const faqItems = extractFaqItems(bodyHtml);
+  const wordCount = estimateWordCount(bodyHtml);
+  const jsonLdOptions: JsonLdOptions = { wordCount, faqItems };
+  if (post.topic) jsonLdOptions.articleSection = post.topic;
+
   const postBody = {
     posts: [
       {
@@ -156,7 +235,7 @@ export async function publishToGhost(post: ContentPost): Promise<void> {
         status: 'published', // aprovado no Cockpit → publicado diretamente
         html: bodyHtml,
         slug: slugify(title),
-        codeinjection_head: buildJsonLd(title, now), // AC3 — JSON-LD BlogPosting
+        codeinjection_head: buildJsonLd(title, now, jsonLdOptions),
       },
     ],
   };
