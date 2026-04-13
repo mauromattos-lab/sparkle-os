@@ -36,63 +36,92 @@ const BRAND = {
 // ─── Custom CSS (Design Spec: @ux-design-expert + Pesquisa: @analyst) ────────
 
 const CUSTOM_CSS = `
-/* Plaka Acessórios — Blog Theme (Story 6.5) */
+/* Plaka Acessórios — Blog Theme v2 (Story 6.5) */
 /* Design: @ux-design-expert | Pesquisa de marca: @analyst */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
-/* CSS Variables Casper — overrides de cor e tipografia */
+/* ── Tipografia ─────────────────────────────────────────── */
 :root {
   --ghost-accent-color: #0197b2;
   --color-accent: #0197b2;
   --gh-font-body: 'Poppins', system-ui, sans-serif;
   --gh-font-heading: 'Poppins', system-ui, sans-serif;
 }
+body { font-family: 'Poppins', system-ui, sans-serif; }
+h1,h2,h3,h4,h5,h6 { font-family: 'Poppins', system-ui, sans-serif; font-weight: 600; }
 
-/* Tipografia global Poppins */
-body {
-  font-family: 'Poppins', system-ui, sans-serif;
+/* ── Navegação (navbar topo) ────────────────────────────── */
+.gh-navigation {
+  background-color: #0197b2;
+  border-bottom: none;
 }
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Poppins', system-ui, sans-serif;
-  font-weight: 600;
-}
-
-/* Header — fundo teal Plaka (#0197b2) */
-.gh-head {
-  background-color: #0197b2 !important;
-}
-
-/* Logo — invertido para branco no fundo teal */
-.gh-head-logo {
+.gh-navigation-logo,
+.gh-navigation-logo img {
   filter: brightness(0) invert(1);
 }
-
-/* Links e botões do header em branco */
-.gh-head a,
-.gh-head button {
+.gh-navigation a,
+.gh-navigation-actions a,
+.gh-navigation button {
   color: #ffffff !important;
 }
+.gh-navigation-actions svg path,
+.gh-navigation-actions svg circle {
+  stroke: #ffffff !important;
+}
 
-/* Post cards — bordas arredondadas, estilo premium minimalista */
+/* ── Cabeçalho hero (título da home) ────────────────────── */
+.gh-header {
+  background-color: #005f75;
+  color: #ffffff;
+}
+.gh-header-title {
+  color: #ffffff;
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
+.gh-footer {
+  background-color: #0197b2;
+  color: #ffffff;
+}
+.gh-footer-inner,
+.gh-footer-bar {
+  color: #ffffff;
+}
+.gh-footer a,
+.gh-footer-menu a,
+.gh-footer-copyright {
+  color: rgba(255,255,255,0.85) !important;
+}
+.gh-footer a:hover {
+  color: #ffffff !important;
+}
+.gh-footer-logo,
+.gh-footer-logo img {
+  filter: brightness(0) invert(1);
+}
+.gh-footer-signup {
+  background-color: #005f75;
+  border-radius: 12px;
+  padding: 2rem;
+}
+.gh-footer-signup-header,
+.gh-footer-signup-subhead {
+  color: #ffffff;
+}
+
+/* ── Post cards ──────────────────────────────────────────── */
 .post-card {
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 .post-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.10);
 }
+.post-card-primary-tag { color: #d94f73; font-weight: 500; }
 
-/* Tags/categorias — rosa secundário Plaka (#d94f73) */
-.post-card-primary-tag {
-  color: #d94f73;
-  font-weight: 500;
-}
-
-/* Botões CTA */
+/* ── Botões e CTAs ───────────────────────────────────────── */
 .gh-btn,
 button[type="submit"] {
   background: #0197b2;
@@ -100,10 +129,11 @@ button[type="submit"] {
   border-radius: 8px;
   border: none;
 }
+.gh-btn:hover { background: #017a90; }
 
-.gh-btn:hover {
-  background: #017a90;
-}
+/* ── Links de conteúdo ───────────────────────────────────── */
+.gh-content a { color: #0197b2; }
+.gh-content a:hover { color: #017a90; }
 `.trim();
 
 // ─── Config ───────────────────────────────────────────────────────────────────
