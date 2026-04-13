@@ -64,12 +64,11 @@ describe('extractDriveFileId', () => {
 });
 
 describe('publishToPinterest', () => {
-  it('AC6: sets status erro_pin when env vars missing', async () => {
+  it('AC6: skips silently (warn-only) when env vars missing', async () => {
+    // Comportamento intencional: sem credentials → warn + return, sem DB update
+    // Ver commit 48faf1e: "Pinterest: remove update de status quando credentials ausentes"
     await publishToPinterest(BASE_POST);
-    expect(mockUpdate).toHaveBeenCalledWith('post-123', expect.objectContaining({
-      status: 'erro_pin',
-      errorMsg: expect.stringContaining('PINTEREST_ACCESS_TOKEN'),
-    }));
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   it('sets status erro_pin when imageDriveUrl is null', async () => {

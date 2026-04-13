@@ -14,8 +14,9 @@ export function markdownToHtml(markdown: string): string {
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
       // Inline code
       .replace(/`(.+?)`/g, '<code>$1</code>')
-      // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+      // Links — strip placeholder URLs (link, url, #, etc.), keep real URLs
+      .replace(/\[([^\]]+)\]\(((?:https?:\/\/)[^)]+)\)/g, '<a href="$2">$1</a>')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
       // Unordered list items
       .replace(/^- (.+)$/gm, '<li>$1</li>')
       // Wrap consecutive <li> in <ul>

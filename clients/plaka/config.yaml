@@ -3,8 +3,8 @@
 #
 # Credenciais são lidas via variáveis de ambiente (NÃO armazenar aqui).
 # Env vars necessárias:
-#   NUVEMSHOP_ACCESS_TOKEN   — token de acesso NuvemShop (Tiendanube)
-#   NUVEMSHOP_USER_ID        — ID do usuário NuvemShop
+#   NUVEMSHOP_ACCESS_TOKEN   — token de acesso NuvemShop (Tiendanube) [Story 6.6: product enricher]
+#   NUVEMSHOP_USER_ID        — ID do usuário NuvemShop = 1447473 (Plaka Acessórios)
 #   NUVEMSHOP_BLOG_ID        — ID do blog (default: 1)
 #   PINTEREST_ACCESS_TOKEN   — token de acesso Pinterest API v5
 #   PINTEREST_BOARD_ID       — ID do board de destino

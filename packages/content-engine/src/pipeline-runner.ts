@@ -6,6 +6,7 @@ import { join } from 'path';
 import { createContentPost, updateContentPost } from '@sparkle-os/core';
 import { loadAgentPrompt, loadTaskPrompt, loadSquadContext } from './agent-loader.js';
 import { loadClientConfig } from './client-config.js';
+import { fetchClientProducts } from './product-enricher.js';
 
 const MODEL = process.env['CONTENT_ENGINE_MODEL'] ?? 'gpt-4o-mini';
 const MAX_REVISION_ITERATIONS = 2;
@@ -102,6 +103,12 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
     // Carrega contexto do cliente (AC2: usa client-context.md em vez de plaka-context.md)
     const { clientContext, postsHistory } = await loadSquadContext(clientId);
 
+    // Story 6.6 — Enriquecimento com catálogo de produtos (graceful degradation)
+    const productContext = await fetchClientProducts().catch(() => '');
+    if (productContext) {
+      console.log(`[content-engine] [${postId}] Produtos carregados para briefing`);
+    }
+
     // --- Step 1: Sage define o tópico ---
     console.log(`[content-engine] [${postId}] Step 1: Sage — daily briefing`);
     const briefingOutput = await callAgent(
@@ -116,12 +123,14 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
 
     // --- Step 2: Lyra escreve o post ---
     console.log(`[content-engine] [${postId}] Step 2: Lyra — write post`);
-    const postOutput = await callAgent(
-      'lyra',
-      'write-post',
-      `Briefing do dia:\n${briefingOutput}\n\nVoz e contexto da marca (${clientConfig.name}):\n${clientContext}\n\nHistórico de posts:\n${postsHistory}`,
-      squadRoot,
-    );
+    const lyraUserMessage = [
+      `Briefing do dia:\n${briefingOutput}`,
+      `Voz e contexto da marca (${clientConfig.name}):\n${clientContext}`,
+      `Histórico de posts:\n${postsHistory}`,
+      ...(productContext ? [productContext] : []),
+    ].join('\n\n');
+
+    const postOutput = await callAgent('lyra', 'write-post', lyraUserMessage, squadRoot);
 
     // --- Step 3: Rex valida (iteração 1) ---
     console.log(`[content-engine] [${postId}] Step 3: Rex — validate (iteração 1)`);
@@ -132,7 +141,13 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
       squadRoot,
     );
 
-    let finalPost = postOutput;
+    // Strip markdown code fence if the model wrapped the output
+    // Also strip internal changelog section added by revision agent (always at the end)
+    let finalPost = postOutput
+      .replace(/^```markdown\s*/i, '')
+      .replace(/\s*```\s*$/, '')
+      .replace(/\n#{1,3}\s*Changelog[\s\S]*/i, '')
+      .trim();
     let iterationCount = 1;
 
     // --- Step 4: Revisão se necessário (máx 2 iterações) ---
