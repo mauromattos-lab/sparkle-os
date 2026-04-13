@@ -22,6 +22,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   publicado: { label: 'Publicado', color: '#2b6cb0' },
   escalado: { label: 'Escalado — requer atenção', color: '#e53e3e' },
   erro: { label: 'Erro', color: '#c53030' },
+  erro_publicacao: { label: 'Erro na publicação', color: '#c53030' },
 };
 
 function statusBadge(status: string): string {
@@ -114,8 +115,13 @@ function buildPendingPostHtml(post: ContentPost): string {
         </div>` : ''}
 
         <div>
-          <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#718096;margin-bottom:4px">Preview do Corpo (200 chars)</div>
-          <div style="font-size:0.875rem;color:#2d3748;background:#f7fafc;padding:12px;border-radius:6px;border-left:3px solid #e2e8f0">${bodySnippet}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#718096">Corpo do Post</div>
+            ${post.bodyFull ? `<button onclick="var el=document.getElementById('body-full-${post.id}');var prev=document.getElementById('body-prev-${post.id}');var isOpen=el.style.display!=='none';el.style.display=isOpen?'none':'block';prev.style.display=isOpen?'block':'none';this.textContent=isOpen?'▼ Ver post completo':'▲ Fechar'"
+              style="font-size:0.75rem;color:#3182ce;background:none;border:none;cursor:pointer;font-weight:600;padding:0">▼ Ver post completo</button>` : ''}
+          </div>
+          <div id="body-prev-${post.id}" style="font-size:0.875rem;color:#2d3748;background:#f7fafc;padding:12px;border-radius:6px;border-left:3px solid #e2e8f0">${bodySnippet}</div>
+          ${post.bodyFull ? `<div id="body-full-${post.id}" style="display:none;font-size:0.875rem;color:#2d3748;background:#f7fafc;padding:16px;border-radius:6px;border-left:3px solid #3182ce;white-space:pre-wrap;line-height:1.7;max-height:60vh;overflow-y:auto">${post.bodyFull.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
         </div>
 
         <div>

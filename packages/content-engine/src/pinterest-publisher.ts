@@ -19,10 +19,7 @@ export async function publishToPinterest(post: ContentPost): Promise<void> {
   const boardId = process.env['PINTEREST_BOARD_ID'];
 
   if (!accessToken || !boardId) {
-    await updateContentPost(post.id, {
-      status: 'erro_pin',
-      errorMsg: 'PINTEREST_ACCESS_TOKEN ou PINTEREST_BOARD_ID não configurado',
-    });
+    console.warn('[pinterest] PINTEREST_ACCESS_TOKEN ou PINTEREST_BOARD_ID não configurado — pulando pin');
     return;
   }
 

@@ -102,8 +102,6 @@ export async function listContentPosts(
 
 export async function getPendingPostForToday(clientId = 'plaka'): Promise<ContentPost | null> {
   const db = getDb();
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
 
   const [row] = await db
     .select()
@@ -115,9 +113,9 @@ export async function getPendingPostForToday(clientId = 'plaka'): Promise<Conten
           eq(schema.contentPosts.status, 'aguardando_aprovacao'),
           eq(schema.contentPosts.status, 'gerando'),
         ),
-        gte(schema.contentPosts.createdAt, todayStart),
       ),
     )
+    .orderBy(desc(schema.contentPosts.createdAt))
     .limit(1);
 
   return row ? rowToPost(row) : null;
