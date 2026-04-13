@@ -60,13 +60,13 @@ describe('runDailyPipeline', () => {
     vi.clearAllMocks();
     mockCreate.mockResolvedValue(basePost);
     mockUpdate.mockResolvedValue({ ...basePost });
-    process.env['ANTHROPIC_API_KEY'] = 'test-key';
+    process.env['OPENAI_API_KEY'] = 'test-key';
   });
 
-  it('AC4: updates status to erro when Anthropic API throws', async () => {
-    // Run without valid ANTHROPIC_API_KEY — Anthropic will throw authentication error
+  it('AC4: updates status to erro when OpenAI API throws', async () => {
+    // Run without valid OPENAI_API_KEY — OpenAI will throw authentication error
     // The pipeline-runner must catch it and set status to 'erro'
-    process.env['ANTHROPIC_API_KEY'] = 'invalid-key-for-test';
+    process.env['OPENAI_API_KEY'] = 'invalid-key-for-test';
 
     await runDailyPipeline('plaka');
 
@@ -83,10 +83,10 @@ describe('runDailyPipeline', () => {
     mockCreate.mockResolvedValue(basePost);
 
     // We just verify create is called with correct clientId
-    // Full pipeline test requires Anthropic mock
+    // Full pipeline test requires OpenAI mock
     expect(mockCreate).not.toHaveBeenCalled();
     await runDailyPipeline('plaka').catch(() => {
-      // May fail without real ANTHROPIC_API_KEY — that's OK
+      // May fail without real OPENAI_API_KEY — that's OK
     });
 
     expect(mockCreate).toHaveBeenCalledWith({ clientId: 'plaka' });

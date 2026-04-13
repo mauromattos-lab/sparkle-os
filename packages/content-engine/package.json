@@ -28,7 +28,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
     "@sparkle-os/core": "workspace:*",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "openai": "^6.34.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

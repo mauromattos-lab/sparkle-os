@@ -1,22 +1,22 @@
 // pipeline-runner.ts — executa a pipeline daily-content do squad aeo-squad-plaka
 // Sage → Lyra → Rex → (revisão se necessário) → Vista
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { join } from 'path';
 import { createContentPost, updateContentPost } from '@sparkle-os/core';
 import { loadAgentPrompt, loadTaskPrompt, loadSquadContext } from './agent-loader.js';
 import { loadClientConfig } from './client-config.js';
 
-const MODEL = process.env['CONTENT_ENGINE_MODEL'] ?? 'claude-sonnet-4-6';
+const MODEL = process.env['CONTENT_ENGINE_MODEL'] ?? 'gpt-4o-mini';
 const MAX_REVISION_ITERATIONS = 2;
 
-let _client: Anthropic | null = null;
+let _client: OpenAI | null = null;
 
-function getClient(): Anthropic {
+function getClient(): OpenAI {
   if (!_client) {
-    const apiKey = process.env['ANTHROPIC_API_KEY'];
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY environment variable is not set');
-    _client = new Anthropic({ apiKey });
+    const apiKey = process.env['OPENAI_API_KEY'];
+    if (!apiKey) throw new Error('OPENAI_API_KEY environment variable is not set');
+    _client = new OpenAI({ apiKey });
   }
   return _client;
 }
@@ -33,18 +33,20 @@ async function callAgent(
   ]);
 
   const client = getClient();
-  const response = await client.messages.create({
+  const response = await client.chat.completions.create({
     model: MODEL,
     max_tokens: 4096,
-    system: `${systemPrompt}\n\n---\n\n## Tarefa Atual\n\n${taskPrompt}`,
-    messages: [{ role: 'user', content: userMessage }],
+    messages: [
+      { role: 'system', content: `${systemPrompt}\n\n---\n\n## Tarefa Atual\n\n${taskPrompt}` },
+      { role: 'user', content: userMessage },
+    ],
   });
 
-  const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock || textBlock.type !== 'text') {
+  const text = response.choices[0]?.message?.content;
+  if (!text) {
     throw new Error(`Agent ${agentName} returned no text content`);
   }
-  return textBlock.text;
+  return text;
 }
 
 function extractBriefingTopic(briefingOutput: string): string {
