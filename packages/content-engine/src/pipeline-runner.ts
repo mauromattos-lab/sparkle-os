@@ -171,7 +171,11 @@ export async function runDailyPipeline(clientId = 'plaka'): Promise<void> {
         `Post revisado para validar (iteração 2 de ${MAX_REVISION_ITERATIONS}):\n\n${revisedPost}`,
         squadRoot,
       );
-      finalPost = revisedPost;
+      finalPost = revisedPost
+        .replace(/^```markdown\s*/i, '')
+        .replace(/\s*```\s*$/, '')
+        .replace(/\n#{1,3}\s*Changelog[\s\S]*/i, '')
+        .trim();
     }
 
     // --- Verifica veredito final ---
