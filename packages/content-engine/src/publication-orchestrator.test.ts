@@ -1,4 +1,5 @@
-// Unit tests for Publication Orchestrator — Stories 5.3 + 5.4 + 5.5
+// Unit tests for Publication Orchestrator — Stories 5.3 + 5.4 + 5.5 + 6.2
+// Atualizado Story 6.4: mock de ghost-publisher em vez de nuvemshop-publisher
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -11,8 +12,8 @@ vi.mock('./drive-client.js', () => ({
   selectDriveImage: vi.fn(),
 }));
 
-vi.mock('./nuvemshop-publisher.js', () => ({
-  publishToNuvemShop: vi.fn(),
+vi.mock('./ghost-publisher.js', () => ({
+  publishToGhost: vi.fn(),
 }));
 
 vi.mock('./pinterest-publisher.js', () => ({
@@ -21,14 +22,14 @@ vi.mock('./pinterest-publisher.js', () => ({
 
 import { getContentPost, updateContentPost } from '@sparkle-os/core';
 import { selectDriveImage } from './drive-client.js';
-import { publishToNuvemShop } from './nuvemshop-publisher.js';
+import { publishToGhost } from './ghost-publisher.js';
 import { publishToPinterest } from './pinterest-publisher.js';
 import { triggerPublication } from './publication-orchestrator.js';
 
 const mockGetPost = vi.mocked(getContentPost);
 const mockUpdate = vi.mocked(updateContentPost);
 const mockSelectDrive = vi.mocked(selectDriveImage);
-const mockPublishNuvem = vi.mocked(publishToNuvemShop);
+const mockPublishGhost = vi.mocked(publishToGhost);
 const mockPublishPin = vi.mocked(publishToPinterest);
 
 const BASE_POST = {
@@ -56,7 +57,7 @@ const BASE_POST = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockUpdate.mockResolvedValue(BASE_POST);
-  mockPublishNuvem.mockResolvedValue(undefined);
+  mockPublishGhost.mockResolvedValue(undefined);
   mockPublishPin.mockResolvedValue(undefined);
 });
 
@@ -65,7 +66,7 @@ describe('triggerPublication', () => {
     mockGetPost.mockResolvedValue(null);
     await triggerPublication('post-not-found');
     expect(mockSelectDrive).not.toHaveBeenCalled();
-    expect(mockPublishNuvem).not.toHaveBeenCalled();
+    expect(mockPublishGhost).not.toHaveBeenCalled();
   });
 
   it('stores Drive image URL when Drive returns a file', async () => {
@@ -75,7 +76,7 @@ describe('triggerPublication', () => {
     const postWithImage = { ...BASE_POST, imageDriveUrl: 'https://drive.google.com/file/d/drive-file-1/view' };
     mockGetPost.mockResolvedValueOnce(BASE_POST);  // initial fetch
     mockGetPost.mockResolvedValueOnce(postWithImage); // after Drive
-    mockGetPost.mockResolvedValueOnce(postWithImage); // after NuvemShop
+    mockGetPost.mockResolvedValueOnce(postWithImage); // after Ghost
 
     await triggerPublication('post-123');
 
@@ -84,36 +85,36 @@ describe('triggerPublication', () => {
     }));
   });
 
-  it('calls publishToNuvemShop with updated post', async () => {
+  it('calls publishToGhost with updated post (Story 6.2)', async () => {
     const postWithImage = { ...BASE_POST, imageDriveUrl: 'https://drive.google.com/file/d/file-1/view' };
     mockGetPost.mockResolvedValue(postWithImage);
     mockSelectDrive.mockResolvedValueOnce(null); // Drive fails gracefully
 
     await triggerPublication('post-123');
 
-    expect(mockPublishNuvem).toHaveBeenCalledWith(expect.objectContaining({ id: 'post-123' }));
+    expect(mockPublishGhost).toHaveBeenCalledWith(expect.objectContaining({ id: 'post-123' }));
   });
 
-  it('calls publishToPinterest after NuvemShop', async () => {
-    const postWithBlog = { ...BASE_POST, imageDriveUrl: 'https://drive.google.com/file/d/f1/view', blogUrl: 'https://plaka.com/blog/post' };
+  it('calls publishToPinterest after Ghost', async () => {
+    const postWithBlog = { ...BASE_POST, imageDriveUrl: 'https://drive.google.com/file/d/f1/view', blogUrl: 'http://187.77.37.88:2368/post/' };
     mockGetPost.mockResolvedValue(postWithBlog);
     mockSelectDrive.mockResolvedValueOnce(null);
 
     await triggerPublication('post-123');
 
-    expect(mockPublishNuvem).toHaveBeenCalled();
+    expect(mockPublishGhost).toHaveBeenCalled();
     expect(mockPublishPin).toHaveBeenCalled();
   });
 
   it('AC5: Pinterest failure does not throw or block', async () => {
-    const postWithBlog = { ...BASE_POST, imageDriveUrl: null, blogUrl: 'https://plaka.com/blog/post' };
+    const postWithBlog = { ...BASE_POST, imageDriveUrl: null, blogUrl: 'http://187.77.37.88:2368/post/' };
     mockGetPost.mockResolvedValue(postWithBlog);
     mockSelectDrive.mockResolvedValueOnce(null);
     mockPublishPin.mockRejectedValueOnce(new Error('Pinterest API down'));
 
     // Should not throw
     await expect(triggerPublication('post-123')).resolves.toBeUndefined();
-    expect(mockPublishNuvem).toHaveBeenCalled();
+    expect(mockPublishGhost).toHaveBeenCalled();
   });
 
   it('Drive failure does not block pipeline', async () => {
@@ -123,6 +124,6 @@ describe('triggerPublication', () => {
     mockGetPost.mockResolvedValue(BASE_POST);
 
     await expect(triggerPublication('post-123')).resolves.toBeUndefined();
-    expect(mockPublishNuvem).toHaveBeenCalled();
+    expect(mockPublishGhost).toHaveBeenCalled();
   });
 });
