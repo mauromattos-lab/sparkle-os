@@ -65,19 +65,23 @@ export async function addLabel(params: ChatwootParams, label: string): Promise<v
 
 /**
  * Sets typing status for the bot in the conversation.
+ * Uses /toggle_typing_status (fazer.ai Chatwoot fork endpoint).
+ * mode: 'typing' = text indicator, 'recording' = audio indicator, 'off' = clear both
  */
 export async function setTypingStatus(
   params: ChatwootParams,
   status: 'on' | 'off',
+  mode: 'typing' | 'recording' = 'typing',
 ): Promise<void> {
-  const res = await fetch(apiUrl(params, '/typing_status'), {
+  const typing_status = status === 'off' ? 'off' : mode;
+  const res = await fetch(apiUrl(params, '/toggle_typing_status'), {
     method: 'POST',
     headers: headers(params.token),
-    body: JSON.stringify({ typing_status: status }),
+    body: JSON.stringify({ typing_status }),
   });
   // Typing status failure is non-critical — log but don't throw
   if (!res.ok) {
-    console.warn(`[zenya] setTypingStatus ${status} failed (${res.status}) — non-critical`);
+    console.warn(`[zenya] setTypingStatus ${typing_status} failed (${res.status}) — non-critical`);
   }
 }
 

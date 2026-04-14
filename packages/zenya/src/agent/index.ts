@@ -87,8 +87,9 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
       const respondWithAudio = audioPref === 'audio' || (audioPref === null && inputIsAudio === true);
 
       if (respondWithAudio) {
+        // Show "gravando áudio..." indicator before generating audio
+        await setTypingStatus(chatwootParams, 'on', 'recording').catch(() => undefined);
         try {
-          // Note: Chatwoot API only supports typing 'on'/'off' — no separate "recording" state
           const ssml = await formatSSML(reply);
           const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey());
           await sendAudioMessage(chatwootParams, audioBuffer);
