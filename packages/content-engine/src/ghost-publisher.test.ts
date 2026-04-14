@@ -372,6 +372,54 @@ describe('publishToGhost — bodyFull vs bodyPreview', () => {
   });
 });
 
+// ─── publishToGhost — feature image (Story 6.8) ──────────────────────────────
+
+describe('publishToGhost — feature image AC4 (Story 6.8)', () => {
+  it('AC4: usa productName como feature_image_alt quando fornecido', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(basePost, 'https://cdn.example.com/img.jpg', 'Colar Gotas Eye Banhado à Prata');
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<{ feature_image_alt: string }> };
+    expect(body.posts[0]?.feature_image_alt).toBe('Colar Gotas Eye Banhado à Prata — Plaka Acessórios');
+  });
+
+  it('AC4: usa imageDesc do post quando productName não fornecido', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(
+      { ...basePost, imageDesc: 'semi joia banhada a ouro — uso diário' },
+      'https://cdn.example.com/img.jpg',
+    );
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<{ feature_image_alt: string }> };
+    expect(body.posts[0]?.feature_image_alt).toBe('semi joia banhada a ouro — uso diário');
+  });
+
+  it('AC4: productName tem precedência sobre imageDesc do Vista', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse(ghostPostResponse))
+      .mockResolvedValueOnce(makeOkResponse(ghostVerifyResponse));
+
+    await publishToGhost(
+      { ...basePost, imageDesc: 'descrição genérica do Vista' },
+      'https://cdn.example.com/img.jpg',
+      'Choker Illusion Corrente Manu',
+    );
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string) as { posts: Array<{ feature_image_alt: string }> };
+    expect(body.posts[0]?.feature_image_alt).toBe('Choker Illusion Corrente Manu — Plaka Acessórios');
+    expect(body.posts[0]?.feature_image_alt).not.toContain('genérica');
+  });
+});
+
 // ─── Story 6.3 — estimateWordCount ───────────────────────────────────────────
 
 describe('estimateWordCount', () => {

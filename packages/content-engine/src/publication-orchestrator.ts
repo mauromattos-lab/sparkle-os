@@ -7,7 +7,7 @@ import { getContentPost, updateContentPost } from '@sparkle-os/core';
 import { selectDriveImage } from './drive-client.js';
 import { publishToGhost } from './ghost-publisher.js';
 import { publishToPinterest } from './pinterest-publisher.js';
-import { fetchFirstProductImageUrl } from './product-enricher.js';
+import { fetchRelevantProductImageUrl } from './product-enricher.js';
 
 export async function triggerPublication(postId: string): Promise<void> {
   const post = await getContentPost(postId);
@@ -34,13 +34,16 @@ export async function triggerPublication(postId: string): Promise<void> {
   const postWithImage = await getContentPost(postId);
   if (!postWithImage) return;
 
-  // Step 2 (Story 6.2 + 6.7): Publish to Ghost CMS with feature image when available
-  const featureImageUrl = await fetchFirstProductImageUrl().catch((err: unknown) => {
+  // Step 2 (Story 6.2 + 6.7 + 6.8): Publish to Ghost CMS with semantically relevant feature image
+  const imageResult = await fetchRelevantProductImageUrl(
+    postWithImage.title ?? '',
+    postWithImage.topic ?? undefined,
+  ).catch((err: unknown) => {
     console.warn('[publication-orchestrator] Feature image fetch failed (non-blocking):', err);
     return null;
   });
 
-  await publishToGhost(postWithImage, featureImageUrl ?? undefined);
+  await publishToGhost(postWithImage, imageResult?.url, imageResult?.productName);
 
   // Re-fetch to get blogUrl for the Pinterest pin link
   const postWithBlog = await getContentPost(postId);

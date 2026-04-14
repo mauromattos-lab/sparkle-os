@@ -1,12 +1,20 @@
-// product-enricher.test.ts — Stories 6.6 + 6.7
-// Unit tests with mocked NuvemShop API
+// product-enricher.test.ts — Stories 6.6 + 6.7 + 6.8
+// Unit tests with mocked NuvemShop API and OpenAI client
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
-const { fetchClientProducts, fetchFirstProductImageUrl } = await import('./product-enricher.js');
+// Mock OpenAI antes de importar o módulo
+const mockCreate = vi.fn();
+vi.mock('openai', () => ({
+  default: vi.fn().mockImplementation(() => ({
+    chat: { completions: { create: mockCreate } },
+  })),
+}));
+
+const { fetchClientProducts, fetchFirstProductImageUrl, fetchRelevantProductImageUrl, buildSelectionPrompt } = await import('./product-enricher.js');
 
 const PRODUCTS_FIXTURE = [
   {
@@ -32,7 +40,9 @@ const PRODUCTS_FIXTURE = [
 beforeEach(() => {
   vi.stubEnv('NUVEMSHOP_ACCESS_TOKEN', 'test-token');
   vi.stubEnv('NUVEMSHOP_USER_ID', '1447473');
+  vi.stubEnv('OPENAI_API_KEY', 'test-openai-key');
   mockFetch.mockReset();
+  mockCreate.mockReset();
 });
 
 afterEach(() => {
@@ -191,5 +201,102 @@ describe('fetchFirstProductImageUrl', () => {
     const result = await fetchFirstProductImageUrl();
 
     expect(result).toBeNull();
+  });
+});
+
+// ─── buildSelectionPrompt — Story 6.8 ────────────────────────────────────────
+
+describe('buildSelectionPrompt', () => {
+  it('gera prompt com título e lista de produtos', () => {
+    const result = buildSelectionPrompt('Semi joia na praia', undefined, ['Choker Illusion', 'Colar Gotas Eye']);
+
+    expect(result).toContain('Título do post: Semi joia na praia');
+    expect(result).toContain('0: Choker Illusion');
+    expect(result).toContain('1: Colar Gotas Eye');
+    expect(result).toContain('número inteiro');
+  });
+
+  it('inclui linha de tópico quando postTopic fornecido', () => {
+    const result = buildSelectionPrompt('Título', 'cuidados', ['Produto A']);
+
+    expect(result).toContain('Tópico: cuidados');
+  });
+
+  it('omite linha de tópico quando postTopic undefined', () => {
+    const result = buildSelectionPrompt('Título', undefined, ['Produto A']);
+
+    expect(result).not.toContain('Tópico:');
+  });
+});
+
+// ─── fetchRelevantProductImageUrl — Story 6.8 ────────────────────────────────
+
+describe('fetchRelevantProductImageUrl', () => {
+  it('AC1/AC2: seleciona produto relevante via LLM e retorna url + productName', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => PRODUCTS_FIXTURE });
+    // LLM seleciona índice 1 (Colar Gotas Eye)
+    mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: '1' } }] });
+
+    const result = await fetchRelevantProductImageUrl('Post sobre colares', 'estilo');
+
+    expect(result).toEqual({
+      url: 'https://d2r9epyceweg5n.cloudfront.net/stores/001/447/473/products/colar-p1.jpg',
+      productName: 'Colar Gotas Eye Banhado à Prata',
+    });
+  });
+
+  it('AC5: retorna null se API NuvemShop falhar', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await fetchRelevantProductImageUrl('Post qualquer');
+
+    expect(result).toBeNull();
+  });
+
+  it('AC5: retorna null se nenhum produto publicado tiver imagem', async () => {
+    const noImages = PRODUCTS_FIXTURE.map((p) => ({ ...p, images: [] }));
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => noImages });
+
+    const result = await fetchRelevantProductImageUrl('Post qualquer');
+
+    expect(result).toBeNull();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('AC6: fallback para primeiro produto se LLM retornar índice fora do range', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => PRODUCTS_FIXTURE });
+    mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: '99' } }] });
+
+    const result = await fetchRelevantProductImageUrl('Post qualquer');
+
+    expect(result?.productName).toBe('Choker Illusion Corrente Manu Banhada à Prata');
+  });
+
+  it('AC6: fallback para primeiro produto se LLM retornar resposta inválida (NaN)', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => PRODUCTS_FIXTURE });
+    mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: 'colar' } }] });
+
+    const result = await fetchRelevantProductImageUrl('Post qualquer');
+
+    expect(result?.productName).toBe('Choker Illusion Corrente Manu Banhada à Prata');
+  });
+
+  it('AC5: fallback para primeiro produto se LLM lançar exceção', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => PRODUCTS_FIXTURE });
+    mockCreate.mockRejectedValueOnce(new Error('OpenAI timeout'));
+
+    const result = await fetchRelevantProductImageUrl('Post qualquer');
+
+    expect(result?.productName).toBe('Choker Illusion Corrente Manu Banhada à Prata');
+  });
+
+  it('AC5: fallback para primeiro produto se OPENAI_API_KEY não configurado', async () => {
+    vi.stubEnv('OPENAI_API_KEY', '');
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => PRODUCTS_FIXTURE });
+
+    const result = await fetchRelevantProductImageUrl('Post qualquer');
+
+    expect(result?.productName).toBe('Choker Illusion Corrente Manu Banhada à Prata');
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

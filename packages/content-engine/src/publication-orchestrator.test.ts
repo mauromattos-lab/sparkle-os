@@ -1,6 +1,7 @@
-// Unit tests for Publication Orchestrator — Stories 5.3 + 5.4 + 5.5 + 6.2 + 6.7
+// Unit tests for Publication Orchestrator — Stories 5.3 + 5.4 + 5.5 + 6.2 + 6.7 + 6.8
 // Atualizado Story 6.4: mock de ghost-publisher em vez de nuvemshop-publisher
 // Atualizado Story 6.7: mock de product-enricher para fetchFirstProductImageUrl
+// Atualizado Story 6.8: fetchFirstProductImageUrl → fetchRelevantProductImageUrl
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -24,13 +25,14 @@ vi.mock('./pinterest-publisher.js', () => ({
 vi.mock('./product-enricher.js', () => ({
   fetchClientProducts: vi.fn().mockResolvedValue(''),
   fetchFirstProductImageUrl: vi.fn().mockResolvedValue(null),
+  fetchRelevantProductImageUrl: vi.fn().mockResolvedValue(null),
 }));
 
 import { getContentPost, updateContentPost } from '@sparkle-os/core';
 import { selectDriveImage } from './drive-client.js';
 import { publishToGhost } from './ghost-publisher.js';
 import { publishToPinterest } from './pinterest-publisher.js';
-import { fetchFirstProductImageUrl } from './product-enricher.js';
+import { fetchRelevantProductImageUrl } from './product-enricher.js';
 import { triggerPublication } from './publication-orchestrator.js';
 
 const mockGetPost = vi.mocked(getContentPost);
@@ -38,7 +40,7 @@ const mockUpdate = vi.mocked(updateContentPost);
 const mockSelectDrive = vi.mocked(selectDriveImage);
 const mockPublishGhost = vi.mocked(publishToGhost);
 const mockPublishPin = vi.mocked(publishToPinterest);
-const mockFetchImageUrl = vi.mocked(fetchFirstProductImageUrl);
+const mockFetchImageUrl = vi.mocked(fetchRelevantProductImageUrl);
 
 const BASE_POST = {
   id: 'post-123',
@@ -101,7 +103,7 @@ describe('triggerPublication', () => {
 
     await triggerPublication('post-123');
 
-    expect(mockPublishGhost).toHaveBeenCalledWith(expect.objectContaining({ id: 'post-123' }), undefined);
+    expect(mockPublishGhost).toHaveBeenCalledWith(expect.objectContaining({ id: 'post-123' }), undefined, undefined);
   });
 
   it('calls publishToPinterest after Ghost', async () => {
@@ -136,22 +138,26 @@ describe('triggerPublication', () => {
     expect(mockPublishGhost).toHaveBeenCalled();
   });
 
-  // ─── Story 6.7 — feature image ─────────────────────────────────────────────
+  // ─── Story 6.7 + 6.8 — feature image ──────────────────────────────────────
 
-  it('AC2: passa featureImageUrl para publishToGhost quando disponível', async () => {
+  it('AC2/6.8: passa featureImageUrl e productName para publishToGhost quando disponível', async () => {
     mockGetPost.mockResolvedValue(BASE_POST);
     mockSelectDrive.mockResolvedValueOnce(null);
-    mockFetchImageUrl.mockResolvedValueOnce('https://cdn.plaka.com.br/produto.jpg');
+    mockFetchImageUrl.mockResolvedValueOnce({
+      url: 'https://cdn.plaka.com.br/produto.jpg',
+      productName: 'Colar Gotas Eye',
+    });
 
     await triggerPublication('post-123');
 
     expect(mockPublishGhost).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'post-123' }),
       'https://cdn.plaka.com.br/produto.jpg',
+      'Colar Gotas Eye',
     );
   });
 
-  it('AC6: passa undefined para publishToGhost quando fetchFirstProductImageUrl retorna null', async () => {
+  it('AC6/6.8: passa undefined quando fetchRelevantProductImageUrl retorna null', async () => {
     mockGetPost.mockResolvedValue(BASE_POST);
     mockSelectDrive.mockResolvedValueOnce(null);
     mockFetchImageUrl.mockResolvedValueOnce(null);
@@ -161,10 +167,11 @@ describe('triggerPublication', () => {
     expect(mockPublishGhost).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'post-123' }),
       undefined,
+      undefined,
     );
   });
 
-  it('AC6: falha em fetchFirstProductImageUrl não bloqueia publicação', async () => {
+  it('AC6/6.8: falha em fetchRelevantProductImageUrl não bloqueia publicação', async () => {
     mockGetPost.mockResolvedValue(BASE_POST);
     mockSelectDrive.mockResolvedValueOnce(null);
     mockFetchImageUrl.mockRejectedValueOnce(new Error('NuvemShop offline'));

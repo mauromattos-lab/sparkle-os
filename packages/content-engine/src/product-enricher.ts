@@ -1,6 +1,35 @@
-// product-enricher.ts — Stories 6.6 + 6.7
+// product-enricher.ts — Stories 6.6 + 6.7 + 6.8
 // Fetches product catalog from NuvemShop API to enrich squad briefing
 // Graceful degradation: returns empty string / null if API unavailable or misconfigured
+
+import OpenAI from 'openai';
+
+const MODEL = process.env['CONTENT_ENGINE_MODEL'] ?? 'gpt-4o-mini';
+
+let _openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI | null {
+  const apiKey = process.env['OPENAI_API_KEY'];
+  if (!apiKey) return null;
+  if (!_openai) _openai = new OpenAI({ apiKey });
+  return _openai;
+}
+
+// Story 6.8 — prompt conciso e determinístico para seleção de produto por relevância
+export function buildSelectionPrompt(
+  postTitle: string,
+  postTopic: string | undefined,
+  productNames: string[],
+): string {
+  const topicLine = postTopic ? `\nTópico: ${postTopic}` : '';
+  const list = productNames.map((n, i) => `${i}: ${n}`).join('\n');
+  return (
+    `Título do post: ${postTitle}${topicLine}\n\n` +
+    `Produtos disponíveis:\n${list}\n\n` +
+    `Responda APENAS com o número (índice) do produto mais relevante para o post. ` +
+    `Responda somente com um número inteiro.`
+  );
+}
 
 interface NuvemShopProduct {
   name: { pt?: string; en?: string };
@@ -78,6 +107,7 @@ export async function fetchClientProducts(): Promise<string> {
 /**
  * Returns the CDN URL of the first image from the first published product with an image.
  * Used as feature_image for Ghost posts (AEO — Story 6.7).
+ * Used as fallback by fetchRelevantProductImageUrl (Story 6.8).
  *
  * Returns null on any failure (graceful degradation — AC6).
  */
@@ -97,4 +127,72 @@ export async function fetchFirstProductImageUrl(): Promise<string | null> {
   }
 
   return null;
+}
+
+/**
+ * Selects the most semantically relevant product image for a post using gpt-4o-mini.
+ * Falls back to fetchFirstProductImageUrl() if LLM fails or returns invalid response.
+ * Returns null if no products with images available (graceful degradation — AC5).
+ *
+ * Story 6.8 — AC1, AC2, AC5, AC6
+ */
+export async function fetchRelevantProductImageUrl(
+  postTitle: string,
+  postTopic?: string,
+): Promise<{ url: string; productName: string } | null> {
+  const products = await fetchProducts();
+  if (!products) return null;
+
+  const publishedWithImages = products.filter(
+    (p) => p.published && p.images?.[0]?.src && (p.name.pt ?? p.name.en),
+  );
+
+  if (!publishedWithImages.length) return null;
+
+  // Fallback: primeiro produto publicado com imagem (comportamento 6.7)
+  const fallbackToFirst = (): { url: string; productName: string } | null => {
+    const first = publishedWithImages[0];
+    if (!first?.images?.[0]?.src) return null;
+    return {
+      url: first.images[0].src,
+      productName: (first.name.pt ?? first.name.en) as string,
+    };
+  };
+
+  const client = getOpenAIClient();
+  if (!client) {
+    console.warn('[product-enricher] OPENAI_API_KEY não configurado — usando primeiro produto (fallback 6.7)');
+    return fallbackToFirst();
+  }
+
+  const productNames = publishedWithImages.map((p) => (p.name.pt ?? p.name.en) as string);
+  const prompt = buildSelectionPrompt(postTitle, postTopic, productNames);
+
+  try {
+    const response = await client.chat.completions.create({
+      model: MODEL,
+      max_tokens: 10,
+      temperature: 0,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const raw = response.choices[0]?.message?.content?.trim() ?? '';
+    const idx = parseInt(raw, 10);
+
+    if (isNaN(idx) || idx < 0 || idx >= publishedWithImages.length) {
+      console.warn(`[product-enricher] LLM retornou índice inválido "${raw}" — usando primeiro produto`);
+      return fallbackToFirst();
+    }
+
+    const selected = publishedWithImages[idx];
+    if (!selected?.images?.[0]?.src) return fallbackToFirst();
+
+    return {
+      url: selected.images[0].src,
+      productName: (selected.name.pt ?? selected.name.en) as string,
+    };
+  } catch (err) {
+    console.warn(`[product-enricher] LLM falhou ao selecionar produto (non-blocking): ${String(err)}`);
+    return fallbackToFirst();
+  }
 }

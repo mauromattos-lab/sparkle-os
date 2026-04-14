@@ -197,7 +197,11 @@ async function verifyCodeInjection(
 
 // ─── Publisher principal (AC1 + AC2 + AC3 + AC4 + AC5 + AC6) ─────────────────
 
-export async function publishToGhost(post: ContentPost, featureImageUrl?: string): Promise<void> {
+export async function publishToGhost(
+  post: ContentPost,
+  featureImageUrl?: string,
+  featureImageProductName?: string,  // Story 6.8 — AC4: nome do produto selecionado pelo LLM
+): Promise<void> {
   const ghostApiUrl = process.env['GHOST_API_URL'];
   const ghostAdminApiKey = process.env['GHOST_ADMIN_API_KEY'];
 
@@ -240,7 +244,12 @@ export async function publishToGhost(post: ContentPost, featureImageUrl?: string
   const jsonLdOptions: JsonLdOptions = { wordCount, faqItems };
   if (post.topic) jsonLdOptions.articleSection = post.topic;
   if (featureImageUrl) jsonLdOptions.imageUrl = featureImageUrl;
-  if (post.imageDesc) jsonLdOptions.imageAlt = post.imageDesc;
+  // Story 6.8 — AC4: productName tem precedência no ImageObject do schema
+  if (featureImageProductName) {
+    jsonLdOptions.imageAlt = `${featureImageProductName} — Plaka Acessórios`;
+  } else if (post.imageDesc) {
+    jsonLdOptions.imageAlt = post.imageDesc;
+  }
 
   const postBody = {
     posts: [
@@ -251,7 +260,12 @@ export async function publishToGhost(post: ContentPost, featureImageUrl?: string
         slug: slugify(title),
         codeinjection_head: buildJsonLd(title, now, jsonLdOptions),
         ...(featureImageUrl ? { feature_image: featureImageUrl } : {}),
-        ...(post.imageDesc ? { feature_image_alt: post.imageDesc } : {}),
+        // Story 6.8 — AC4: productName tem precedência sobre imageDesc do Vista
+        ...(featureImageProductName
+          ? { feature_image_alt: `${featureImageProductName} — Plaka Acessórios` }
+          : post.imageDesc
+            ? { feature_image_alt: post.imageDesc }
+            : {}),
       },
     ],
   };
