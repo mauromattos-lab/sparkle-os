@@ -1,0 +1,77 @@
+// Zenya agent loop — processes incoming messages using Vercel AI SDK + OpenAI gpt-4.1
+// Loads conversation history, calls LLM with tools, saves history, sends response
+
+import { generateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { loadHistory, saveHistory } from './memory.js';
+import { buildSystemPrompt } from './prompt.js';
+import { createTenantTools } from '../tenant/tool-factory.js';
+import { sendMessage, setTypingStatus, getChatwootParams } from '../integrations/chatwoot.js';
+import type { TenantConfig } from '../tenant/config-loader.js';
+
+export interface AgentParams {
+  /** UUID from zenya_tenants */
+  tenantId: string;
+  /** Chatwoot account_id (for API calls) */
+  accountId: string;
+  /** Chatwoot conversation_id */
+  conversationId: string;
+  /** Resolved tenant configuration */
+  config: TenantConfig;
+  /** Incoming user message text */
+  message: string;
+  /** User's phone number */
+  phone: string;
+}
+
+/**
+ * Runs the Zenya agent loop for a single incoming message.
+ * Orchestrates: history → LLM → history save → Chatwoot response.
+ *
+ * AC7: Any errors bubble up to the webhook lock handler's finally block,
+ * ensuring the session lock is always released.
+ */
+export async function runZenyaAgent(params: AgentParams): Promise<void> {
+  const { tenantId, accountId, conversationId, config, message, phone } = params;
+
+  const chatwootParams = getChatwootParams(accountId, conversationId);
+
+  // Show typing indicator (non-blocking failure OK)
+  await setTypingStatus(chatwootParams, 'on').catch(() => undefined);
+
+  try {
+    // AC2: load conversation history (last 50 messages)
+    const history = await loadHistory(tenantId, phone);
+
+    // AC4: build full system prompt (base + client SOP)
+    const systemPrompt = buildSystemPrompt(config);
+
+    // AC5: create tenant-scoped tools (tenantId injected via closure)
+    const tools = createTenantTools(tenantId, config, { accountId, conversationId });
+
+    // AC1: call LLM with generateText (gpt-4.1, maxSteps: 15)
+    const result = await generateText({
+      model: openai('gpt-4.1'),
+      maxSteps: 15,
+      system: systemPrompt,
+      messages: [
+        ...history.map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: message },
+      ],
+      tools,
+    });
+
+    const reply = result.text;
+
+    // AC3: save conversation history
+    await saveHistory(tenantId, phone, message, reply);
+
+    // AC6: send reply via Chatwoot
+    if (reply.trim()) {
+      await sendMessage(chatwootParams, reply);
+    }
+  } finally {
+    // Turn off typing regardless of success or error
+    await setTypingStatus(chatwootParams, 'off').catch(() => undefined);
+  }
+}
