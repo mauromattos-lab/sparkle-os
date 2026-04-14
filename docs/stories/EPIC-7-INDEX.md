@@ -1,6 +1,6 @@
 # Epic 7 — Zenya como Órgão Nativo do SparkleOS
 
-**Status:** 🔲 Draft — Stories 7.1 🔲 7.2 🔲 7.3 🔲 7.4 🔲 7.5 🔲 7.6 🔲 7.7 🔲 7.8 🔲
+**Status:** 🟡 InProgress — Stories 7.1 ✅ 7.2 ✅ 7.3 ✅ 7.4 ✅ 7.5 ✅ 7.6 ✅ 7.7 ✅ 7.8 🔲
 **Criado por:** Morgan (@pm) + River (@sm)
 **Data:** 2026-04-14
 **Fonte:** PRD `docs/zenya-orgao-sparkle-prd.md` — análise Atlas + arquitetura Aria + pesquisa externa Atlas
@@ -22,14 +22,14 @@ O SparkleOS foi construído para ser o ambiente onde a Zenya cresce. Mantê-la f
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|------------|------------|----------|
-| [7.1](./7.1.story.md) | Fundação: pacote Zenya + Webhook Worker | 🔲 Draft | P1 — Blocker | — | @dev |
-| [7.2](./7.2.story.md) | Tenant Config Loader + Isolamento Multi-tenant | 🔲 Draft | P1 | 7.1 | @dev + @data-engineer |
-| [7.3](./7.3.story.md) | Agent Loop Core (Agente Principal) | 🔲 Draft | P1 | 7.2 | @dev |
-| [7.4](./7.4.story.md) | Message Chunker + Typing Simulation | 🔲 Draft | P2 | 7.3 | @dev |
-| [7.5](./7.5.story.md) | Ferramentas de Agendamento (Google Calendar) | 🔲 Draft | P2 | 7.3 | @dev |
-| [7.6](./7.6.story.md) | Resposta em Áudio (ElevenLabs TTS) | 🔲 Draft | P2 | 7.3 | @dev |
-| [7.7](./7.7.story.md) | Ferramentas de Integração Customizada | 🔲 Draft | P2 | 7.3 | @dev |
-| [7.8](./7.8.story.md) | Validação com Zenya Prime e Cutover | 🔲 Draft | P1 | 7.3, 7.4, 7.5, 7.6, 7.7 | @dev + @devops |
+| [7.1](./7.1.story.md) | Fundação: pacote Zenya + Webhook Worker | ✅ Ready for Review | P1 — Blocker | — | @dev |
+| [7.2](./7.2.story.md) | Tenant Config Loader + Isolamento Multi-tenant | ✅ Ready for Review | P1 | 7.1 | @dev + @data-engineer |
+| [7.3](./7.3.story.md) | Agent Loop Core (Agente Principal) | ✅ Ready for Review | P1 | 7.2 | @dev |
+| [7.4](./7.4.story.md) | Message Chunker + Typing Simulation | ✅ Ready for Review | P2 | 7.3 | @dev |
+| [7.5](./7.5.story.md) | Ferramentas de Agendamento (Google Calendar) | ✅ Ready for Review | P2 | 7.3 | @dev |
+| [7.6](./7.6.story.md) | Resposta em Áudio (ElevenLabs TTS) | ✅ Ready for Review | P2 | 7.3 | @dev |
+| [7.7](./7.7.story.md) | Ferramentas de Integração Customizada | ✅ Ready for Review | P2 | 7.3 | @dev |
+| [7.8](./7.8.story.md) | Validação com Zenya Prime e Cutover | 🔲 Aguardando Deploy | P1 | 7.3, 7.4, 7.5, 7.6, 7.7 | @dev + @devops |
 
 ---
 
@@ -63,9 +63,9 @@ Wave 4 — Cutover (após todas):
 
 | Componente | Tecnologia |
 |-----------|-----------|
-| Agent loop | Vercel AI SDK 5 (`generateText` + `tools`) |
-| Webhook server | Fastify (Node.js) |
-| Fila + Lock | PostgreSQL (`SELECT FOR UPDATE SKIP LOCKED`) |
+| Agent loop | Vercel AI SDK 4 (`generateText` + `tool()`) |
+| Webhook server | Hono (Node.js) |
+| Fila + Lock | PostgreSQL INSERT ON CONFLICT (via Supabase JS) |
 | Memória | PostgreSQL + Supabase |
 | TTS | ElevenLabs API |
 | Deploy | PM2 na VPS (187.77.37.88) |
