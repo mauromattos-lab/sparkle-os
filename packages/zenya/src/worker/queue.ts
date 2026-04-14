@@ -13,6 +13,8 @@ export interface QueuedMessage {
 export interface PendingMessage {
   message_id: string;
   content: string;
+  /** URL of audio attachment, if message has no text content */
+  audio_url?: string | undefined;
 }
 
 export async function enqueue(msg: QueuedMessage): Promise<void> {
@@ -51,10 +53,20 @@ export async function fetchPending(
 
   if (error) throw new Error(`fetchPending failed: ${error.message}`);
 
-  return (data ?? []).map((row) => ({
-    message_id: String(row['message_id']),
-    content: String((row['payload'] as Record<string, unknown>)['content'] ?? ''),
-  }));
+  return (data ?? []).map((row) => {
+    const payload = row['payload'] as Record<string, unknown>;
+    const content = String(payload['content'] ?? '');
+    // Extract audio URL if message has no text content (voice message)
+    const attachments = payload['attachments'] as Array<Record<string, unknown>> | undefined;
+    const audioAttachment = attachments?.find(
+      (a) => a['file_type'] === 'audio' && a['data_url'],
+    );
+    return {
+      message_id: String(row['message_id']),
+      content,
+      audio_url: content ? undefined : (audioAttachment?.['data_url'] as string | undefined),
+    };
+  });
 }
 
 export async function markProcessing(messageId: string): Promise<void> {

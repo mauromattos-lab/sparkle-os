@@ -6,6 +6,7 @@ import { enqueue, fetchPending, markAllDone, markAllFailed } from './queue.js';
 import { withSessionLock } from './lock.js';
 import { loadTenantByAccountId } from '../tenant/config-loader.js';
 import { runZenyaAgent } from '../agent/index.js';
+import { transcribeAudioUrl } from '../integrations/whisper.js';
 
 // Debounce window: wait this long after the first message before processing.
 // Any messages arriving during this window are merged into a single agent call.
@@ -91,10 +92,25 @@ export function createWebhookRouter(): Hono {
         const pending = await fetchPending(accountId, phone);
         const pendingIds = pending.map((m) => m.message_id);
 
+        // Resolve content for each pending message — transcribe audio if needed
+        const resolvedContents: string[] = [];
+        for (const m of pending) {
+          if (m.content) {
+            resolvedContents.push(m.content);
+          } else if (m.audio_url) {
+            const transcription = await transcribeAudioUrl(m.audio_url);
+            if (transcription) {
+              resolvedContents.push(transcription);
+            } else {
+              resolvedContents.push('[áudio não transcrito]');
+            }
+          }
+        }
+
         // Merge all pending messages into a single input for the agent
         // If no pending found (race condition), fall back to the current message
-        const mergedMessage = pending.length > 0
-          ? pending.map((m) => m.content).filter(Boolean).join('\n')
+        const mergedMessage = resolvedContents.length > 0
+          ? resolvedContents.join('\n')
           : message;
 
         // Resolve actual tenant config (cache hit after first request)
