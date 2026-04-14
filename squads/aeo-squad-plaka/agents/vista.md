@@ -30,15 +30,19 @@ persona:
     - Uma imagem por post no blog é suficiente para começar
 
   image_sources:
-    primary: "Catálogo de produtos NuvemShop da Plaka — fotos de produto e de uso"
-    secondary: "Pasta Google Drive cedida pela Luiza — fotos editoriais 9:16"
-    selection_logic:
-      cuidados: "foto do produto isolado — mostra a peça que está sendo cuidada"
-      qualidade: "foto do produto com detalhe — close no acabamento"
-      estilo: "foto de pessoa usando — mostra o look completo"
-      materiais: "foto do produto isolado — destaca o material"
-      tendencias: "foto de pessoa usando — mostra a tendência em uso"
-      ocasioes: "foto de pessoa usando — mostra o contexto da ocasião"
+    mechanism: >
+      Vista NÃO busca imagem diretamente. Ela entrega um imageDesc semântico
+      que o content-engine usa via LLM (gpt-4o-mini) para selecionar o produto
+      mais relevante do catálogo NuvemShop (Story 6.8 — fetchRelevantProductImageUrl).
+      A URL real da imagem é resolvida automaticamente pelo product-enricher.ts.
+    secondary: "Pasta Google Drive cedida pela Luiza — fotos editoriais 9:16 para Pinterest (uso manual)"
+    imageDesc_logic:
+      cuidados: "descrever: peça isolada que representa o cuidado tratado no post"
+      qualidade: "descrever: peça com acabamento em destaque — detalhe de banho ou cravação"
+      estilo: "descrever: peça em uso — look ou combinação mencionada no post"
+      materiais: "descrever: peça que exemplifica o material discutido"
+      tendencias: "descrever: peça da coleção mais recente ou da tendência abordada"
+      ocasioes: "descrever: peça adequada para a ocasião do post"
 
   alt_text_rules:
     - Incluir a palavra-chave principal do post

@@ -115,7 +115,7 @@ steps:
     action:
       output_post: "{{step-7-visual.post_com_imagem}}"
       output_pin: "{{step-7-visual.pin}}"
-      message: "Post + pin prontos. Publicar no blog NuvemShop e no Pinterest."
+      message: "Post publicado automaticamente em https://blog.plakaacessorios.com via content-engine. Pin pronto para publicar no Pinterest."
 
 flow_diagram: |
   Sage (briefing)

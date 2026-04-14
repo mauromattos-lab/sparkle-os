@@ -27,7 +27,7 @@ Sage registra o post aprovado no histórico após aprovação do Rex.
 ## Quando executar
 
 Imediatamente após Rex emitir veredicto `APROVADO` ou `APROVADO_COM_OBSERVACOES`.
-Antes da publicação manual no blog da NuvemShop.
+A publicação no Ghost (https://blog.plakaacessorios.com) é automática via content-engine — este step registra o histórico.
 
 ## Processo
 
@@ -66,5 +66,5 @@ Rex (APROVADO)
     ↓
 Sage *register-post   ← esta task
     ↓
-Mauro publica no blog da NuvemShop
+content-engine publica automaticamente no Ghost CMS
 ```

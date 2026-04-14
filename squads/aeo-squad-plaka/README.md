@@ -77,7 +77,7 @@ aeo-squad-plaka/
 
 Este squad é parte do **SparkleOS** — sistema de orquestração de IA da Synkra.
 Cliente: Luiza (Plaka Acessórios) | Operador: Mauro
-Integração prevista: NuvemShop Blog API (publicação) + Pinterest API (distribuição)
+Integração: Ghost CMS na VPS (publicação) + NuvemShop Catalog API (imagens) + Pinterest API (distribuição)
 
 ## Manutenção
 

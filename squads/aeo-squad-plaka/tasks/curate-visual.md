@@ -14,8 +14,7 @@ Saida: |
   - pin: {titulo, descricao, hashtags}
 Checklist:
   - "[ ] Identificar bloco de conteúdo do briefing"
-  - "[ ] Selecionar tipo de imagem (produto isolado vs. pessoa usando)"
-  - "[ ] Descrever qual imagem buscar (categoria, produto, contexto)"
+  - "[ ] Escrever imageDesc semântico — descrever produto ideal para o tópico"
   - "[ ] Escrever alt text AEO-otimizado (máx 125 chars)"
   - "[ ] Inserir referência de imagem no post (após primeiro H2)"
   - "[ ] Escrever título do pin (máx 100 chars)"
@@ -39,9 +38,11 @@ bloco = tendencias → foto de pessoa usando (tendência em contexto)
 bloco = ocasioes  → foto de pessoa usando (contexto da ocasião)
 ```
 
-**Fonte prioritária por bloco:**
-- Produto isolado → catálogo NuvemShop (formato correto para blog)
-- Pessoa usando → Drive da Luiza ou catálogo NuvemShop (o que estiver disponível)
+**Como a imagem é resolvida:**
+A Vista entrega `imageDesc` — descrição semântica do produto ideal para o post.
+O `content-engine` (product-enricher.ts + gpt-4o-mini) seleciona automaticamente
+o produto mais relevante do catálogo NuvemShop e resolve a URL real.
+Vista não faz chamada de API diretamente.
 
 ## Formato de Output
 
@@ -49,8 +50,7 @@ bloco = ocasioes  → foto de pessoa usando (contexto da ocasião)
 
 ```yaml
 imagem_blog:
-  fonte: "NuvemShop catálogo | Google Drive"
-  descricao: "string — descrição detalhada de qual imagem buscar"
+  imageDesc: "string — descrição semântica do produto ideal (usada pelo content-engine para seleção LLM)"
   alt_text: "string — máx 125 caracteres, com palavra-chave principal"
   posicao_no_post: "após primeiro H2"
 ```

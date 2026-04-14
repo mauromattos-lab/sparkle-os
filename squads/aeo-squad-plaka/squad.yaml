@@ -42,7 +42,8 @@ config:
 dependencies:
   integrations:
     - exa-web-search
-    - nuvemshop-blog-api
+    - nuvemshop-catalog-api
+    - ghost-cms-api
     - pinterest-api
   squads: []
 

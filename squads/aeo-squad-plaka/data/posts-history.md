@@ -9,9 +9,7 @@
 
 | Data | Tópico | Pergunta Central | Bloco | Palavras-chave Principais |
 |------|--------|-----------------|-------|--------------------------|
-| — | — | — | — | — |
-
-*(Registro vazio — primeiro post ainda não gerado)*
+| 2026-04-14 | Por que semi joia deixa a pele verde | Por que semi joia deixa a pele verde e como evitar? | cuidados | semi joia deixa pele verde, semi joia mancha, oxidação pele |
 
 ---
 
@@ -33,7 +31,7 @@
 
 | Bloco | Meta Semanal | Atual |
 |-------|-------------|-------|
-| Cuidados | 2 posts | 0 |
+| Cuidados | 2 posts | 1 |
 | Qualidade | 2 posts | 0 |
 | Estilo | 1 post | 0 |
 | Materiais | 1 post | 0 |
@@ -50,7 +48,7 @@ Lista de tópicos de alta prioridade identificados na pesquisa inicial (@analyst
 - [ ] Semi joia na praia e piscina — o que acontece e o que fazer depois
 - [ ] Como limpar semi joia em casa sem danificar
 - [ ] Como guardar semi joia para durar mais anos
-- [ ] Semi joia mancha? Por quê e como evitar
+- [x] Semi joia mancha? Por quê e como evitar
 - [ ] Semi joia no banho — pode ou não pode?
 - [ ] Como tirar o cheiro de metal de semi joias
 

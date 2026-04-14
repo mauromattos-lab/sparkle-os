@@ -96,4 +96,4 @@ Lyra escreve o artigo AEO do dia a partir do briefing da Sage.
 
 ## Output Format
 
-Entregar o post completo em Markdown, pronto para copiar e colar no blog da NuvemShop.
+Entregar o post completo em Markdown — publicação automática no Ghost (https://blog.plakaacessorios.com) via content-engine.
