@@ -6,10 +6,15 @@ import { openai } from '@ai-sdk/openai';
 import { loadHistory, saveHistory } from './memory.js';
 import { buildSystemPrompt } from './prompt.js';
 import { createTenantTools } from '../tenant/tool-factory.js';
-import { setTypingStatus, getChatwootParams, getContactAudioPreference } from '../integrations/chatwoot.js';
+import {
+  setTypingStatus,
+  getChatwootParams,
+  getContactAudioPreference,
+  markConversationRead,
+  sendAudioMessage,
+} from '../integrations/chatwoot.js';
 import { chunkAndSend } from '../integrations/message-chunker.js';
 import { formatSSML, generateAudio, getElevenLabsApiKey } from '../integrations/elevenlabs.js';
-import { sendAudioMessage } from '../integrations/chatwoot.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
 export interface AgentParams {
@@ -38,6 +43,9 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
   const { tenantId, accountId, conversationId, config, message, phone } = params;
 
   const chatwootParams = getChatwootParams(accountId, conversationId);
+
+  // Mark conversation as read — user sees double-check receipt immediately
+  await markConversationRead(chatwootParams).catch(() => undefined);
 
   // Show typing indicator (non-blocking failure OK)
   await setTypingStatus(chatwootParams, 'on').catch(() => undefined);
@@ -75,6 +83,7 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
 
       if (audioPref === 'audio') {
         try {
+          // Note: Chatwoot API only supports typing 'on'/'off' — no separate "recording" state
           const ssml = await formatSSML(reply);
           const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey());
           await sendAudioMessage(chatwootParams, audioBuffer);

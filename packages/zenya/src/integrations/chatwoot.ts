@@ -156,6 +156,22 @@ export async function setContactAudioPreference(
   await assertOk(res, 'setContactAudioPreference');
 }
 
+/**
+ * Marks all messages in the conversation as read (updates agent's last_seen_at).
+ * Called at the start of processing so the user sees the "read" receipt.
+ */
+export async function markConversationRead(params: ChatwootParams): Promise<void> {
+  const res = await fetch(apiUrl(params, '/update_last_seen'), {
+    method: 'POST',
+    headers: headers(params.token),
+    body: JSON.stringify({}),
+  });
+  // Non-critical — log but don't throw
+  if (!res.ok) {
+    console.warn(`[zenya] markConversationRead failed (${res.status}) — non-critical`);
+  }
+}
+
 /** Builds ChatwootParams from environment variables + runtime IDs. */
 export function getChatwootParams(accountId: string, conversationId: string): ChatwootParams {
   const url = process.env['CHATWOOT_URL'];

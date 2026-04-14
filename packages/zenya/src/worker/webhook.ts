@@ -2,10 +2,18 @@
 // Decision: using Hono instead of Fastify (consistent with brain package pattern)
 
 import { Hono } from 'hono';
-import { enqueue } from './queue.js';
+import { enqueue, fetchPending, markAllDone, markAllFailed } from './queue.js';
 import { withSessionLock } from './lock.js';
 import { loadTenantByAccountId } from '../tenant/config-loader.js';
 import { runZenyaAgent } from '../agent/index.js';
+
+// Debounce window: wait this long after the first message before processing.
+// Any messages arriving during this window are merged into a single agent call.
+const DEBOUNCE_MS = parseInt(process.env['ZENYA_DEBOUNCE_MS'] ?? '2500', 10);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // Chatwoot webhook payload shape (relevant fields only)
 interface ChatwootWebhookPayload {
@@ -76,17 +84,36 @@ export function createWebhookRouter(): Hono {
     // Lock is ALWAYS released in withSessionLock's finally block.
     void (async () => {
       await withSessionLock(accountId, phone, async () => {
+        // Debounce: wait for any burst messages to arrive and get enqueued
+        await sleep(DEBOUNCE_MS);
+
+        // Fetch all pending messages accumulated during the debounce window
+        const pending = await fetchPending(accountId, phone);
+        const pendingIds = pending.map((m) => m.message_id);
+
+        // Merge all pending messages into a single input for the agent
+        // If no pending found (race condition), fall back to the current message
+        const mergedMessage = pending.length > 0
+          ? pending.map((m) => m.content).filter(Boolean).join('\n')
+          : message;
+
         // Resolve actual tenant config (cache hit after first request)
         const config = await loadTenantByAccountId(accountId);
 
-        await runZenyaAgent({
-          tenantId: config.id,
-          accountId,
-          conversationId,
-          config,
-          message,
-          phone,
-        });
+        try {
+          await runZenyaAgent({
+            tenantId: config.id,
+            accountId,
+            conversationId,
+            config,
+            message: mergedMessage,
+            phone,
+          });
+          await markAllDone(pendingIds);
+        } catch (err) {
+          await markAllFailed(pendingIds);
+          throw err;
+        }
       });
     })().catch((err: unknown) => {
       console.error(`[zenya] Agent error for message ${messageId}:`, err);
