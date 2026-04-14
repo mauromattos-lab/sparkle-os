@@ -174,10 +174,10 @@ export async function markConversationRead(params: ChatwootParams): Promise<void
 
 /** Builds ChatwootParams from environment variables + runtime IDs. */
 export function getChatwootParams(accountId: string, conversationId: string): ChatwootParams {
-  const url = process.env['CHATWOOT_URL'];
-  const token = process.env['CHATWOOT_TOKEN'];
+  const url = process.env['CHATWOOT_BASE_URL'];
+  const token = process.env['CHATWOOT_API_TOKEN'];
   if (!url || !token) {
-    throw new Error('CHATWOOT_URL and CHATWOOT_TOKEN env vars are required');
+    throw new Error('CHATWOOT_BASE_URL and CHATWOOT_API_TOKEN env vars are required');
   }
   return { url, accountId, conversationId, token };
 }
