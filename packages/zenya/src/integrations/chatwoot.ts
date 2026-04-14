@@ -73,7 +73,8 @@ export async function setTypingStatus(
   status: 'on' | 'off',
   mode: 'typing' | 'recording' = 'typing',
 ): Promise<void> {
-  const typing_status = status === 'off' ? 'off' : mode;
+  // Chatwoot fazer.ai fork: 'on' for text typing, 'recording' for audio, 'off' to clear
+  const typing_status = status === 'off' ? 'off' : mode === 'recording' ? 'recording' : 'on';
   const res = await fetch(apiUrl(params, '/toggle_typing_status'), {
     method: 'POST',
     headers: headers(params.token),
