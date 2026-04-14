@@ -8,7 +8,9 @@
 import { tool } from 'ai';
 import type { ToolSet } from 'ai';
 import { z } from 'zod';
-import { addLabel, sendMessage, getChatwootParams } from '../integrations/chatwoot.js';
+import { addLabel, sendMessage, getChatwootParams, setContactAudioPreference } from '../integrations/chatwoot.js';
+import { createCalendarTools } from '../integrations/google-calendar.js';
+import { createAsaasTools } from '../integrations/asaas.js';
 import type { TenantConfig } from './config-loader.js';
 
 export interface AgentContext {
@@ -31,7 +33,7 @@ export function createTenantTools(
 ): TenantTools {
   const chatwootParams = () => getChatwootParams(ctx.accountId, ctx.conversationId);
 
-  return {
+  const tools: TenantTools = {
     /**
      * Escalates the conversation to a human agent.
      * Adds 'agente-off' label to Chatwoot — disabling the bot for this session.
@@ -95,7 +97,7 @@ export function createTenantTools(
     }),
 
     /**
-     * Marks the conversation for follow-up (e.g. label 'follow-up').
+     * Marks the conversation for follow-up.
      */
     marcarFollowUp: tool({
       description: 'Marca a conversa para follow-up humano sem desativar o bot.',
@@ -113,4 +115,41 @@ export function createTenantTools(
       },
     }),
   };
+
+  // AC5 (story 7.6): allow user to change audio/text preference
+  tools['alterarPreferenciaAudioTexto'] = tool({
+    description:
+      'Altera a preferência de formato de resposta do usuário (áudio ou texto). ' +
+      'Use quando o usuário pedir para receber respostas em áudio ou voltar para texto.',
+    parameters: z.object({
+      preferencia: z.enum(['audio', 'texto']).describe('Formato de resposta preferido'),
+    }),
+    execute: async ({ preferencia }) => {
+      const params = chatwootParams();
+      await setContactAudioPreference(params, ctx.conversationId, preferencia);
+      return {
+        atualizado: true,
+        preferencia,
+        mensagem:
+          preferencia === 'audio'
+            ? 'Preferência atualizada: você receberá respostas em áudio.'
+            : 'Preferência atualizada: você receberá respostas em texto.',
+      };
+    },
+  });
+
+  // AC4 (story 7.5): conditionally add Google Calendar tools
+  if (config.active_tools.includes('google_calendar')) {
+    Object.assign(tools, createCalendarTools(tenantId, config));
+  }
+
+  // AC2 (story 7.7): Asaas integration — activated per tenant via active_tools
+  // To add a new integration: create integrations/{name}.ts + add guard here
+  if (config.active_tools.includes('asaas')) {
+    // Credentials loaded at execution time inside the tool (via getCredentialJson)
+    // We pass a placeholder here; the tool calls getCredentialJson(tenantId, 'asaas') itself
+    Object.assign(tools, createAsaasTools(tenantId));
+  }
+
+  return tools;
 }

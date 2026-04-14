@@ -6,7 +6,10 @@ import { openai } from '@ai-sdk/openai';
 import { loadHistory, saveHistory } from './memory.js';
 import { buildSystemPrompt } from './prompt.js';
 import { createTenantTools } from '../tenant/tool-factory.js';
-import { sendMessage, setTypingStatus, getChatwootParams } from '../integrations/chatwoot.js';
+import { setTypingStatus, getChatwootParams, getContactAudioPreference } from '../integrations/chatwoot.js';
+import { chunkAndSend } from '../integrations/message-chunker.js';
+import { formatSSML, generateAudio, getElevenLabsApiKey } from '../integrations/elevenlabs.js';
+import { sendAudioMessage } from '../integrations/chatwoot.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
 export interface AgentParams {
@@ -66,9 +69,23 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
     // AC3: save conversation history
     await saveHistory(tenantId, phone, message, reply);
 
-    // AC6: send reply via Chatwoot
+    // AC6: send reply — audio if user prefers it, text otherwise (story 7.6)
     if (reply.trim()) {
-      await sendMessage(chatwootParams, reply);
+      const audioPref = await getContactAudioPreference(chatwootParams, phone).catch(() => null);
+
+      if (audioPref === 'audio') {
+        try {
+          const ssml = await formatSSML(reply);
+          const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey());
+          await sendAudioMessage(chatwootParams, audioBuffer);
+        } catch (audioErr) {
+          // AC4 (story 7.6): fallback to text — user gets the response, not a silent error
+          console.warn('[zenya] Audio generation failed, falling back to text:', audioErr);
+          await chunkAndSend(reply, chatwootParams);
+        }
+      } else {
+        await chunkAndSend(reply, chatwootParams);
+      }
     }
   } finally {
     // Turn off typing regardless of success or error
