@@ -94,10 +94,12 @@ export function createWebhookRouter(): Hono {
 
         // Resolve content for each pending message — transcribe audio if needed
         const resolvedContents: string[] = [];
+        let inputIsAudio = false;
         for (const m of pending) {
           if (m.content) {
             resolvedContents.push(m.content);
           } else if (m.audio_url) {
+            inputIsAudio = true;
             const transcription = await transcribeAudioUrl(m.audio_url);
             if (transcription) {
               resolvedContents.push(transcription);
@@ -124,6 +126,7 @@ export function createWebhookRouter(): Hono {
             config,
             message: mergedMessage,
             phone,
+            inputIsAudio,
           });
           await markAllDone(pendingIds);
         } catch (err) {

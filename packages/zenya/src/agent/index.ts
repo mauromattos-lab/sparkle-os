@@ -30,6 +30,8 @@ export interface AgentParams {
   message: string;
   /** User's phone number */
   phone: string;
+  /** Whether the input came from an audio message (mirrors format by default) */
+  inputIsAudio?: boolean;
 }
 
 /**
@@ -40,7 +42,7 @@ export interface AgentParams {
  * ensuring the session lock is always released.
  */
 export async function runZenyaAgent(params: AgentParams): Promise<void> {
-  const { tenantId, accountId, conversationId, config, message, phone } = params;
+  const { tenantId, accountId, conversationId, config, message, phone, inputIsAudio } = params;
 
   const chatwootParams = getChatwootParams(accountId, conversationId);
 
@@ -77,11 +79,14 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
     // AC3: save conversation history
     await saveHistory(tenantId, phone, message, reply);
 
-    // AC6: send reply — audio if user prefers it, text otherwise (story 7.6)
+    // AC6: send reply — format decision:
+    // 1. Explicit preference ('audio'|'texto') always wins
+    // 2. No preference set → mirror input format (audio in → audio out, text in → text out)
     if (reply.trim()) {
       const audioPref = await getContactAudioPreference(chatwootParams, phone).catch(() => null);
+      const respondWithAudio = audioPref === 'audio' || (audioPref === null && inputIsAudio === true);
 
-      if (audioPref === 'audio') {
+      if (respondWithAudio) {
         try {
           // Note: Chatwoot API only supports typing 'on'/'off' — no separate "recording" state
           const ssml = await formatSSML(reply);
@@ -92,7 +97,7 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
           console.warn('[zenya] Audio generation failed, falling back to text:', audioErr);
           await chunkAndSend(reply, chatwootParams);
         }
-      } else {
+      } else if (audioPref === 'texto' || !respondWithAudio) {
         await chunkAndSend(reply, chatwootParams);
       }
     }
