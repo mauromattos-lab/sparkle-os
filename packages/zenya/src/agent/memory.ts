@@ -45,6 +45,23 @@ export async function loadHistory(
 }
 
 /**
+ * Deletes all conversation history for a session (tenant + phone).
+ * Used by the /reset command in test mode.
+ */
+export async function clearHistory(tenantId: string, phone: string): Promise<void> {
+  const sb = getSupabase();
+  const { error } = await sb
+    .from('zenya_conversation_history')
+    .delete()
+    .eq('tenant_id', tenantId)
+    .eq('phone_number', phone);
+
+  if (error) {
+    throw new Error(`Failed to clear conversation history: ${error.message}`);
+  }
+}
+
+/**
  * Persists a user message and the agent's response as two separate rows.
  */
 export async function saveHistory(

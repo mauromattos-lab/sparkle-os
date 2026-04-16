@@ -7,6 +7,8 @@ import { withSessionLock } from './lock.js';
 import { loadTenantByAccountId } from '../tenant/config-loader.js';
 import { runZenyaAgent } from '../agent/index.js';
 import { transcribeAudioUrl } from '../integrations/whisper.js';
+import { clearHistory } from '../agent/memory.js';
+import { sendMessage, getChatwootParams } from '../integrations/chatwoot.js';
 
 // Debounce window: wait this long after the first message before processing.
 // Any messages arriving during this window are merged into a single agent call.
@@ -126,6 +128,15 @@ export function createWebhookRouter(): Hono {
         // Test mode: if allowed_phones is set, silently ignore unlisted numbers
         if (config.allowed_phones.length > 0 && !config.allowed_phones.includes(phone)) {
           console.log(`[zenya] Test mode — ignored ${phone} (not in allowed list for tenant ${config.name})`);
+          return;
+        }
+
+        // /reset command — test mode only: clears conversation history for this session
+        if (config.allowed_phones.length > 0 && mergedMessage.trim() === '/reset') {
+          await clearHistory(config.id, phone);
+          await sendMessage(getChatwootParams(accountId, conversationId), '🔄 Memória zerada. Nova conversa!');
+          await markAllDone(pendingIds);
+          console.log(`[zenya] /reset — tenant=${config.id} phone=${phone}`);
           return;
         }
 
