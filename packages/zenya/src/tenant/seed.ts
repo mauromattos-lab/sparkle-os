@@ -490,13 +490,16 @@ async function seed(): Promise<void> {
     // Insert encrypted credentials
     for (const cred of t.credentials ?? []) {
       const encrypted = encryptCredential(cred.value, masterKey);
+      // Supabase REST API does not accept Node.js Buffer directly for BYTEA —
+      // it must be sent as a \x-prefixed hex string so the REST layer stores raw bytes.
+      const encryptedHex = `\\x${encrypted.toString('hex')}`;
       const { error: credErr } = await sb
         .from('zenya_tenant_credentials')
         .upsert(
           {
             tenant_id: String(tenant['id']),
             service: cred.service,
-            credentials_encrypted: encrypted,
+            credentials_encrypted: encryptedHex,
           },
           { onConflict: 'tenant_id,service', ignoreDuplicates: false },
         );
