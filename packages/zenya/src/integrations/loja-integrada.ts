@@ -323,10 +323,15 @@ export function createLojaIntegradaTools(tenantId: string): ToolSet {
         const rastreio = envio?.objeto ?? null;
         const transportadora = envio?.forma_envio?.nome ?? null;
 
+        const itens = (data.itens ?? [])
+          .map((i) => `${Math.round(parseFloat(i.quantidade) || 1)}x ${i.nome}`)
+          .join(', ');
+
         let resultado = `Pedido #${data.numero} — ${situacao} (${dataPedido})`;
+        if (itens) resultado += `\nItens: ${itens}`;
         if (transportadora) resultado += `\nEnvio: ${transportadora}`;
         if (rastreio) {
-          resultado += `\nRastreamento: ${rastreio} (https://melhorrastreio.com.br/rastreio/${rastreio})`;
+          resultado += `\nRastreamento: https://melhorrastreio.com.br/rastreio/${rastreio}`;
         }
 
         return { encontrou: true, resultado };
