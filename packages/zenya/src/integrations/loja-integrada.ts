@@ -161,7 +161,7 @@ async function scanPedidosPorCliente(
   authHeader: string,
   identificador: string,
   tipo: 'nome' | 'email' | 'cpf' | 'telefone',
-  limite: number = 20,
+  limite: number = 60,
 ): Promise<Array<{ numero: number; situacao: string; dataPedido: string }>> {
   const BASE = 'https://api.awsli.com.br';
 
