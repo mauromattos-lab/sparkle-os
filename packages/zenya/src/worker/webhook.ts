@@ -118,6 +118,12 @@ export function createWebhookRouter(): Hono {
         // Resolve actual tenant config (cache hit after first request)
         const config = await loadTenantByAccountId(accountId);
 
+        // Test mode: if allowed_phones is set, silently ignore unlisted numbers
+        if (config.allowed_phones.length > 0 && !config.allowed_phones.includes(phone)) {
+          console.log(`[zenya] Test mode — ignored ${phone} (not in allowed list for tenant ${config.name})`);
+          return;
+        }
+
         try {
           await runZenyaAgent({
             tenantId: config.id,

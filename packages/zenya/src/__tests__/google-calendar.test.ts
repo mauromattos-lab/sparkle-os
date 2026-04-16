@@ -36,6 +36,7 @@ const CONFIG = {
   system_prompt: '',
   active_tools: ['google_calendar'],
   chatwoot_account_id: '1',
+  allowed_phones: [],
 };
 const CREDS = {
   client_id: 'cid',

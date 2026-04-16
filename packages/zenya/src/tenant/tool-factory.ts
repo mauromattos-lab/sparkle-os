@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { addLabel, sendMessage, getChatwootParams, setContactAudioPreference } from '../integrations/chatwoot.js';
 import { createCalendarTools } from '../integrations/google-calendar.js';
 import { createAsaasTools } from '../integrations/asaas.js';
+import { createLojaIntegradaTools } from '../integrations/loja-integrada.js';
 import type { TenantConfig } from './config-loader.js';
 
 export interface AgentContext {
@@ -149,6 +150,11 @@ export function createTenantTools(
     // Credentials loaded at execution time inside the tool (via getCredentialJson)
     // We pass a placeholder here; the tool calls getCredentialJson(tenantId, 'asaas') itself
     Object.assign(tools, createAsaasTools(tenantId));
+  }
+
+  // Loja Integrada — e-commerce product search + order lookup
+  if (config.active_tools.includes('loja_integrada')) {
+    Object.assign(tools, createLojaIntegradaTools(tenantId));
   }
 
   return tools;

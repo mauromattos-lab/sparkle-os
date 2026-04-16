@@ -10,6 +10,8 @@ export interface TenantConfig {
   system_prompt: string;
   active_tools: string[];
   chatwoot_account_id: string;
+  /** Test mode: if non-empty, only these phone numbers receive responses. */
+  allowed_phones: string[];
 }
 
 const TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -44,6 +46,7 @@ function rowToConfig(row: Record<string, unknown>): TenantConfig {
     system_prompt: String(row['system_prompt'] ?? ''),
     active_tools: Array.isArray(row['active_tools']) ? (row['active_tools'] as string[]) : [],
     chatwoot_account_id: String(row['chatwoot_account_id']),
+    allowed_phones: Array.isArray(row['allowed_phones']) ? (row['allowed_phones'] as string[]) : [],
   };
 }
 
@@ -58,7 +61,7 @@ export async function loadTenantConfig(tenantId: string): Promise<TenantConfig> 
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones')
     .eq('id', tenantId)
     .single();
 
@@ -83,7 +86,7 @@ export async function loadTenantByAccountId(accountId: string): Promise<TenantCo
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones')
     .eq('chatwoot_account_id', accountId)
     .single();
 
