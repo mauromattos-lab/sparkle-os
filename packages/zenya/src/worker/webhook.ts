@@ -22,7 +22,7 @@ interface ChatwootWebhookPayload {
   content?: string | null;
   message_type?: string;
   account?: { id: string | number };
-  conversation?: { id: string | number };
+  conversation?: { id: string | number; labels?: string[] };
   sender?: { phone_number?: string | null; name?: string };
   attachments?: unknown[];
   created_at?: number;
@@ -63,6 +63,11 @@ export function createWebhookRouter(): Hono {
 
     // AC3: filter outgoing/activity — bot's own messages, return 200 silently
     if (IGNORED_MESSAGE_TYPES.has(payload.message_type!)) {
+      return c.json({ ok: true, skipped: true });
+    }
+
+    // agente-off label: conversation was escalated to human — bot stays silent
+    if (payload.conversation?.labels?.includes('agente-off')) {
       return c.json({ ok: true, skipped: true });
     }
 
