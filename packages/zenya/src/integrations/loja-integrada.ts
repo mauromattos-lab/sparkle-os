@@ -1,6 +1,10 @@
 // Loja Integrada integration — product search and order lookup
 // Credentials stored encrypted via getCredentialJson(tenantId, 'loja-integrada')
 // Credential shape: { chave_api: string, id_aplicacao: string }
+//
+// Order lookup flow:
+//   1. Detalhar_pedido_por_numero — cliente sabe o número (caminho principal)
+//   2. Buscar_pedidos_por_cliente  — cliente NÃO sabe o número (fallback via scan)
 
 import { tool } from 'ai';
 import type { ToolSet } from 'ai';
@@ -29,6 +33,22 @@ interface ProdutoDetalhe extends Produto {
 interface ListResponse {
   objects: Produto[];
   meta: { next: string | null; total_count: number };
+}
+
+interface PedidoListItem {
+  numero: number;
+  cliente: string; // URI: /api/v1/cliente/{id}
+  situacao: { nome: string } | null;
+  data_criacao: string | null;
+  valor_total: string | null;
+}
+
+interface ClienteDetalhe {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone_celular: string;
+  fone: string | null;
 }
 
 // Synonyms for common search terms that differ from catalog names
@@ -129,6 +149,80 @@ async function fetchProductDetail(id: number, authHeader: string): Promise<Produ
   });
   if (!res.ok) return null;
   return (await res.json()) as ProdutoDetalhe;
+}
+
+/**
+ * Scans the N most recent orders and returns those belonging to a customer
+ * identified by nome, email, cpf, or telefone.
+ * The Loja Integrada REST API v1 does not support server-side filtering on
+ * customer fields, so we fetch order list + cliente details in parallel.
+ */
+async function scanPedidosPorCliente(
+  authHeader: string,
+  identificador: string,
+  tipo: 'nome' | 'email' | 'cpf' | 'telefone',
+  limite: number = 20,
+): Promise<Array<{ numero: number; situacao: string; dataPedido: string }>> {
+  const BASE = 'https://api.awsli.com.br';
+
+  const listRes = await fetch(
+    `${BASE}/api/v1/pedido/?limit=${limite}&order_by=-numero`,
+    { headers: { Authorization: authHeader } },
+  );
+  if (!listRes.ok) return [];
+
+  const listData = (await listRes.json()) as { objects: PedidoListItem[] };
+  const pedidos = listData.objects ?? [];
+
+  // Fetch all cliente details in parallel
+  const pares = await Promise.all(
+    pedidos.map(async (pedido) => {
+      const uri = pedido.cliente.startsWith('http')
+        ? pedido.cliente
+        : `${BASE}${pedido.cliente}`;
+      const res = await fetch(uri, { headers: { Authorization: authHeader } });
+      if (!res.ok) return null;
+      const cliente = (await res.json()) as ClienteDetalhe;
+      return { pedido, cliente };
+    }),
+  );
+
+  const identNorm = normalizar(identificador);
+
+  return pares
+    .filter((par): par is NonNullable<typeof par> => {
+      if (!par) return false;
+      const { cliente } = par;
+      switch (tipo) {
+        case 'nome':
+          return normalizar(cliente.nome ?? '').includes(identNorm);
+        case 'email':
+          return (cliente.email ?? '').toLowerCase() === identificador.toLowerCase().trim();
+        case 'cpf': {
+          const cpfClean = (cliente.cpf ?? '').replace(/\D/g, '');
+          const idClean = identificador.replace(/\D/g, '');
+          return cpfClean === idClean && idClean.length > 0;
+        }
+        case 'telefone': {
+          const telClean = (cliente.telefone_celular ?? cliente.fone ?? '').replace(/\D/g, '');
+          const idClean = identificador.replace(/\D/g, '');
+          // Match by last 8+ digits to handle DDD variations
+          return (
+            idClean.length >= 8 &&
+            (telClean.endsWith(idClean) || idClean.endsWith(telClean))
+          );
+        }
+        default:
+          return false;
+      }
+    })
+    .map(({ pedido }) => ({
+      numero: pedido.numero,
+      situacao: pedido.situacao?.nome ?? 'N/A',
+      dataPedido: pedido.data_criacao
+        ? new Date(pedido.data_criacao).toLocaleDateString('pt-BR')
+        : 'N/A',
+    }));
 }
 
 /**
@@ -236,6 +330,47 @@ export function createLojaIntegradaTools(tenantId: string): ToolSet {
         }
 
         return { encontrou: true, resultado };
+      },
+    }),
+
+    Buscar_pedidos_por_cliente: tool({
+      description:
+        'Busca pedidos recentes de um cliente quando ele NÃO sabe o número do pedido. ' +
+        'Use SOMENTE após o cliente confirmar que não tem o número e querer tentar por outro dado. ' +
+        'Aceita nome, e-mail, CPF ou telefone. ' +
+        'Retorna os pedidos encontrados com status e data — para ver rastreio, use Detalhar_pedido_por_numero com o número retornado.',
+      parameters: z.object({
+        identificador: z
+          .string()
+          .describe('O dado fornecido pelo cliente: nome completo, e-mail, CPF (só números) ou telefone'),
+        tipo: z
+          .enum(['nome', 'email', 'cpf', 'telefone'])
+          .describe('Tipo do identificador: nome | email | cpf | telefone'),
+      }),
+      execute: async ({ identificador, tipo }) => {
+        const creds = await getCredentialJson<LojaIntegradaCredentials>(tenantId, 'loja-integrada');
+        const authHeader = `chave_api ${creds.chave_api} aplicacao ${creds.id_aplicacao}`;
+
+        const encontrados = await scanPedidosPorCliente(authHeader, identificador, tipo);
+
+        if (encontrados.length === 0) {
+          return {
+            encontrou: false,
+            resultado: `Não encontrei pedidos recentes para esse ${tipo}. Verifique se o dado está correto, ou peça ao cliente o número do pedido.`,
+          };
+        }
+
+        const linhas = encontrados.slice(0, 5).map(
+          (p) => `Pedido #${p.numero} — ${p.situacao} (${p.dataPedido})`,
+        );
+
+        const plural = encontrados.length > 1 ? 'pedidos encontrados' : 'pedido encontrado';
+        return {
+          encontrou: true,
+          resultado:
+            `${encontrados.length} ${plural}:\n${linhas.join('\n')}\n\n` +
+            `Para ver rastreio de algum desses, pergunte ao cliente qual deseja e use Detalhar_pedido_por_numero.`,
+        };
       },
     }),
   };
