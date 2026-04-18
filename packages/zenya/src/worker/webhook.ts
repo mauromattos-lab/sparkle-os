@@ -139,6 +139,7 @@ export function createWebhookRouter(): Hono {
               message: mergedMessage,
               phone,
               adminName,
+              inputIsAudio,
             });
             await markAllDone(pendingIds);
           } catch (err) {

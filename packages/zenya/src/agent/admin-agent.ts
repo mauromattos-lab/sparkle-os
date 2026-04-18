@@ -9,9 +9,12 @@ import { z } from 'zod';
 import {
   setTypingStatus,
   getChatwootParams,
+  getContactAudioPreference,
   markConversationRead,
+  sendAudioMessage,
 } from '../integrations/chatwoot.js';
 import { chunkAndSend } from '../integrations/message-chunker.js';
+import { formatSSML, generateAudio, getElevenLabsApiKey } from '../integrations/elevenlabs.js';
 import { loadHistory, saveHistory } from './memory.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
@@ -207,6 +210,7 @@ export interface AdminAgentParams {
   message: string;
   phone: string;
   adminName: string | null;
+  inputIsAudio?: boolean;
 }
 
 /**
@@ -214,7 +218,7 @@ export interface AdminAgentParams {
  * Provides metrics and management info — no customer history, no audio.
  */
 export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
-  const { accountId, conversationId, config, message, phone, adminName } = params;
+  const { accountId, conversationId, config, message, phone, adminName, inputIsAudio } = params;
 
   const chatwootParams = getChatwootParams(accountId, conversationId);
 
@@ -242,7 +246,22 @@ export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
 
     if (reply.trim()) {
       await saveHistory(config.id, adminSessionKey, message, reply);
-      await chunkAndSend(reply, chatwootParams);
+
+      const audioPref = await getContactAudioPreference(chatwootParams, phone).catch(() => null);
+      const respondWithAudio = audioPref === 'audio' || (audioPref === null && inputIsAudio === true);
+
+      if (respondWithAudio) {
+        await setTypingStatus(chatwootParams, 'on', 'recording').catch(() => undefined);
+        try {
+          const ssml = await formatSSML(reply);
+          const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey());
+          await sendAudioMessage(chatwootParams, audioBuffer);
+        } catch {
+          await chunkAndSend(reply, chatwootParams);
+        }
+      } else {
+        await chunkAndSend(reply, chatwootParams);
+      }
     }
   } finally {
     await setTypingStatus(chatwootParams, 'off').catch(() => undefined);
