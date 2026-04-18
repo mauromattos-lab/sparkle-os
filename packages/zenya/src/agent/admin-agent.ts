@@ -12,6 +12,7 @@ import {
   markConversationRead,
 } from '../integrations/chatwoot.js';
 import { chunkAndSend } from '../integrations/message-chunker.js';
+import { loadHistory, saveHistory } from './memory.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
 const BASE_URL = process.env['CHATWOOT_BASE_URL']!;
@@ -213,7 +214,7 @@ export interface AdminAgentParams {
  * Provides metrics and management info — no customer history, no audio.
  */
 export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
-  const { accountId, conversationId, config, message, adminName } = params;
+  const { accountId, conversationId, config, message, phone, adminName } = params;
 
   const chatwootParams = getChatwootParams(accountId, conversationId);
 
@@ -221,19 +222,26 @@ export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
   await setTypingStatus(chatwootParams, 'on').catch(() => undefined);
 
   try {
+    // Admin sessions use a prefixed phone key to keep history separate from customer sessions
+    const adminSessionKey = `admin:${phone}`;
+    const history = await loadHistory(config.id, adminSessionKey, 20);
     const tools = createAdminTools(accountId);
 
     const result = await generateText({
       model: openai('gpt-4.1'),
-      maxSteps: 5,
+      maxSteps: 10,
       system: buildAdminPrompt(adminName),
-      messages: [{ role: 'user' as const, content: message }],
+      messages: [
+        ...history.map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: message },
+      ],
       tools,
     });
 
     const reply = result.text;
 
     if (reply.trim()) {
+      await saveHistory(config.id, adminSessionKey, message, reply);
       await chunkAndSend(reply, chatwootParams);
     }
   } finally {
