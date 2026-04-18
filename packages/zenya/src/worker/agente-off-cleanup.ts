@@ -2,6 +2,8 @@
 // Runs every hour — prevents conversations from staying blocked if agent forgets to remove label
 
 import { getSupabase } from '../db/client.js';
+import { zapiRemoveLabel, type ZApiCredentials } from '../integrations/zapi-labels.js';
+import { getCredentialJson } from '../tenant/credentials.js';
 
 const BASE_URL = process.env['CHATWOOT_BASE_URL']!;
 const TOKEN = process.env['CHATWOOT_API_TOKEN']!;
@@ -12,16 +14,31 @@ function headers(): Record<string, string> {
   return { 'api_access_token': TOKEN, 'Content-Type': 'application/json' };
 }
 
-async function getAllAccountIds(): Promise<string[]> {
+interface AgenteOffConversation {
+  id: number;
+  labels: string[];
+  last_activity_at: number;
+  /** Chatwoot conversation meta — includes sender phone when present */
+  meta?: {
+    sender?: {
+      phone_number?: string | null;
+    };
+  };
+}
+
+async function getAllTenants(): Promise<Array<{ tenantId: string; accountId: string }>> {
   const sb = getSupabase();
-  const { data } = await sb.from('zenya_tenants').select('chatwoot_account_id');
-  return (data ?? []).map((row: Record<string, unknown>) => String(row['chatwoot_account_id']));
+  const { data } = await sb.from('zenya_tenants').select('id, chatwoot_account_id');
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    tenantId: String(row['id']),
+    accountId: String(row['chatwoot_account_id']),
+  }));
 }
 
 async function getAgenteOffConversations(
   accountId: string,
-): Promise<Array<{ id: number; labels: string[]; last_activity_at: number }>> {
-  const conversations: Array<{ id: number; labels: string[]; last_activity_at: number }> = [];
+): Promise<AgenteOffConversation[]> {
+  const conversations: AgenteOffConversation[] = [];
   for (let page = 1; page <= 5; page++) {
     const res = await fetch(
       `${BASE_URL}/api/v1/accounts/${accountId}/conversations?page=${page}&labels[]=agente-off`,
@@ -29,7 +46,7 @@ async function getAgenteOffConversations(
     );
     if (!res.ok) break;
     const data = (await res.json()) as { data?: { payload?: unknown[] } };
-    const items = (data.data?.payload ?? []) as Array<{ id: number; labels: string[]; last_activity_at: number }>;
+    const items = (data.data?.payload ?? []) as AgenteOffConversation[];
     conversations.push(...items);
     if (items.length < 25) break;
   }
@@ -67,10 +84,10 @@ async function removeAgenteOffLabel(accountId: string, conversationId: number, c
 }
 
 async function runCleanup(): Promise<void> {
-  const accountIds = await getAllAccountIds().catch(() => [] as string[]);
+  const tenants = await getAllTenants().catch(() => [] as Array<{ tenantId: string; accountId: string }>);
   const now = Date.now();
 
-  for (const accountId of accountIds) {
+  for (const { tenantId, accountId } of tenants) {
     const conversations = await getAgenteOffConversations(accountId).catch(() => []);
 
     for (const conv of conversations) {
@@ -84,6 +101,22 @@ async function runCleanup(): Promise<void> {
         console.log(
           `[agente-off-cleanup] Removed agente-off — account=${accountId} conv=${conv.id} idle=${idleHours}h`,
         );
+
+        // Remove native WhatsApp Business label — non-critical, degrades gracefully
+        const phone = conv.meta?.sender?.phone_number ?? null;
+        if (phone) {
+          try {
+            const zapCreds = await getCredentialJson<ZApiCredentials>(tenantId, 'zapi');
+            const labelId = zapCreds.labels?.humano;
+            if (labelId) {
+              await zapiRemoveLabel(phone, labelId, zapCreds);
+            }
+          } catch (err) {
+            console.warn(
+              `[agente-off-cleanup] zapiRemoveLabel falhou (non-critical) — account=${accountId} conv=${conv.id}: ${err}`,
+            );
+          }
+        }
       }
     }
   }

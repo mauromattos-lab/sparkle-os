@@ -137,6 +137,7 @@ describe('conditional activation (tool-factory)', () => {
     const tools = createTenantTools(TENANT_ID, configWithout, {
       accountId: '1',
       conversationId: '2',
+      phone: '+5500000000000',
     });
     expect(tools).not.toHaveProperty('buscarJanelasDisponiveis');
   });
@@ -147,6 +148,7 @@ describe('conditional activation (tool-factory)', () => {
     const tools = createTenantTools(TENANT_ID, configWith, {
       accountId: '1',
       conversationId: '2',
+      phone: '+5500000000000',
     });
     expect(tools).toHaveProperty('buscarJanelasDisponiveis');
   });

@@ -60,7 +60,7 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
     const systemPrompt = buildSystemPrompt(config);
 
     // AC5: create tenant-scoped tools (tenantId injected via closure)
-    const tools = createTenantTools(tenantId, config, { accountId, conversationId });
+    const tools = createTenantTools(tenantId, config, { accountId, conversationId, phone });
 
     // AC1: call LLM with generateText (gpt-4.1, maxSteps: 15)
     const result = await generateText({

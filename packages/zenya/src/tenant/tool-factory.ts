@@ -9,14 +9,18 @@ import { tool } from 'ai';
 import type { ToolSet } from 'ai';
 import { z } from 'zod';
 import { addLabel, sendMessage, getChatwootParams, setContactAudioPreference } from '../integrations/chatwoot.js';
+import { zapiAddLabel, type ZApiCredentials } from '../integrations/zapi-labels.js';
 import { createCalendarTools } from '../integrations/google-calendar.js';
 import { createAsaasTools } from '../integrations/asaas.js';
 import { createLojaIntegradaTools } from '../integrations/loja-integrada.js';
+import { getCredentialJson } from './credentials.js';
 import type { TenantConfig } from './config-loader.js';
 
 export interface AgentContext {
   accountId: string;
   conversationId: string;
+  /** Customer phone number — used for Z-API label operations */
+  phone: string;
 }
 
 // ToolSet from AI SDK is the correct type for the tools map passed to generateText
@@ -52,6 +56,18 @@ export function createTenantTools(
         const params = chatwootParams();
         // Add label that disables the bot for this conversation
         await addLabel(params, 'agente-off');
+
+        // Apply native WhatsApp Business label — non-critical, degrades gracefully
+        try {
+          const zapCreds = await getCredentialJson<ZApiCredentials>(tenantId, 'zapi');
+          const labelId = zapCreds.labels?.humano;
+          if (labelId) {
+            await zapiAddLabel(ctx.phone, labelId, zapCreds);
+          }
+        } catch (err) {
+          console.warn(`[zenya] zapiAddLabel falhou (non-critical) — tenant=${tenantId}: ${err}`);
+        }
+
         console.log(
           `[zenya] Escalated to human — tenant=${tenantId} conv=${ctx.conversationId}` +
           ` motivo=${motivo ?? 'não especificado'} resumo=${resumo_conversa.slice(0, 80)}`,
