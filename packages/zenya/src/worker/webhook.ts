@@ -6,6 +6,7 @@ import { enqueue, fetchPending, markAllDone, markAllFailed } from './queue.js';
 import { withSessionLock } from './lock.js';
 import { loadTenantByAccountId } from '../tenant/config-loader.js';
 import { runZenyaAgent } from '../agent/index.js';
+import { runAdminAgent } from '../agent/admin-agent.js';
 import { transcribeAudioUrl } from '../integrations/whisper.js';
 import { clearHistory } from '../agent/memory.js';
 import { sendMessage, getChatwootParams } from '../integrations/chatwoot.js';
@@ -124,6 +125,25 @@ export function createWebhookRouter(): Hono {
 
         // Resolve actual tenant config (cache hit after first request)
         const config = await loadTenantByAccountId(accountId);
+
+        // Admin channel: messages from admin_phones get metrics/management responses
+        if (config.admin_phones.length > 0 && config.admin_phones.includes(phone)) {
+          console.log(`[zenya] Admin mode — phone=${phone} tenant=${config.name}`);
+          try {
+            await runAdminAgent({
+              accountId,
+              conversationId,
+              config,
+              message: mergedMessage,
+              phone,
+            });
+            await markAllDone(pendingIds);
+          } catch (err) {
+            await markAllFailed(pendingIds);
+            throw err;
+          }
+          return;
+        }
 
         // Test mode: if allowed_phones is set, silently ignore unlisted numbers
         if (config.allowed_phones.length > 0 && !config.allowed_phones.includes(phone)) {

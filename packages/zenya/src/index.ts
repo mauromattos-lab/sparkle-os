@@ -7,6 +7,7 @@ import 'dotenv/config';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { createWebhookRouter } from './worker/webhook.js';
+import { startAgenteOffCleanup } from './worker/agente-off-cleanup.js';
 
 // ---------------------------------------------------------------------------
 // Startup env validation — fail fast with a clear message
@@ -60,4 +61,7 @@ if (process.env['VITEST'] === undefined) {
   serve({ fetch: app.fetch, port }, (info) => {
     console.log(`[zenya] Webhook server running on port ${info.port}`);
   });
+
+  // Start background job: remove agente-off label after 72h idle
+  startAgenteOffCleanup();
 }

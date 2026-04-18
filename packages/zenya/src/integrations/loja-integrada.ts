@@ -232,11 +232,14 @@ export function createLojaIntegradaTools(tenantId: string): ToolSet {
   return {
     Buscar_produto: tool({
       description:
-        'Busca produtos no catálogo da loja pelo nome ou tipo. ' +
+        'Busca UM produto no catálogo da loja pelo nome ou tipo. ' +
         'Use sempre que o cliente perguntar sobre um produto, preço ou disponibilidade. ' +
+        'IMPORTANTE: chame esta ferramenta UMA VEZ POR PRODUTO — nunca combine múltiplos produtos em uma única chamada. ' +
+        'Se o cliente perguntar sobre 3 produtos, faça 3 chamadas separadas. ' +
+        'NUNCA afirme que um produto não existe sem antes chamar esta ferramenta. ' +
         'NUNCA invente preços ou URLs — use apenas o que essa ferramenta retornar.',
       parameters: z.object({
-        termo: z.string().describe('Nome ou tipo do produto a buscar (ex: "camiseta", "ecobag", "canga")'),
+        termo: z.string().describe('Nome ou tipo de UM único produto a buscar (ex: "ecobag", "camiseta", "canga"). Nunca combine múltiplos produtos.'),
       }),
       execute: async ({ termo }) => {
         const creds = await getCredentialJson<LojaIntegradaCredentials>(tenantId, 'loja-integrada');
@@ -252,6 +255,8 @@ export function createLojaIntegradaTools(tenantId: string): ToolSet {
           .filter((p) => p.ativo && p.nome?.trim() && !p.nome.includes('DUPLICADO'))
           .filter((p) => !termoNorm || corresponde(p, termoNorm, palavras))
           .slice(0, 5);
+
+        console.log(`[loja-integrada] Buscar_produto termo="${termo}" → ${encontrados.length} resultado(s): ${encontrados.map((p) => p.nome).join(', ') || 'nenhum'}`);
 
         if (encontrados.length === 0) {
           return { encontrou: false, resultado: 'Nenhum produto encontrado para esse termo.' };

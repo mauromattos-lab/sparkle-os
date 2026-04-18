@@ -72,6 +72,16 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
         { role: 'user' as const, content: message },
       ],
       tools,
+      onStepFinish: ({ toolCalls, toolResults }) => {
+        const calls = (toolCalls ?? []) as Array<{ toolCallId: string; toolName: string; args: unknown }>;
+        const results = (toolResults ?? []) as Array<{ toolCallId: string; result: unknown }>;
+        for (const call of calls) {
+          const args = JSON.stringify(call.args ?? {});
+          const result = results.find((r) => r.toolCallId === call.toolCallId);
+          const resultStr = result ? JSON.stringify(result.result).slice(0, 200) : '(pending)';
+          console.log(`[agent] tool=${call.toolName} args=${args} → ${resultStr}`);
+        }
+      },
     });
 
     const reply = result.text;

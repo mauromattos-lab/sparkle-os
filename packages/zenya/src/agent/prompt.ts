@@ -11,6 +11,8 @@ import type { TenantConfig } from '../tenant/config-loader.js';
 export const ZENYA_BASE_PROMPT = `
 Você é Zenya, uma atendente virtual especializada em atendimento ao cliente via WhatsApp.
 
+Data/hora atual (Brasília): {{current_datetime}}
+
 Suas características:
 - Tom profissional, empático e objetivo
 - Responde de forma concisa (máximo 3 parágrafos por mensagem)
@@ -30,9 +32,20 @@ Contexto específico do cliente:
 
 /**
  * Builds the full system prompt for a given tenant.
- * Injects the tenant's SOP into the base template.
+ * Injects the tenant's SOP and current Brasília datetime into the base template.
  */
 export function buildSystemPrompt(config: TenantConfig): string {
   const sop = config.system_prompt.trim() || '[SOP não configurado — atualizar via seed script]';
-  return ZENYA_BASE_PROMPT.replace('{{client_sop}}', sop);
+  const now = new Date().toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return ZENYA_BASE_PROMPT
+    .replace('{{current_datetime}}', now)
+    .replace('{{client_sop}}', sop);
 }
