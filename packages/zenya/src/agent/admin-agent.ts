@@ -21,11 +21,14 @@ function chatwootHeaders(): Record<string, string> {
   return { 'api_access_token': TOKEN, 'Content-Type': 'application/json' };
 }
 
-const ADMIN_SYSTEM_PROMPT = `Você é a Zenya em modo admin. Você está falando com um administrador do tenant.
+function buildAdminPrompt(adminName: string | null): string {
+  const greeting = adminName ? `Você está falando com ${adminName}.` : 'Você está falando com um administrador.';
+  return `Você é a Zenya em modo admin. ${greeting}
 Responda de forma objetiva e direta com as métricas e informações solicitadas.
 Você tem acesso a ferramentas para consultar dados do Chatwoot (conversas, status, escalações).
 Seja concisa — o admin está consultando pelo WhatsApp, não quer respostas longas.
 Se não souber algo, diga claramente. Não invente dados.`;
+}
 
 /**
  * Fetches conversation counts from Chatwoot for the given account.
@@ -202,6 +205,7 @@ export interface AdminAgentParams {
   config: TenantConfig;
   message: string;
   phone: string;
+  adminName: string | null;
 }
 
 /**
@@ -209,7 +213,7 @@ export interface AdminAgentParams {
  * Provides metrics and management info — no customer history, no audio.
  */
 export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
-  const { accountId, conversationId, config, message } = params;
+  const { accountId, conversationId, config, message, adminName } = params;
 
   const chatwootParams = getChatwootParams(accountId, conversationId);
 
@@ -222,7 +226,7 @@ export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
     const result = await generateText({
       model: openai('gpt-4.1'),
       maxSteps: 5,
-      system: ADMIN_SYSTEM_PROMPT,
+      system: buildAdminPrompt(adminName),
       messages: [{ role: 'user' as const, content: message }],
       tools,
     });

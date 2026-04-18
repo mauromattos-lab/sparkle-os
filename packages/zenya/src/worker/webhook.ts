@@ -128,7 +128,9 @@ export function createWebhookRouter(): Hono {
 
         // Admin channel: messages from admin_phones get metrics/management responses
         if (config.admin_phones.length > 0 && config.admin_phones.includes(phone)) {
-          console.log(`[zenya] Admin mode — phone=${phone} tenant=${config.name}`);
+          const adminContact = config.admin_contacts.find((c) => c.phone === phone);
+          const adminName = adminContact?.name ?? null;
+          console.log(`[zenya] Admin mode — phone=${phone} name=${adminName ?? 'unknown'} tenant=${config.name}`);
           try {
             await runAdminAgent({
               accountId,
@@ -136,6 +138,7 @@ export function createWebhookRouter(): Hono {
               config,
               message: mergedMessage,
               phone,
+              adminName,
             });
             await markAllDone(pendingIds);
           } catch (err) {

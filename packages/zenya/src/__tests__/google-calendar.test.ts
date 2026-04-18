@@ -38,6 +38,7 @@ const CONFIG = {
   chatwoot_account_id: '1',
   allowed_phones: [],
   admin_phones: [],
+  admin_contacts: [],
 };
 const CREDS = {
   client_id: 'cid',

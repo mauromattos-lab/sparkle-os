@@ -14,6 +14,8 @@ export interface TenantConfig {
   allowed_phones: string[];
   /** Admin channel: numbers that receive admin-mode responses (metrics, stats). */
   admin_phones: string[];
+  /** Admin contacts with names: [{phone, name}] — used for personalized admin greetings. */
+  admin_contacts: Array<{ phone: string; name: string }>;
 }
 
 const TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -50,6 +52,7 @@ function rowToConfig(row: Record<string, unknown>): TenantConfig {
     chatwoot_account_id: String(row['chatwoot_account_id']),
     allowed_phones: Array.isArray(row['allowed_phones']) ? (row['allowed_phones'] as string[]) : [],
     admin_phones: Array.isArray(row['admin_phones']) ? (row['admin_phones'] as string[]) : [],
+    admin_contacts: Array.isArray(row['admin_contacts']) ? (row['admin_contacts'] as Array<{ phone: string; name: string }>) : [],
   };
 }
 
@@ -64,7 +67,7 @@ export async function loadTenantConfig(tenantId: string): Promise<TenantConfig> 
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts')
     .eq('id', tenantId)
     .single();
 
@@ -89,7 +92,7 @@ export async function loadTenantByAccountId(accountId: string): Promise<TenantCo
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts')
     .eq('chatwoot_account_id', accountId)
     .single();
 
