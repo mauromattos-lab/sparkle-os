@@ -64,7 +64,7 @@ export async function loadTenantConfig(tenantId: string): Promise<TenantConfig> 
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones')
     .eq('id', tenantId)
     .single();
 
@@ -89,7 +89,7 @@ export async function loadTenantByAccountId(accountId: string): Promise<TenantCo
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones')
     .eq('chatwoot_account_id', accountId)
     .single();
 
