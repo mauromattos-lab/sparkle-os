@@ -471,11 +471,20 @@ async function publishToGhost(briefing, postMd, featureImageUrl, productName) {
   const html = marked.parse(postMd);
   const publishedAt = new Date().toISOString();
 
+  // Ghost 5 usa mobiledoc internamente — encapsular HTML em HTML card
+  const mobiledoc = JSON.stringify({
+    version: '0.3.1',
+    atoms: [],
+    cards: [['html', { html }]],
+    markups: [],
+    sections: [[10, 0]],
+  });
+
   const payload = {
     status: 'published',
     title,
     slug,
-    html,
+    mobiledoc,
     feature_image: featureImageUrl ?? undefined,
     feature_image_alt: featureImageUrl ? `${productName} — Plaka Acessórios` : undefined,
     tags: [{ slug: briefing.bloco_conteudo }, { slug: 'semi-joias' }],
