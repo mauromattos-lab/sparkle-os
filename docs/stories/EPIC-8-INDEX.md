@@ -71,16 +71,16 @@ Wave 3 — Conteúdo (paralelo à 8.2):
 
 ## Definition of Done do Epic 8
 
-- [ ] 8 posts existentes com tags AEO aplicadas
-- [ ] Taxonomy pages (`/tag/cuidados/`, `/tag/qualidade/`, etc.) acessíveis no Ghost
-- [ ] 8 posts com feature image resolvida via product-enricher
-- [ ] Open Graph `og:image` presente em todos os posts
-- [ ] Tagline do blog atualizada para identidade semi joias
-- [ ] Bio de autor criada no Ghost
-- [ ] Pillar page "Guia de Cuidados com Semi Joias" publicada com links para 3 posts
-- [ ] `write-post.md` atualizado com regra de contextual linking e citação obrigatória
-- [ ] `daily-content.yaml` com gate de scheduling (máx 1 post/dia)
-- [ ] Scorecard AEO estimado: 65+/80 (vs. 41/80 atual)
+- [x] 7 posts existentes com tags AEO aplicadas (8º post "pele verde" ainda não publicado no Ghost)
+- [x] Taxonomy pages (`/tag/cuidados/`, `/tag/qualidade/`, etc.) acessíveis no Ghost
+- [x] 7 posts com feature image via NuvemShop API (backfill executado)
+- [x] `og:image` presente via feature_image do Ghost
+- [ ] Tagline do blog atualizada — **requer ação manual** (Ghost Admin → Settings → General)
+- [ ] Bio de autor criada no Ghost — **requer ação manual** (Ghost Admin → Staff → Plaka Acessórios)
+- [x] Pillar page "Guia de Cuidados com Semi Joias" publicada — https://blog.plakaacessorios.com/guia-completo-de-cuidados-com-semi-joias/
+- [x] `write-post.md` atualizado com regra de contextual linking e citação obrigatória
+- [x] `daily-content.yaml` com gate de scheduling (máx 1 post/dia)
+- [ ] Scorecard AEO estimado: 65+/80 — a confirmar na análise da Semana 2
 
 ---
 
