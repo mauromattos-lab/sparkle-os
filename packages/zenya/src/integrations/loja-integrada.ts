@@ -102,6 +102,15 @@ function formatarUrl(produto: ProdutoDetalhe): string {
   return base;
 }
 
+async function validarUrl(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: 'HEAD', signal: AbortSignal.timeout(3000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 function stripHtml(html: string | null): string {
   if (!html) return '';
   return html
@@ -267,20 +276,29 @@ export function createLojaIntegradaTools(tenantId: string): ToolSet {
           encontrados.map((p) => fetchProductDetail(p.id, authHeader)),
         );
 
-        const linhas = detalhes
-          .filter((d): d is ProdutoDetalhe => d !== null && !!d.nome)
-          .map((p) => {
-            const preco =
-              p.preco_cheio != null
-                ? `R$ ${Number(p.preco_cheio).toFixed(2).replace('.', ',')}`
-                : 'Preço sob consulta';
-            const url = formatarUrl(p);
-            const descricao = stripHtml(p.descricao_completa);
-            let linha = `- ${p.nome} | ${preco}`;
-            if (descricao) linha += ` | ${descricao.substring(0, 400)}`;
-            if (url) linha += ` | ${url}`;
-            return linha;
-          });
+        const linhas = await Promise.all(
+          detalhes
+            .filter((d): d is ProdutoDetalhe => d !== null && !!d.nome)
+            .map(async (p) => {
+              const preco =
+                p.preco_cheio != null
+                  ? `R$ ${Number(p.preco_cheio).toFixed(2).replace('.', ',')}`
+                  : 'Preço sob consulta';
+              const urlCandidata = formatarUrl(p);
+              const descricao = stripHtml(p.descricao_completa);
+              let linha = `- ${p.nome} | ${preco}`;
+              if (descricao) linha += ` | ${descricao.substring(0, 400)}`;
+              if (urlCandidata) {
+                const valida = await validarUrl(urlCandidata);
+                if (valida) {
+                  linha += ` | ${urlCandidata}`;
+                } else {
+                  console.log(`[loja-integrada] URL inválida descartada: ${urlCandidata}`);
+                }
+              }
+              return linha;
+            }),
+        );
 
         return { encontrou: true, resultado: linhas.join('\n') };
       },
