@@ -83,9 +83,10 @@ function extractBlock(text) {
  * Rex deve responder: { "veredicto": "...", "feedback": "..." }
  */
 function parseRexVeredicto(text) {
-  const match = text.match(/\{[\s\S]*?"veredicto"[\s\S]*?\}/);
-  if (!match) throw new Error(`Rex não retornou JSON válido:\n${text.slice(0, 300)}`);
-  return JSON.parse(match[0]);
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error(`Rex não retornou JSON válido:\n${text.slice(0, 300)}`);
+  return JSON.parse(text.slice(start, end + 1));
 }
 
 /**
@@ -565,7 +566,7 @@ async function main() {
   let post = await writePost(briefing);
 
   // Step 3: Validar (Rex)
-  let { veredicto } = { veredicto: await validatePost(post) };
+  let veredicto = await validatePost(post);
 
   // Steps 4-5: Loop de revisão
   if (veredicto.veredicto === 'REVISAO') {
