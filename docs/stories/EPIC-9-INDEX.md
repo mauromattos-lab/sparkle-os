@@ -1,9 +1,9 @@
 # Epic 9 — AEO Squad Plaka: Automação Diária de Conteúdo
 
 **Status:** Draft
-**Criado por:** Morgan (@pm) — 2026-04-19
+**Criado por:** Morgan (@pm) — arquitetura: Aria (@architect) — 2026-04-19
 **Depende de:** Epic 8 (Done)
-**Objetivo:** Transformar o pipeline manual de geração de conteúdo do squad Plaka em um processo autônomo que roda diariamente no servidor, produzindo, validando, processando imagens e publicando um post no Ghost sem intervenção humana — com notificação ao Mauro apenas quando escalação for necessária.
+**Objetivo:** Transformar o pipeline manual de geração de conteúdo do squad Plaka em um processo autônomo via GitHub Actions que roda diariamente, produzindo, validando, processando imagens e publicando um post no Ghost sem intervenção humana — com notificação ao Mauro apenas quando escalação for necessária.
 
 ---
 
@@ -13,40 +13,47 @@ O Epic 8 entregou a estrutura completa: squad com agentes (Sage, Lyra, Rex, Vist
 
 O pipeline ainda exige execução manual. O custo de operação diário é alto: alguém precisa iniciar o fluxo, supervisionar cada etapa e publicar. Com o volume-alvo de 1 post/dia, isso não é sustentável.
 
-**A automação elimina essa fricção.** O servidor executa o pipeline às 09h BRT todos os dias, publica automaticamente no Ghost, processa a feature image, e notifica o Mauro apenas em dois casos: post publicado (resumo) ou escalação necessária (problema que precisa de olho humano).
+**A automação elimina essa fricção.** GitHub Actions executa o pipeline às 09h BRT todos os dias, publica automaticamente no Ghost, processa a feature image, e notifica o Mauro apenas em dois casos: post publicado (resumo) ou escalação necessária.
 
 ---
 
 ## Arquitetura de Automação
 
 ```
-VPS (187.77.37.88)
-  ├── n8n (porta 5678) ← orquestrador principal
-  │     └── Workflow: plaka-daily-content
-  │           ├── Trigger: cron 09:00 BRT (America/Sao_Paulo)
-  │           ├── Step 0: Gate — posts-history.md (max 1/dia)
-  │           ├── Step 1: Claude API → Sage (briefing)
-  │           ├── Step 2: Claude API → Lyra (escrever post)
-  │           ├── Step 3: Claude API → Rex (validar)
-  │           ├── Step 4: [se REVISAO] Claude API → Lyra (reescrever)
-  │           ├── Step 5: [se REVISAO] Claude API → Rex (revalidar)
-  │           ├── Step 6: [se ESCALADO] → Notificar Mauro e parar
-  │           ├── Step 7: NuvemShop API → resolver imagem via product-enricher
-  │           ├── Step 8: Node.js sharp → processar 1200×630 hero
-  │           ├── Step 9: Ghost Admin API → publicar post com feature_image
-  │           ├── Step 10: Ghost Admin API → atualizar posts-history.md
-  │           └── Step 11: Zenya/Z-API → notificar Mauro (resumo do post)
-  └── Node.js scripts (content-engine)
-        ├── auto-publish-post.mjs  ← novo (Story 9.2)
-        └── process-feature-images.mjs  ← já existe (Story 8.2)
+GitHub Actions (cron 09:00 BRT = UTC 12:00)
+  └── ubuntu-latest runner
+        ├── actions/checkout@v4
+        │     └── repo clonado (posts-history.md, tasks, context)
+        ├── actions/setup-node@v4 (Node 20)
+        ├── npm install (sharp + dependências)
+        └── node packages/content-engine/scripts/daily-pipeline.mjs
+              ├── Step 0: Gate — lê posts-history.md (max 1 post/dia)
+              ├── Step 1: Claude API → Sage (briefing)
+              ├── Step 2: Claude API → Lyra (escrever post)
+              ├── Step 3: Claude API → Rex (validar)
+              ├── Step 4: [se REVISAO] Claude API → Lyra (reescrever)
+              ├── Step 5: [se REVISAO] Claude API → Rex (revalidar)
+              ├── Step 6: [se ESCALADO] Z-API → WhatsApp Mauro + exit
+              ├── Step 7: NuvemShop API → resolver imagem (com modelo confirmado)
+              ├── Step 8: sharp → processar 1200×630 hero
+              ├── Step 9: Ghost Admin API → upload imagem + publicar post
+              ├── Step 10: atualizar posts-history.md
+              └── Step 11: Z-API → WhatsApp (resumo do post publicado)
+        └── stefanzweifel/git-auto-commit@v5
+              └── commit posts-history.md → origin/main
 ```
 
-**Por que n8n?**
-- Já roda no VPS (porta 5678, usado pelo Zenya)
-- Interface visual para debugar cada step
-- Retry automático em falhas de rede
-- Histórico de execuções visível
-- Fácil de pausar/retomar sem editar código
+**Por que GitHub Actions (não n8n, não VPS cron):**
+
+| Critério | GitHub Actions | VPS cron |
+|---------|---------------|---------|
+| Monitoramento | UI nativa, histórico por run | Log file, SSH pra ver |
+| Falha silenciosa | Email automático | Nenhum alerta |
+| Trigger manual | `workflow_dispatch` nativo | SSH + executar script |
+| Secrets | GitHub Secrets (criptografado) | .env no servidor |
+| Infra para gerenciar | Zero | Crontab, log rotation |
+| Custo | Grátis (~150 min/mês de 2000) | VPS já pago |
+| sharp | Funciona no ubuntu-latest | Funciona no VPS |
 
 ---
 
@@ -54,9 +61,9 @@ VPS (187.77.37.88)
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|------------|------------|----------|
-| [9.1](./9.1.story.md) | n8n Workflow: Trigger Cron + Pipeline Sage→Rex | Draft | P1 — Blocker | — | @dev |
-| [9.2](./9.2.story.md) | Publicação Automática: Feature Image + Ghost | Draft | P1 | 9.1 | @dev |
-| [9.3](./9.3.story.md) | Notificações: WhatsApp para Sucesso e Escalação | Draft | P2 | 9.1 | @dev |
+| [9.1](./9.1.story.md) | GitHub Actions: Workflow + Pipeline Sage→Rex | Draft | P1 — Blocker | — | @dev |
+| [9.2](./9.2.story.md) | Script daily-pipeline.mjs: Imagem + Publicação Ghost | Draft | P1 | 9.1 | @dev |
+| [9.3](./9.3.story.md) | Notificações WhatsApp: Sucesso e Escalação | Draft | P2 | 9.1 | @dev |
 
 ---
 
@@ -64,12 +71,11 @@ VPS (187.77.37.88)
 
 ```
 Wave 1 — Orquestração (blocker):
-  9.1 — n8n workflow com cron + steps Sage, Lyra, Rex, loop de revisão
-        → Pipeline inteligente, gera post aprovado automaticamente
+  9.1 — GitHub Actions workflow com cron + script diário
+        → Trigger automático, logs e histórico no GitHub
 
-Wave 2 — Publicação (após 9.1):
-  9.2 — Publicação automática: feature image via NuvemShop + processamento
-        sharp + POST no Ghost Admin API
+Wave 2 — Pipeline completo (após 9.1):
+  9.2 — daily-pipeline.mjs: Sage→Lyra→Rex→imagem→Ghost→git commit
         → Post aparece no blog sem intervenção
 
 Wave 3 — Visibilidade (paralelo à 9.2):
@@ -83,26 +89,29 @@ Wave 3 — Visibilidade (paralelo à 9.2):
 
 | Componente | Mudança |
 |-----------|---------|
-| n8n (VPS) | Novo workflow `plaka-daily-content` com 11 steps |
-| `packages/content-engine/scripts/` | Novo `auto-publish-post.mjs` |
-| `squads/aeo-squad-plaka/workflows/daily-content.yaml` | Trigger alterado de `manual` → `scheduled` (documentar) |
-| `squads/aeo-squad-plaka/data/posts-history.md` | Atualizado automaticamente pelo pipeline |
-| Z-API / Zenya | Novo endpoint de notificação de publicação |
+| `.github/workflows/` | Novo `plaka-daily-content.yml` |
+| `packages/content-engine/scripts/` | Novo `daily-pipeline.mjs` |
+| GitHub Secrets | 7 secrets: ANTHROPIC_API_KEY, GHOST_API_URL, GHOST_ADMIN_API_KEY, NUVEMSHOP_ACCESS_TOKEN, NUVEMSHOP_USER_ID, ZAPI_INSTANCE_ID, ZAPI_TOKEN, MAURO_PHONE |
+| `squads/aeo-squad-plaka/workflows/daily-content.yaml` | Trigger atualizado: `manual` → `scheduled` |
+| `squads/aeo-squad-plaka/data/posts-history.md` | Atualizado automaticamente via git-auto-commit |
 
 ---
 
 ## Definition of Done do Epic 9
 
-- [ ] Workflow n8n `plaka-daily-content` ativo no VPS, trigger cron 09:00 BRT
-- [ ] Gate de 1 post/dia funcional (step-0 lê posts-history.md)
-- [ ] Sage gera briefing via Claude API (system prompt fiel ao task/daily-briefing.md)
-- [ ] Lyra escreve post completo com contextual links e citação (task/write-post.md)
+- [ ] `.github/workflows/plaka-daily-content.yml` ativo com cron 09:00 BRT
+- [ ] `workflow_dispatch` funcional para trigger manual
+- [ ] Gate de 1 post/dia funcional (lê posts-history.md do checkout)
+- [ ] Sage gera briefing via Claude API (system prompt de daily-briefing.md)
+- [ ] Lyra escreve post completo com contextual links e citação (write-post.md)
 - [ ] Rex valida e devolve feedback — loop de revisão max 2x
-- [ ] Feature image resolvida automaticamente via NuvemShop + processada 1200×630
+- [ ] Feature image resolvida automaticamente via NuvemShop (índice com modelo confirmado)
+- [ ] Imagem processada 1200×630 com sharp no runner
 - [ ] Post publicado no Ghost com feature_image, tags e slug corretos
-- [ ] `posts-history.md` atualizado automaticamente após publicação
+- [ ] `posts-history.md` commitado automaticamente via git-auto-commit
 - [ ] Notificação WhatsApp enviada com título + URL do post
 - [ ] Notificação de escalação enviada quando Rex rejeita 2x
+- [ ] GitHub Secrets configurados (documentação para Mauro)
 - [ ] Teste end-to-end com 1 post real publicado automaticamente
 
 ---
