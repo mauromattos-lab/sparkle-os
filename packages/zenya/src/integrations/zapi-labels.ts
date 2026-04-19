@@ -51,13 +51,13 @@ export async function zapiAddLabel(
   labelId: string,
   creds: ZApiCredentials,
 ): Promise<void> {
-  const url = `${ZAPI_BASE_URL}/instances/${creds.instanceId}/token/${creds.token}/tags-add`;
+  // POST /chats/{phone}/tags/{labelId} — no body, tag ID in path
+  const url = `${ZAPI_BASE_URL}/instances/${creds.instanceId}/token/${creds.token}/chats/${normalizePhone(phone)}/tags/${labelId}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: zapiHeaders(creds.clientToken),
-    body: JSON.stringify({ phone: normalizePhone(phone), tag: labelId }),
   });
-  await assertOk(res, 'tags-add');
+  await assertOk(res, 'chats/tags');
 }
 
 /**
@@ -74,11 +74,11 @@ export async function zapiRemoveLabel(
   labelId: string,
   creds: ZApiCredentials,
 ): Promise<void> {
-  const url = `${ZAPI_BASE_URL}/instances/${creds.instanceId}/token/${creds.token}/tags-remove`;
+  // DELETE /chats/{phone}/tags/{labelId} — no body, tag ID in path
+  const url = `${ZAPI_BASE_URL}/instances/${creds.instanceId}/token/${creds.token}/chats/${normalizePhone(phone)}/tags/${labelId}`;
   const res = await fetch(url, {
-    method: 'POST',
+    method: 'DELETE',
     headers: zapiHeaders(creds.clientToken),
-    body: JSON.stringify({ phone: normalizePhone(phone), tag: labelId }),
   });
-  await assertOk(res, 'tags-remove');
+  await assertOk(res, 'chats/tags/delete');
 }

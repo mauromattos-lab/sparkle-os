@@ -1,6 +1,6 @@
 # Epic 7 — Zenya como Órgão Nativo do SparkleOS
 
-**Status:** 🟡 InProgress — Stories 7.1 ✅ 7.2 ✅ 7.3 ✅ 7.4 ✅ 7.5 ✅ 7.6 ✅ 7.7 ✅ 7.8 🔲 7.9 ✅ 7.10 ✅
+**Status:** 🟡 InProgress — Stories 7.1 ✅ 7.2 ✅ 7.3 ✅ 7.4 ✅ 7.5 ✅ 7.6 ✅ 7.7 ✅ 7.8 🔲 7.9 ✅ 7.10 ✅ Done
 **Criado por:** Morgan (@pm) + River (@sm)
 **Data:** 2026-04-14
 **Fonte:** PRD `docs/zenya-orgao-sparkle-prd.md` — análise Atlas + arquitetura Aria + pesquisa externa Atlas
@@ -31,7 +31,7 @@ O SparkleOS foi construído para ser o ambiente onde a Zenya cresce. Mantê-la f
 | [7.7](./7.7.story.md) | Ferramentas de Integração Customizada | ✅ Ready for Review | P2 | 7.3 | @dev |
 | [7.8](./7.8.story.md) | Validação com Zenya Prime e Cutover | 🔲 Aguardando Deploy | P1 | 7.3, 7.4, 7.5, 7.6, 7.7 | @dev + @devops |
 | [7.9](./7.9.story.md) | Debounce de Mensagens e Confirmação de Leitura | ✅ Ready for Review | P2 | 7.1, 7.3 | @dev |
-| [7.10](./7.10.story.md) | Etiquetas Nativas WhatsApp Business na Escalação para Humano | ✅ Ready for Review | P2 | 7.1, 7.3, 7.7 | @dev |
+| [7.10](./7.10.story.md) | Etiquetas Nativas WhatsApp Business na Escalação para Humano | ✅ Done | P2 | 7.1, 7.3, 7.7 | @dev |
 
 ---
 

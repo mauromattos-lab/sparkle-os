@@ -119,7 +119,7 @@ async function main() {
   } else {
     // 4. Criar nova etiqueta
     console.log(`🏷️  Criando etiqueta "${labelName}"...`);
-    const created = await zapiPost(instanceId, token, clientToken, 'create-tag', { name: labelName });
+    const created = await zapiPost(instanceId, token, clientToken, 'tags', { name: labelName, color: 1 });
     labelId = String(created.id);
     console.log(`✅ Etiqueta criada — ID: ${labelId}`);
   }

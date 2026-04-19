@@ -23,28 +23,29 @@ beforeEach(() => {
 // --- zapiAddLabel ---
 
 describe('zapiAddLabel', () => {
-  it('POST correto para tags-add com phone normalizado', async () => {
+  it('POST correto para /chats/{phone}/tags/{labelId} sem body', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true } as Response);
 
     await zapiAddLabel('+5531999998888', '10', mockCreds);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      `${BASE}/tags-add`,
+      `${BASE}/chats/5531999998888/tags/10`,
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ phone: '5531999998888', tag: '10' }),
       }),
     );
+    // sem body — tag no path
+    const callOpts = mockFetch.mock.calls[0]![1] as { body?: string };
+    expect(callOpts.body).toBeUndefined();
   });
 
-  it('normaliza phone sem + também (idempotente)', async () => {
+  it('normaliza phone sem + (idempotente) — phone no path', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true } as Response);
 
     await zapiAddLabel('5531999998888', '10', mockCreds);
 
-    const call = mockFetch.mock.calls[0]!;
-    const body = JSON.parse((call[1] as { body: string }).body) as { phone: string };
-    expect(body.phone).toBe('5531999998888');
+    const url = mockFetch.mock.calls[0]![0] as string;
+    expect(url).toContain('/chats/5531999998888/tags/10');
   });
 
   it('lança erro quando API retorna status não-OK', async () => {
@@ -55,7 +56,7 @@ describe('zapiAddLabel', () => {
     } as Response);
 
     await expect(zapiAddLabel('+5531999998888', '10', mockCreds)).rejects.toThrow(
-      'Z-API tags-add failed (403)',
+      'Z-API chats/tags failed (403)',
     );
   });
 
@@ -72,18 +73,20 @@ describe('zapiAddLabel', () => {
 // --- zapiRemoveLabel ---
 
 describe('zapiRemoveLabel', () => {
-  it('POST correto para tags-remove com phone normalizado', async () => {
+  it('DELETE correto para /chats/{phone}/tags/{labelId} sem body', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true } as Response);
 
     await zapiRemoveLabel('+5531999998888', '10', mockCreds);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      `${BASE}/tags-remove`,
+      `${BASE}/chats/5531999998888/tags/10`,
       expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ phone: '5531999998888', tag: '10' }),
+        method: 'DELETE',
       }),
     );
+    // sem body — tag no path
+    const callOpts = mockFetch.mock.calls[0]![1] as { body?: string };
+    expect(callOpts.body).toBeUndefined();
   });
 
   it('lança erro quando API retorna status não-OK', async () => {
@@ -94,7 +97,7 @@ describe('zapiRemoveLabel', () => {
     } as Response);
 
     await expect(zapiRemoveLabel('+5531999998888', '10', mockCreds)).rejects.toThrow(
-      'Z-API tags-remove failed (500)',
+      'Z-API chats/tags/delete failed (500)',
     );
   });
 });
