@@ -127,9 +127,10 @@ async function _resolveFeatureImageDirect(title, topic) {
     return null;
   }
 
-  // Monta query a partir do tópico (ex: "cuidados brinco" → "brinco")
-  // Usa a primeira palavra substantiva do tópico como query principal
-  const query = (topic ?? title).split(/\s+/).slice(0, 2).join(' ');
+  // Monta query a partir do tópico — usa a última palavra (mais específica)
+  // Ex: "cuidados brinco" → "brinco", "colares layering" → "colar"
+  const words = (topic ?? title).split(/\s+/).filter(Boolean);
+  const query = words[words.length - 1] ?? words[0];
 
   const url = `https://api.tiendanube.com/v1/${userId}/products?q=${encodeURIComponent(query)}&fields=id,name,images&per_page=5`;
 
