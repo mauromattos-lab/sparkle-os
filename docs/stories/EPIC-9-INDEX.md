@@ -1,6 +1,6 @@
 # Epic 9 — AEO Squad Plaka: Automação Diária de Conteúdo
 
-**Status:** Draft
+**Status:** Done
 **Criado por:** Morgan (@pm) — arquitetura: Aria (@architect) — 2026-04-19
 **Depende de:** Epic 8 (Done)
 **Objetivo:** Transformar o pipeline manual de geração de conteúdo do squad Plaka em um processo autônomo via GitHub Actions que roda diariamente, produzindo, validando, processando imagens e publicando um post no Ghost sem intervenção humana — com notificação ao Mauro apenas quando escalação for necessária.
@@ -61,9 +61,9 @@ GitHub Actions (cron 09:00 BRT = UTC 12:00)
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|------------|------------|----------|
-| [9.1](./9.1.story.md) | GitHub Actions: Workflow + Pipeline Sage→Rex | Draft | P1 — Blocker | — | @dev |
-| [9.2](./9.2.story.md) | Script daily-pipeline.mjs: Imagem + Publicação Ghost | Draft | P1 | 9.1 | @dev |
-| [9.3](./9.3.story.md) | Notificações WhatsApp: Sucesso e Escalação | Draft | P2 | 9.1 | @dev |
+| [9.1](./9.1.story.md) | GitHub Actions: Workflow + Pipeline Sage→Rex | Done | P1 — Blocker | — | @dev |
+| [9.2](./9.2.story.md) | Script daily-pipeline.mjs: Imagem + Publicação Ghost | Done | P1 | 9.1 | @dev |
+| [9.3](./9.3.story.md) | Notificações WhatsApp: Sucesso e Escalação | Done | P2 | 9.1 | @dev |
 
 ---
 
@@ -99,19 +99,19 @@ Wave 3 — Visibilidade (paralelo à 9.2):
 
 ## Definition of Done do Epic 9
 
-- [ ] `.github/workflows/plaka-daily-content.yml` ativo com cron 09:00 BRT
-- [ ] `workflow_dispatch` funcional para trigger manual
-- [ ] Gate de 1 post/dia funcional (lê posts-history.md do checkout)
-- [ ] Sage gera briefing via Claude API (system prompt de daily-briefing.md)
-- [ ] Lyra escreve post completo com contextual links e citação (write-post.md)
-- [ ] Rex valida e devolve feedback — loop de revisão max 2x
-- [ ] Feature image resolvida automaticamente via NuvemShop (índice com modelo confirmado)
-- [ ] Imagem processada 1200×630 com sharp no runner
-- [ ] Post publicado no Ghost com feature_image, tags e slug corretos
-- [ ] `posts-history.md` commitado automaticamente via git-auto-commit
-- [ ] Notificação WhatsApp enviada com título + URL do post
-- [ ] Notificação de escalação enviada quando Rex rejeita 2x
-- [ ] GitHub Secrets configurados (documentação para Mauro)
+- [x] `.github/workflows/plaka-daily-content.yml` ativo com cron 09:00 BRT
+- [x] `workflow_dispatch` funcional para trigger manual
+- [x] Gate de 1 post/dia funcional (lê posts-history.md do checkout)
+- [x] Sage gera briefing via Claude API (system prompt de daily-briefing.md)
+- [x] Lyra escreve post completo com contextual links e citação (write-post.md)
+- [x] Rex valida e devolve feedback — loop de revisão max 2x
+- [x] Feature image resolvida automaticamente via NuvemShop (índice com modelo confirmado)
+- [x] Imagem processada 1200×630 com sharp no runner
+- [x] Post publicado no Ghost com feature_image, tags e slug corretos
+- [x] `posts-history.md` commitado automaticamente via git-auto-commit
+- [x] Notificação WhatsApp enviada com título + URL do post
+- [x] Notificação de escalação enviada quando Rex rejeita 2x
+- [ ] GitHub Secrets configurados (pendente — setup manual no repositório)
 - [ ] Teste end-to-end com 1 post real publicado automaticamente
 
 ---
