@@ -166,7 +166,11 @@ async function _resolveFeatureImageDirect(title, topic) {
   }
 
   for (const product of products) {
-    const imageUrl = product.images?.[0]?.src;
+    // Preferir foto lifestyle (img_*) sobre foto de produto (UUID)
+    const images = product.images ?? [];
+    const lifestyle = images.find(img => img.src?.split('/').pop()?.startsWith('img_'));
+    const chosen = lifestyle ?? images[0];
+    const imageUrl = chosen?.src;
     const productName = product.name?.pt ?? product.name?.en ?? product.name;
     if (imageUrl && productName) {
       return { url: imageUrl, productName: String(productName) };
