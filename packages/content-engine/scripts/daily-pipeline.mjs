@@ -41,32 +41,33 @@ function readRepoFile(relPath) {
 }
 
 /**
- * Chama a Claude API com retry (429/500/503) e backoff exponencial.
+ * Chama a OpenAI API com retry (429/500/503) e backoff exponencial.
  */
 async function callClaude(systemPrompt, userMessage, maxTokens = 4096) {
   for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'gpt-4o',
         max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
       }),
     });
-    if (res.ok) return (await res.json()).content[0].text;
+    if (res.ok) return (await res.json()).choices[0].message.content;
     if ([429, 500, 503].includes(res.status) && attempt < 2) {
       const wait = 30000 * (attempt + 1);
-      console.warn(`[claude] tentativa ${attempt + 1} falhou (${res.status}) — aguardando ${wait / 1000}s...`);
+      console.warn(`[openai] tentativa ${attempt + 1} falhou (${res.status}) — aguardando ${wait / 1000}s...`);
       await new Promise(r => setTimeout(r, wait));
       continue;
     }
-    throw new Error(`Claude API ${res.status}: ${await res.text()}`);
+    throw new Error(`OpenAI API ${res.status}: ${await res.text()}`);
   }
 }
 
