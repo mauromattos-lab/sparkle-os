@@ -1,6 +1,6 @@
 # Epic 8 — AEO Squad Plaka: Correções de Semana 1 e Fortalecimento de Autoridade
 
-**Status:** 🔍 InReview
+**Status:** ✅ Done
 **Criado por:** Morgan (@pm) — análise Atlas (@analyst) — 2026-04-19
 **Fonte:** Relatório de diagnóstico AEO pós-semana-1 (`squads/aeo-squad-plaka/`)
 **Objetivo:** Corrigir os gaps de distribuição e arquitetura identificados na Semana 1 do AEO Squad Plaka, aplicar correções retroativas nos 8 posts publicados, e fortalecer o squad para produzir conteúdo com maior potencial de citação por LLMs a partir da Semana 2.
@@ -29,8 +29,8 @@ O Atlas (@analyst) conduziu análise do blog `blog.plakaacessorios.com` ao final
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|------------|------------|----------|
 | [8.1](./8.1.story.md) | Ghost: Tags, Taxonomia e Correções de Estrutura | ✅ Done | P1 — Blocker | — | @dev |
-| [8.2](./8.2.story.md) | Feature Images: Backfill e Product Enricher no Fluxo Manual | 🔍 InReview | P1 | 8.1 | @dev |
-| [8.3](./8.3.story.md) | Squad: Contextual Linking, Citações e Pillar Page | 🔍 InReview | P2 | 8.1 | @dev |
+| [8.2](./8.2.story.md) | Feature Images: Backfill e Product Enricher no Fluxo Manual | ✅ Done | P1 | 8.1 | @dev |
+| [8.3](./8.3.story.md) | Squad: Contextual Linking, Citações e Pillar Page | ✅ Done | P2 | 8.1 | @dev |
 
 ---
 
