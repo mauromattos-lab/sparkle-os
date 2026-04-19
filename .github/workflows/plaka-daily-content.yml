@@ -1,0 +1,42 @@
+name: Plaka Daily Content
+
+on:
+  schedule:
+    - cron: '0 12 * * *'  # 09:00 BRT (UTC-3)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Ignorar gate de 1 post/dia'
+        type: boolean
+        default: false
+
+jobs:
+  daily-content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: cd packages/content-engine/scripts && npm install
+
+      - name: Run daily pipeline
+        run: node packages/content-engine/scripts/daily-pipeline.mjs
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GHOST_API_URL: ${{ secrets.GHOST_API_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+          NUVEMSHOP_ACCESS_TOKEN: ${{ secrets.NUVEMSHOP_ACCESS_TOKEN }}
+          NUVEMSHOP_USER_ID: ${{ secrets.NUVEMSHOP_USER_ID }}
+          ZAPI_INSTANCE_ID: ${{ secrets.ZAPI_INSTANCE_ID }}
+          ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
+          MAURO_PHONE: ${{ secrets.MAURO_PHONE }}
+          FORCE: ${{ inputs.force }}
+
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'feat(aeo): post diário ${{ env.POST_DATE }} — ${{ env.POST_TITLE }}'
+          file_pattern: 'squads/aeo-squad-plaka/data/posts-history.md'

@@ -4,8 +4,10 @@ squad: aeo-squad-plaka
 version: 1.0.0
 
 trigger:
-  type: manual
-  description: "Executar uma vez por dia para gerar o post do blog"
+  type: scheduled
+  schedule: "0 12 * * *"  # 09:00 BRT (UTC-3) via GitHub Actions
+  description: "Execução automática diária — GitHub Actions plaka-daily-content.yml"
+  manual_override: "workflow_dispatch com input force=true para ignorar gate"
 
 config:
   max_revision_iterations: 2
