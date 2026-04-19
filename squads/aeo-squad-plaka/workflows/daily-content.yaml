@@ -14,6 +14,27 @@ config:
   output_format: markdown
 
 steps:
+  - id: step-0-scheduling-check
+    name: "Verificar se já existe post publicado hoje"
+    type: guard
+    # Gate soft: garante no máximo 1 post por dia.
+    # Para situações especiais (repost, correção urgente, evento), use a flag --force para ignorar este gate.
+    # Exemplo: aiox run daily-content --force
+    inputs:
+      data_atual: "{{today}}"
+      historico_posts: "{{file:data/posts-history.md}}"
+    logic: |
+      Verificar em data/posts-history.md se já existe uma linha na tabela de
+      Registro de Posts com a data igual a {{today}} (formato YYYY-MM-DD).
+      Se sim: STOP — emitir mensagem "Já existe um post publicado hoje ({{today}}).
+      Agendar para amanhã." e interromper o workflow.
+      Se não: prosseguir para step-1-briefing normalmente.
+    force_override: "{{flags.force | default: false}}"
+    on_stop:
+      message: "Já existe um post publicado hoje ({{today}}). Agendar para amanhã."
+      action: STOP
+    on_proceed: step-1-briefing
+
   - id: step-1-briefing
     name: "Sage define o tópico do dia"
     agent: sage

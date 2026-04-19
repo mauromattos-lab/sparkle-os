@@ -14,7 +14,7 @@ Saida: |
   - confirmacao: "Registro concluído — tópico X adicionado"
 Checklist:
   - "[ ] Extrair: data, tópico, pergunta central, bloco, palavras-chave do briefing"
-  - "[ ] Adicionar linha na tabela de posts em data/posts-history.md"
+  - "[ ] Adicionar linha na tabela de posts em data/posts-history.md (incluindo a URL do post publicado)"
   - "[ ] Marcar tópico como concluído no backlog (se presente)"
   - "[ ] Atualizar distribuição por bloco (tabela de meta semanal)"
   - "[ ] Confirmar registro"
@@ -42,11 +42,15 @@ palavras_chave:  primeiras 2-3 do briefing.palavras_chave
 
 ### 2. Adicionar entrada na tabela
 
-Abrir `data/posts-history.md` e adicionar linha na tabela de Registro de Posts:
+Abrir `data/posts-history.md` e adicionar linha na tabela de Registro de Posts.
+**Obrigatório incluir a URL do post publicado no Ghost** — necessária para contextual linking nos posts futuros.
 
 ```markdown
-| {data} | {topico} | {pergunta_central} | {bloco} | {palavras_chave} |
+| {data} | {topico} | {pergunta_central} | {bloco} | {palavras_chave} | {url} |
 ```
+
+A URL é retornada pelo content-engine após publicação no Ghost (`https://blog.plakaacessorios.com/{slug}/`).
+Se o post foi publicado manualmente, copiar a URL do browser após a publicação.
 
 ### 3. Marcar no backlog
 

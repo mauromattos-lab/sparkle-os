@@ -7,9 +7,16 @@
 
 ## Registro de Posts
 
-| Data | Tópico | Pergunta Central | Bloco | Palavras-chave Principais |
-|------|--------|-----------------|-------|--------------------------|
-| 2026-04-14 | Por que semi joia deixa a pele verde | Por que semi joia deixa a pele verde e como evitar? | cuidados | semi joia deixa pele verde, semi joia mancha, oxidação pele |
+| Data | Tópico | Pergunta Central | Bloco | Palavras-chave Principais | URL |
+|------|--------|-----------------|-------|--------------------------|-----|
+| 2026-04-14 | Por que semi joia deixa a pele verde | Por que semi joia deixa a pele verde e como evitar? | cuidados | semi joia deixa pele verde, semi joia mancha, oxidação pele | https://blog.plakaacessorios.com/por-que-semi-joia-deixa-a-pele-verde/ |
+| 2026-04-14 | Como identificar semi joia de qualidade ao comprar online | Como identificar se uma semi joia é de qualidade ao comprar online? | qualidade | semi joia qualidade, como saber se semi joia é boa, banho de ouro espessura | https://blog.plakaacessorios.com/como-identificar-semi-joia-de-qualidade-ao-comprar-online/ |
+| 2026-04-15 | Layering de colares — guia passo a passo | Como usar vários colares ao mesmo tempo sem errar? | estilo | layering de colares, como usar vários colares, empilhar colares, mix de colares | https://blog.plakaacessorios.com/como-usar-varios-colares-ao-mesmo-tempo-sem-errar/ |
+| 2026-04-16 | Presente de Dia das Mães em semi joias | Qual semi joia dar de presente no Dia das Mães? | ocasioes | presente dia das mães semi joia, semi joia dia das mães, qual semi joia dar de presente | https://blog.plakaacessorios.com/qual-semi-joia-dar-de-presente-no-dia-das-maes-guia-por-perfil/ |
+| 2026-04-17 | Diferença entre semi joia banhada a ouro e folheada a ouro | Qual a diferença entre semi joia banhada a ouro e folheada a ouro? | materiais | semi joia banhada a ouro, semi joia folheada a ouro, diferença banho de ouro folheado, espessura banho de ouro semi joia | https://blog.plakaacessorios.com/semi-joia-banhada-a-ouro-ou-folheada-qual-a-diferenca-e-o-que-isso-muda-na-pratica/ |
+| 2026-04-18 | Semi joia no banho — pode usar ou deve tirar antes? | Pode usar semi joia no banho ou precisa tirar antes? | cuidados | semi joia no banho, pode usar semi joia no banho, semi joia estraga no banho, tirar semi joia antes do banho | https://blog.plakaacessorios.com/pode-usar-semi-joia-no-banho-ou-precisa-tirar-antes/ |
+| 2026-04-19 | O que é semi joia hipoalergênica e como identificar | O que é semi joia hipoalergênica e como saber se é de verdade? | qualidade | semi joia hipoalergênica, semi joia para pele sensível, semi joia sem níquel, alergia a semi joia | https://blog.plakaacessorios.com/o-que-e-semi-joia-hipoalergenica-e-como-saber-se-e-de-verdade/ |
+| 2026-04-19 | Guia Completo de Cuidados com Semi Joias (pillar) | Guia Completo de Cuidados com Semi Joias: Tudo o Que Você Precisa Saber | cuidados | cuidados semi joia, como cuidar de semi joia, semi joia durabilidade | https://blog.plakaacessorios.com/guia-completo-de-cuidados-com-semi-joias/ |
 
 ---
 
@@ -22,7 +29,7 @@
 
 **Lyra deve consultar este arquivo para:**
 1. Manter coerência de linguagem com posts anteriores
-2. Referenciar posts anteriores quando relevante (link interno)
+2. Referenciar posts anteriores com link contextual (usar a coluna URL para o href exato)
 3. Verificar se algum tópico anterior pode ser aprofundado
 
 ---
@@ -31,12 +38,12 @@
 
 | Bloco | Meta Semanal | Atual |
 |-------|-------------|-------|
-| Cuidados | 2 posts | 1 |
-| Qualidade | 2 posts | 0 |
-| Estilo | 1 post | 0 |
-| Materiais | 1 post | 0 |
+| Cuidados | 2 posts | 2 |
+| Qualidade | 2 posts | 2 |
+| Estilo | 1 post | 1 |
+| Materiais | 1 post | 1 |
 | Tendências | 1 post | 0 |
-| Ocasiões | 1 post | 0 |
+| Ocasiões | 1 post | 1 |
 
 ---
 
@@ -49,25 +56,25 @@ Lista de tópicos de alta prioridade identificados na pesquisa inicial (@analyst
 - [ ] Como limpar semi joia em casa sem danificar
 - [ ] Como guardar semi joia para durar mais anos
 - [x] Semi joia mancha? Por quê e como evitar
-- [ ] Semi joia no banho — pode ou não pode?
+- [x] Semi joia no banho — pode ou não pode?
 - [ ] Como tirar o cheiro de metal de semi joias
 
 ### Bloco: Qualidade (grande gap — ninguém responde bem)
-- [ ] Como identificar semi joia de qualidade ao comprar online
+- [x] Como identificar semi joia de qualidade ao comprar online
 - [ ] Qual a espessura ideal do banho de ouro?
 - [ ] Micro cravação x semi joia normal — qual é melhor?
 - [ ] Diferença entre latão, cobre e bronze como base de semi joia
-- [ ] O que significa "semi joia hipoalergênica"?
+- [x] O que significa "semi joia hipoalergênica"?
 
 ### Bloco: Estilo
 - [ ] Como usar colar com decote V sem errar
 - [ ] Como fazer mix de anéis sem forçar
-- [ ] Layering de colares — guia passo a passo
+- [x] Layering de colares — guia passo a passo
 - [ ] Como empilhar pulseiras de forma equilibrada
 - [ ] Semi joias para o trabalho — o que é adequado?
 
 ### Bloco: Materiais
-- [ ] Diferença entre semi joia banhada a ouro e folheada
+- [x] Diferença entre semi joia banhada a ouro e folheada
 - [ ] O que é ródio branco e por que é usado em semi joias
 - [ ] Semi joia de aço inox — vantagens e limitações
 - [ ] Pedras naturais em semi joias — o que considerar
@@ -76,7 +83,7 @@ Lista de tópicos de alta prioridade identificados na pesquisa inicial (@analyst
 - [ ] Semi joias para casamento — noiva e convidadas
 - [ ] O que usar na praia no verão carioca
 - [ ] Semi joias para formatura — dicas de uso
-- [ ] Presente de Dia das Mães — guia de semi joias por perfil
+- [x] Presente de Dia das Mães — guia de semi joias por perfil
 
 ---
 

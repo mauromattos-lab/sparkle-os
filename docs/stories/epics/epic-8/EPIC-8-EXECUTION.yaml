@@ -1,0 +1,182 @@
+# ============================================================
+# Epic 8 — AEO Squad Plaka: Correções de Semana 1 e
+#           Fortalecimento de Autoridade
+# Execution Plan — Wave-Based Parallel Development
+#
+# Criado por: Morgan (@pm)
+# Data: 2026-04-19
+# Fonte: Análise Atlas (@analyst) pós-semana-1
+# Template: epic-orchestration.yaml
+# ============================================================
+
+execution:
+  epicId: EPIC-8
+  epicName: "AEO Squad Plaka — Correções Semana 1"
+  epicIndex: docs/stories/EPIC-8-INDEX.md
+  storyBasePath: docs/stories
+  template: epic-orchestration
+
+  # ──────────────────────────────────────────────────────────
+  # STORIES
+  # ──────────────────────────────────────────────────────────
+
+  stories:
+    "8.1":
+      file: 8.1.story.md
+      title: "Ghost: Tags, Taxonomia e Correções de Estrutura"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [api_contract_validation, backward_compatibility_check, script_review]
+      branch: feat/8.1-ghost-taxonomy
+      complexity: medium
+      priority: P1-blocker
+      key_files:
+        - packages/content-engine/scripts/setup-ghost-taxonomy.mjs
+        - packages/content-engine/.env
+
+    "8.2":
+      file: 8.2.story.md
+      title: "Feature Images: Backfill e Product Enricher no Fluxo Manual"
+      executor: "@dev"
+      quality_gate: "@architect"
+      quality_gate_tools: [api_contract_validation, integration_test, schema_validation]
+      branch: feat/8.2-feature-images-backfill
+      complexity: medium
+      priority: P1
+      key_files:
+        - packages/content-engine/scripts/_publish-helpers.mjs
+        - packages/content-engine/scripts/backfill-feature-images.mjs
+        - packages/content-engine/src/product-enricher.ts
+        - packages/content-engine/src/ghost-publisher.ts
+
+    "8.3":
+      file: 8.3.story.md
+      title: "Squad: Contextual Linking, Citações, Scheduling e Pillar Page"
+      executor: "@dev"
+      quality_gate: "@pm"
+      quality_gate_tools: [content_review, workflow_validation, squad_task_review]
+      branch: feat/8.3-squad-improvements
+      complexity: medium
+      priority: P2
+      key_files:
+        - squads/aeo-squad-plaka/tasks/write-post.md
+        - squads/aeo-squad-plaka/tasks/register-post.md
+        - squads/aeo-squad-plaka/workflows/daily-content.yaml
+        - squads/aeo-squad-plaka/data/posts-history.md
+        - packages/content-engine/scripts/publish-pillar-cuidados.mjs
+
+  # ──────────────────────────────────────────────────────────
+  # WAVES
+  # ──────────────────────────────────────────────────────────
+
+  waves:
+
+    - number: 1
+      name: "Estrutura Ghost — Taxonomia e Identidade"
+      parallel: false
+      stories: ["8.1"]
+      dependencies: []
+      rationale: |
+        Blocker — tags no Ghost são pré-requisito para que os posts ganhem
+        hierarquia semântica. A Story 8.2 precisa das tags existentes para
+        incluir tag_ids no backfill de imagens. A Story 8.3 referencia
+        taxonomy pages ao criar a pillar page.
+      gate:
+        agent: "@architect"
+        focus: |
+          - Script setup-ghost-taxonomy.mjs executa sem erros
+          - 6 tags criadas no Ghost Admin e acessíveis via GET /ghost/api/admin/tags/
+          - Tags aplicadas nos 8 posts existentes — verificar via GET de cada post
+          - Tagline do blog atualizada em Ghost Settings
+          - Bio de autor visível no Ghost Admin
+          - Script é idempotente (segunda execução não duplica nada)
+          - Credenciais consumidas apenas do .env — sem hardcode
+      merge:
+        order: ["feat/8.1-ghost-taxonomy"]
+        conflict_risk: low
+        notes: "Único branch — sem risco de conflito"
+      tag: wave-1-ghost-taxonomy
+
+    - number: 2
+      name: "Imagens e Melhorias do Squad"
+      parallel: true
+      stories: ["8.2", "8.3"]
+      dependencies: [1]
+      rationale: |
+        8.2 e 8.3 dependem da Wave 1 (tags precisam existir para o backfill
+        incluir tag_ids) mas são completamente independentes entre si —
+        atuam em arquivos distintos e podem ser desenvolvidas em paralelo.
+      gate:
+        agent: "@architect"
+        focus: |
+          — Story 8.2:
+          - _publish-helpers.mjs exporta resolveFeatureImage, buildJwt, slugify
+          - backfill-feature-images.mjs executa para os 8 posts sem erros
+          - Pelo menos 1 post verificado com og:image válido via curl
+          - JSON-LD atualizado com ImageObject nos posts com imagem resolvida
+          - Graceful degradation: NuvemShop indisponível → skip sem falhar
+
+          — Story 8.3:
+          - write-post.md com regra de contextual linking e citação no checklist
+          - daily-content.yaml com step-0 de scheduling check funcional
+          - register-post.md e posts-history.md com coluna URL
+          - publish-pillar-cuidados.mjs executado com sucesso
+          - Pillar page acessível no blog com tag cuidados e links para 3 posts
+          - JSON-LD da pillar page válido (BlogPosting + FAQPage)
+
+          — Integração:
+          - Nenhum script novo conflita com scripts existentes
+          - Padrão JWT/env seguido consistentemente em todos os novos scripts
+      merge:
+        order:
+          - feat/8.2-feature-images-backfill
+          - feat/8.3-squad-improvements
+        conflict_risk: low
+        notes: |
+          8.2 altera apenas packages/content-engine/scripts/ (novos arquivos).
+          8.3 altera squads/aeo-squad-plaka/ (tasks, workflow, data) e adiciona
+          um novo script. Sem sobreposição de arquivos.
+      tag: wave-2-images-squad
+
+  # ──────────────────────────────────────────────────────────
+  # FINAL GATE
+  # ──────────────────────────────────────────────────────────
+
+  final_gate:
+    agent: "@architect"
+    tag: epic-8-complete
+    focus: |
+      Sign-off final do Epic 8 — AEO Squad Plaka Semana 1:
+
+      1. Blog health check:
+         - 8 posts com tags AEO aplicadas — taxonomy pages acessíveis
+         - 8 posts com feature_image → og:image presente
+         - Tagline e bio de autor atualizadas
+
+      2. Pillar page:
+         - "Guia Completo de Cuidados com Semi Joias" publicada
+         - Links internos para 3 posts de cuidados funcionando
+         - Tag cuidados aplicada, JSON-LD válido
+
+      3. Squad fortalecido:
+         - write-post.md com contextual linking + citação obrigatória
+         - daily-content.yaml com gate de scheduling (máx 1 post/dia)
+         - posts-history.md com coluna URL
+
+      4. Scorecard estimado pós-epic:
+         - Feature images: 8/10 (vs. 1/10)
+         - Topical authority: 7/10 (vs. 4/10)
+         - Links internos: 7/10 (vs. 5/10)
+         - EEAT: 6/10 (vs. 4/10)
+         - Total estimado: 65+/80 (vs. 41/80)
+
+      5. Definition of Done do EPIC-8-INDEX.md: todos os checkboxes atendidos
+
+  # ──────────────────────────────────────────────────────────
+  # RETROSPECTIVE
+  # ──────────────────────────────────────────────────────────
+
+  retrospective:
+    agent: "@pm"
+    format: brief
+    focus: "Gaps identificados vs. resolvidos, o que incluir no processo do squad para a Semana 2"

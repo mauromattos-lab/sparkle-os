@@ -27,6 +27,8 @@ Checklist:
   - "[ ] CTA sutil no final — sem linguagem de loja"
   - "[ ] Verificar: 800-1200 palavras"
   - "[ ] Verificar: tom de especialista, não de vendedor"
+  - "[ ] Incluir 1-2 links internos contextuais no corpo do texto para posts relacionados existentes"
+  - "[ ] Incluir 1 citação externa verificável para posts com afirmações técnicas (dados de mercado, saúde, química)"
 ---
 
 # *write-post
@@ -87,6 +89,40 @@ Lyra escreve o artigo AEO do dia a partir do briefing da Sage.
 - Adjetivos vazios ("incrível", "maravilhoso", "perfeito")
 - Generalidades sem suporte ("algumas peças podem...", "dependendo do caso...")
 - Menções forçadas à marca Plaka no meio do conteúdo
+
+## Links Internos
+
+**Regra:** Lyra deve incluir 1-2 links internos contextuais **no corpo do texto** — não apenas no rodapé ou seção final.
+
+**Processo:**
+1. Consultar `data/posts-history.md` e identificar posts publicados relacionados ao tópico do dia
+2. Identificar o parágrafo mais relevante onde o link se encaixa naturalmente
+3. Inserir o link dentro da frase, como texto âncora descritivo — nunca como "clique aqui" ou "veja também"
+
+**Exemplo correto:**
+> "A espessura do [banho de ouro](https://blog.plakaacessorios.com/semi-joia-banhada-a-ouro-ou-folheada-qual-a-diferenca-e-o-que-isso-muda-na-pratica/) é o principal fator que determina a durabilidade da peça..."
+
+**Exemplo incorreto:**
+> "Para saber mais sobre banho de ouro, [clique aqui](URL)."
+
+**Critério:** O link deve fazer sentido para o leitor naquele ponto — ele deve agregar contexto, não parecer inserção forçada.
+
+## Citações Externas
+
+**Regra:** Posts com afirmações técnicas (dados de mercado, saúde, química, regulamentação) devem incluir 1 citação externa verificável.
+
+**Fontes recomendadas:**
+- SBD — Sociedade Brasileira de Dermatologia (saúde da pele, alergias)
+- ABNT — normas técnicas de composição metálica
+- INMETRO — regulamentação de produtos e certificações
+- Publicações científicas sobre ligas metálicas (artigos indexados)
+
+**Formato:** Citação inserida no corpo do parágrafo como referência entre parênteses ou como link no final da frase afirmativa — não como nota de rodapé formal.
+
+**Exemplo:**
+> "A alergia ao níquel afeta entre 10% e 15% da população brasileira (Sociedade Brasileira de Dermatologia)."
+
+**Quando aplicar:** Posts dos blocos "cuidados", "qualidade" e "materiais" quase sempre contêm afirmações técnicas. Posts de "estilo" e "ocasiões" raramente precisam.
 
 ## Comprimento
 
