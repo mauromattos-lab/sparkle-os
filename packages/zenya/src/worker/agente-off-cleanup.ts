@@ -83,7 +83,7 @@ async function removeAgenteOffLabel(accountId: string, conversationId: number, c
   }
 }
 
-async function runCleanup(): Promise<void> {
+export async function runCleanup(): Promise<void> {
   const tenants = await getAllTenants().catch(() => [] as Array<{ tenantId: string; accountId: string }>);
   const now = Date.now();
 
