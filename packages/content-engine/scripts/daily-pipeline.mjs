@@ -160,7 +160,9 @@ async function generateBriefing() {
   ].join('\n');
 
   const raw = await callClaude(systemPrompt, userMsg, 2048);
-  const briefing = parseYaml(extractBlock(raw));
+  const parsed = parseYaml(extractBlock(raw));
+  // O task file define YAML com chave raiz "briefing:" — desembrulhar se presente
+  const briefing = parsed?.briefing ?? parsed;
 
   console.log(`[step-1] Tópico: "${briefing.topico}" | Bloco: ${briefing.bloco_conteudo}`);
   return briefing;
@@ -228,6 +230,9 @@ async function validatePost(post, iteration = 1) {
 
   const raw = await callClaude(systemPrompt, userMsg, 1024);
   const result = parseRexVeredicto(raw);
+  // Normalizar veredictos com variações (ex: APROVADO_COM_OBSERVACOES → APROVADO)
+  if (result.veredicto?.startsWith('APROVADO')) result.veredicto = 'APROVADO';
+  if (result.veredicto?.startsWith('REVISAO')) result.veredicto = 'REVISAO';
   console.log(`[step-3] Veredicto: ${result.veredicto}`);
   return result;
 }
