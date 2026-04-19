@@ -284,6 +284,7 @@ pm2 logs zenya-webhook --lines 100
 | Admin session key `admin:{phone}` | Separa histórico admin do histórico de cliente |
 | `admin_contacts` JSONB com `{phone, name}` | Permite saudação personalizada sem nova tabela |
 | Migration ANTES do deploy | Coluna inexistente no SELECT derruba todos os tenants |
+| Validação de URL de produto (HEAD request) | API da Loja Integrada retorna slugs internos que não existem na loja pública — URLs são validadas antes de chegar ao LLM, 404s são descartados silenciosamente |
 
 ---
 
@@ -293,6 +294,7 @@ pm2 logs zenya-webhook --lines 100
 |--------|----------------------|--------|-------------|--------|
 | Zenya Prime (SparkleOS) | `1` | Produção | base | Mauro |
 | Julia - Fun Personalize | `5` | Produção | base + loja_integrada | Julia, Mauro |
+| Gustavo - Designer/Streamers | pendente | Onboarding | base | Gustavo |
 
 ---
 
