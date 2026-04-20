@@ -34,6 +34,8 @@ interface ChatwootWebhookPayload {
   account?: { id: string | number };
   conversation?: { id: string | number; labels?: string[] };
   sender?: { phone_number?: string | null; name?: string; type?: string };
+  /** Chatwoot payload's "meta" block — contains the conversation's Contact (customer) */
+  meta?: { sender?: { phone_number?: string | null; name?: string } };
   attachments?: unknown[];
   created_at?: number;
 }
@@ -44,14 +46,24 @@ interface ChatwootWebhookPayload {
 const ACTIVITY_MESSAGE_TYPES = new Set(['activity', 'template']);
 
 function extractPhone(payload: ChatwootWebhookPayload): string | null {
-  return payload.sender?.phone_number ?? null;
+  // For 'incoming' messages, sender is the customer (Contact) with phone_number.
+  // For 'outgoing' messages, sender is the agent (User) WITHOUT phone_number;
+  // fall back to meta.sender (the Contact of the conversation) if present.
+  return (
+    payload.sender?.phone_number ??
+    payload.meta?.sender?.phone_number ??
+    null
+  );
 }
 
 function validatePayload(payload: ChatwootWebhookPayload): string | null {
   if (!payload.message_type) return 'missing message_type';
   if (!payload.account?.id) return 'missing account.id';
   if (!payload.conversation?.id) return 'missing conversation.id';
-  if (!payload.sender?.phone_number) return 'missing sender.phone_number';
+  // phone_number is only required for 'incoming' — outgoing sender is the agent (no phone).
+  if (payload.message_type === 'incoming' && !payload.sender?.phone_number) {
+    return 'missing sender.phone_number';
+  }
   return null;
 }
 
@@ -73,6 +85,16 @@ export function createWebhookRouter(): Hono {
       return c.json({ error: validationError }, 400);
     }
 
+    // DIAGNOSTIC: log every non-incoming request shape to diagnose human-reply detection.
+    // Temporary — remove once heuristic is confirmed.
+    if (payload.message_type !== 'incoming') {
+      console.log(
+        `[zenya][diag] type=${payload.message_type} source_id=${JSON.stringify(payload.source_id)} ` +
+        `sender=${JSON.stringify(payload.sender)} conv=${payload.conversation?.id} ` +
+        `labels=${JSON.stringify(payload.conversation?.labels)} content_len=${payload.content?.length ?? 0}`,
+      );
+    }
+
     // Activity/template: internal Chatwoot events, always skip
     if (ACTIVITY_MESSAGE_TYPES.has(payload.message_type!)) {
       return c.json({ ok: true, skipped: true });
@@ -80,7 +102,7 @@ export function createWebhookRouter(): Hono {
 
     const accountId = String(payload.account!.id);
     const conversationId = String(payload.conversation!.id);
-    const phone = extractPhone(payload)!;
+    const phone = extractPhone(payload);
 
     // Outgoing messages: distinguish bot replies from human agent replies.
     //   - Bot sends via Chatwoot API → source_id is null
@@ -95,7 +117,7 @@ export function createWebhookRouter(): Hono {
           await escalateToHuman({
             tenantId: config.id,
             chatwoot: getChatwootParams(accountId, conversationId),
-            phone,
+            phone: phone ?? '',
             source: 'human-reply',
           });
         } catch (err) {
@@ -107,6 +129,11 @@ export function createWebhookRouter(): Hono {
 
     // agente-off label: conversation was escalated to human — bot stays silent
     if (payload.conversation?.labels?.includes('agente-off')) {
+      return c.json({ ok: true, skipped: true });
+    }
+
+    // Beyond here, message is 'incoming' — validatePayload already enforced phone presence.
+    if (!phone) {
       return c.json({ ok: true, skipped: true });
     }
 
