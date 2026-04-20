@@ -36,6 +36,11 @@ interface ChatwootWebhookPayload {
   sender?: { phone_number?: string | null; name?: string; type?: string };
   /** Chatwoot payload's "meta" block — contains the conversation's Contact (customer) */
   meta?: { sender?: { phone_number?: string | null; name?: string } };
+  /**
+   * Content attributes echoed back by Chatwoot. The bot marks its own messages with
+   * { sent_by_zenya: true } on send, so the webhook can identify them here.
+   */
+  content_attributes?: { sent_by_zenya?: boolean } & Record<string, unknown>;
   attachments?: unknown[];
   created_at?: number;
 }
@@ -90,6 +95,7 @@ export function createWebhookRouter(): Hono {
     if (payload.message_type !== 'incoming') {
       console.log(
         `[zenya][diag] type=${payload.message_type} source_id=${JSON.stringify(payload.source_id)} ` +
+        `sent_by_zenya=${payload.content_attributes?.sent_by_zenya ?? false} ` +
         `sender=${JSON.stringify(payload.sender)} conv=${payload.conversation?.id} ` +
         `labels=${JSON.stringify(payload.conversation?.labels)} content_len=${payload.content?.length ?? 0}`,
       );
@@ -105,12 +111,13 @@ export function createWebhookRouter(): Hono {
     const phone = extractPhone(payload);
 
     // Outgoing messages: distinguish bot replies from human agent replies.
-    //   - Bot sends via Chatwoot API → source_id is null
-    //   - Human agent replies on the store's phone → Z-API mirrors into Chatwoot
-    //     with source_id = original WhatsApp message id
-    // When a human replies, auto-apply 'agente-off' so the bot stays silent.
+    //   - Bot (Zenya): marks content_attributes.sent_by_zenya=true on send
+    //   - Human — Chatwoot panel: outgoing without sent_by_zenya
+    //   - Human — store's phone: outgoing without sent_by_zenya (source_id = wamid.xxx)
+    // Any outgoing NOT marked by the bot → human → auto-apply 'agente-off'.
     if (payload.message_type === 'outgoing') {
-      const isHumanReply = Boolean(payload.source_id);
+      const isBot = payload.content_attributes?.sent_by_zenya === true;
+      const isHumanReply = !isBot;
       if (isHumanReply && !payload.conversation?.labels?.includes('agente-off')) {
         try {
           const config = await loadTenantByAccountId(accountId);

@@ -142,10 +142,13 @@ describe('POST /webhook/chatwoot', () => {
     );
   });
 
-  // Outgoing: bot reply (source_id null) → skip silently; human reply (source_id set) → auto-escalate
+  // Outgoing: bot (sent_by_zenya=true) → skip silent; anything else (panel ou celular) → auto-escalate
   describe('outgoing message handling', () => {
-    it('skips bot replies (outgoing without source_id) without escalating', async () => {
-      const payload = makePayload({ message_type: 'outgoing', source_id: null });
+    it('skips bot replies (outgoing with sent_by_zenya=true) without escalating', async () => {
+      const payload = makePayload({
+        message_type: 'outgoing',
+        content_attributes: { sent_by_zenya: true },
+      });
       const res = await postWebhook(app, payload);
       expect(res.status).toBe(200);
       const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
@@ -156,32 +159,38 @@ describe('POST /webhook/chatwoot', () => {
       expect(mockEscalateToHuman).not.toHaveBeenCalled();
     });
 
-    it('auto-escalates human replies (outgoing with source_id) — applies agente-off', async () => {
+    it('auto-escalates human replies from the store phone (outgoing with source_id, no sent_by_zenya)', async () => {
       const payload = makePayload({
         message_type: 'outgoing',
-        source_id: 'whatsapp-msg-id-abc123',
+        source_id: 'wamid.abc123',
       });
       const res = await postWebhook(app, payload);
       expect(res.status).toBe(200);
       const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
-      expect(body.ok).toBe(true);
-      expect(body.skipped).toBe(true);
       expect(body.human_reply).toBe(true);
-      expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockEscalateToHuman).toHaveBeenCalledOnce();
       expect(mockEscalateToHuman).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tenantId: 'tenant-uuid-123',
-          phone: '+5511999990000',
-          source: 'human-reply',
-        }),
+        expect.objectContaining({ tenantId: 'tenant-uuid-123', source: 'human-reply' }),
       );
+    });
+
+    it('auto-escalates human replies from the Chatwoot panel (outgoing, source_id null, no sent_by_zenya)', async () => {
+      const payload = makePayload({
+        message_type: 'outgoing',
+        source_id: null,
+        sender: { type: 'User', name: 'Julia' },
+      });
+      const res = await postWebhook(app, payload);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
+      expect(body.human_reply).toBe(true);
+      expect(mockEscalateToHuman).toHaveBeenCalledOnce();
     });
 
     it('skips re-escalation when agente-off label is already present', async () => {
       const payload = makePayload({
         message_type: 'outgoing',
-        source_id: 'whatsapp-msg-id-xyz',
+        source_id: 'wamid.xyz',
         conversation: { id: 'conv-999', labels: ['agente-off'] },
       });
       const res = await postWebhook(app, payload);
@@ -193,7 +202,7 @@ describe('POST /webhook/chatwoot', () => {
       mockEscalateToHuman.mockRejectedValueOnce(new Error('Chatwoot down'));
       const payload = makePayload({
         message_type: 'outgoing',
-        source_id: 'whatsapp-msg-id-999',
+        source_id: 'wamid.999',
       });
       const res = await postWebhook(app, payload);
       expect(res.status).toBe(200);
