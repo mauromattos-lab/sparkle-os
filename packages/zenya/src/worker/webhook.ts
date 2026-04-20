@@ -10,6 +10,7 @@ import { runAdminAgent } from '../agent/admin-agent.js';
 import { transcribeAudioUrl } from '../integrations/whisper.js';
 import { clearHistory } from '../agent/memory.js';
 import { sendMessage, getChatwootParams } from '../integrations/chatwoot.js';
+import { escalateToHuman } from '../tenant/escalation.js';
 
 // Debounce window: wait this long after the first message before processing.
 // Any messages arriving during this window are merged into a single agent call.
@@ -24,15 +25,23 @@ interface ChatwootWebhookPayload {
   id?: number;
   content?: string | null;
   message_type?: string;
+  /**
+   * Original message ID from the external channel (e.g. WhatsApp msg id when mirrored
+   * via Z-API). Present on messages that come from outside Chatwoot; null when the bot
+   * creates a message via Chatwoot API.
+   */
+  source_id?: string | null;
   account?: { id: string | number };
   conversation?: { id: string | number; labels?: string[] };
-  sender?: { phone_number?: string | null; name?: string };
+  sender?: { phone_number?: string | null; name?: string; type?: string };
   attachments?: unknown[];
   created_at?: number;
 }
 
-// Message types that should be ignored (bot's own messages, system events)
-const IGNORED_MESSAGE_TYPES = new Set(['outgoing', 'activity', 'template']);
+// Activity/template messages are internal Chatwoot events — always ignored.
+// 'outgoing' is handled separately: may be the bot itself OR a human reply mirrored
+// from the store's phone (Z-API). Distinguished by source_id.
+const ACTIVITY_MESSAGE_TYPES = new Set(['activity', 'template']);
 
 function extractPhone(payload: ChatwootWebhookPayload): string | null {
   return payload.sender?.phone_number ?? null;
@@ -64,9 +73,36 @@ export function createWebhookRouter(): Hono {
       return c.json({ error: validationError }, 400);
     }
 
-    // AC3: filter outgoing/activity — bot's own messages, return 200 silently
-    if (IGNORED_MESSAGE_TYPES.has(payload.message_type!)) {
+    // Activity/template: internal Chatwoot events, always skip
+    if (ACTIVITY_MESSAGE_TYPES.has(payload.message_type!)) {
       return c.json({ ok: true, skipped: true });
+    }
+
+    const accountId = String(payload.account!.id);
+    const conversationId = String(payload.conversation!.id);
+    const phone = extractPhone(payload)!;
+
+    // Outgoing messages: distinguish bot replies from human agent replies.
+    //   - Bot sends via Chatwoot API → source_id is null
+    //   - Human agent replies on the store's phone → Z-API mirrors into Chatwoot
+    //     with source_id = original WhatsApp message id
+    // When a human replies, auto-apply 'agente-off' so the bot stays silent.
+    if (payload.message_type === 'outgoing') {
+      const isHumanReply = Boolean(payload.source_id);
+      if (isHumanReply && !payload.conversation?.labels?.includes('agente-off')) {
+        try {
+          const config = await loadTenantByAccountId(accountId);
+          await escalateToHuman({
+            tenantId: config.id,
+            chatwoot: getChatwootParams(accountId, conversationId),
+            phone,
+            source: 'human-reply',
+          });
+        } catch (err) {
+          console.error(`[zenya] Failed to auto-escalate on human reply — conv=${conversationId}: ${err}`);
+        }
+      }
+      return c.json({ ok: true, skipped: true, human_reply: isHumanReply });
     }
 
     // agente-off label: conversation was escalated to human — bot stays silent
@@ -74,9 +110,6 @@ export function createWebhookRouter(): Hono {
       return c.json({ ok: true, skipped: true });
     }
 
-    const accountId = String(payload.account!.id);
-    const conversationId = String(payload.conversation!.id);
-    const phone = extractPhone(payload)!;
     const messageId = String(payload.id ?? `${accountId}-${phone}-${Date.now()}`);
     const message = payload.content ?? '';
 

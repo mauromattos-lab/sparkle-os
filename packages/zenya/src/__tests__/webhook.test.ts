@@ -17,6 +17,35 @@ vi.mock('../worker/queue.js', () => ({
   enqueue: (...args: unknown[]) => mockEnqueue(...args),
 }));
 
+const mockEscalateToHuman = vi.fn().mockResolvedValue(undefined);
+vi.mock('../tenant/escalation.js', () => ({
+  escalateToHuman: (...args: unknown[]) => mockEscalateToHuman(...args),
+}));
+
+const mockLoadTenantByAccountId = vi.fn().mockResolvedValue({
+  id: 'tenant-uuid-123',
+  chatwoot_account_id: 'tenant-123',
+  name: 'Test Tenant',
+  system_prompt: '',
+  active_tools: [],
+  allowed_phones: [],
+  admin_phones: [],
+  admin_contacts: [],
+});
+vi.mock('../tenant/config-loader.js', () => ({
+  loadTenantByAccountId: (...args: unknown[]) => mockLoadTenantByAccountId(...args),
+}));
+
+vi.mock('../integrations/chatwoot.js', () => ({
+  getChatwootParams: (accountId: string, conversationId: string) => ({
+    url: 'https://chatwoot.test',
+    token: 'test-token',
+    accountId,
+    conversationId,
+  }),
+  sendMessage: vi.fn(),
+}));
+
 // Import after mocks
 import { createWebhookRouter } from '../worker/webhook.js';
 
@@ -96,9 +125,9 @@ describe('POST /webhook/chatwoot', () => {
     });
   });
 
-  // AC3: outgoing/activity filter
-  describe('outgoing message filter', () => {
-    it.each(['outgoing', 'activity', 'template'])(
+  // AC3: activity/template filter — always skip
+  describe('activity/template filter', () => {
+    it.each(['activity', 'template'])(
       'returns 200 and skips message_type=%s without enqueuing',
       async (msgType) => {
         const payload = makePayload({ message_type: msgType });
@@ -108,8 +137,68 @@ describe('POST /webhook/chatwoot', () => {
         expect(body.ok).toBe(true);
         expect(body.skipped).toBe(true);
         expect(mockEnqueue).not.toHaveBeenCalled();
+        expect(mockEscalateToHuman).not.toHaveBeenCalled();
       },
     );
+  });
+
+  // Outgoing: bot reply (source_id null) → skip silently; human reply (source_id set) → auto-escalate
+  describe('outgoing message handling', () => {
+    it('skips bot replies (outgoing without source_id) without escalating', async () => {
+      const payload = makePayload({ message_type: 'outgoing', source_id: null });
+      const res = await postWebhook(app, payload);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
+      expect(body.ok).toBe(true);
+      expect(body.skipped).toBe(true);
+      expect(body.human_reply).toBe(false);
+      expect(mockEnqueue).not.toHaveBeenCalled();
+      expect(mockEscalateToHuman).not.toHaveBeenCalled();
+    });
+
+    it('auto-escalates human replies (outgoing with source_id) — applies agente-off', async () => {
+      const payload = makePayload({
+        message_type: 'outgoing',
+        source_id: 'whatsapp-msg-id-abc123',
+      });
+      const res = await postWebhook(app, payload);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
+      expect(body.ok).toBe(true);
+      expect(body.skipped).toBe(true);
+      expect(body.human_reply).toBe(true);
+      expect(mockEnqueue).not.toHaveBeenCalled();
+      expect(mockEscalateToHuman).toHaveBeenCalledOnce();
+      expect(mockEscalateToHuman).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 'tenant-uuid-123',
+          phone: '+5511999990000',
+          source: 'human-reply',
+        }),
+      );
+    });
+
+    it('skips re-escalation when agente-off label is already present', async () => {
+      const payload = makePayload({
+        message_type: 'outgoing',
+        source_id: 'whatsapp-msg-id-xyz',
+        conversation: { id: 'conv-999', labels: ['agente-off'] },
+      });
+      const res = await postWebhook(app, payload);
+      expect(res.status).toBe(200);
+      expect(mockEscalateToHuman).not.toHaveBeenCalled();
+    });
+
+    it('responds 200 even when escalateToHuman throws (graceful degradation)', async () => {
+      mockEscalateToHuman.mockRejectedValueOnce(new Error('Chatwoot down'));
+      const payload = makePayload({
+        message_type: 'outgoing',
+        source_id: 'whatsapp-msg-id-999',
+      });
+      const res = await postWebhook(app, payload);
+      expect(res.status).toBe(200);
+      expect(mockEscalateToHuman).toHaveBeenCalledOnce();
+    });
   });
 
   // AC4: queue insertion
