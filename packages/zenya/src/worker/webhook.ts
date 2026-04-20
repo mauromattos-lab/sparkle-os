@@ -90,14 +90,16 @@ export function createWebhookRouter(): Hono {
       return c.json({ error: validationError }, 400);
     }
 
-    // DIAGNOSTIC: log every webhook request shape.
+    // DIAGNOSTIC: log every non-incoming request shape to diagnose human-reply detection.
     // Temporary — remove once heuristic is confirmed.
-    console.log(
-      `[zenya][diag] type=${payload.message_type} source_id=${JSON.stringify(payload.source_id)} ` +
-      `sender=${JSON.stringify(payload.sender)} conv=${payload.conversation?.id} ` +
-      `labels=${JSON.stringify(payload.conversation?.labels)} content_len=${payload.content?.length ?? 0} ` +
-      `phone=${payload.sender?.phone_number ?? payload.meta?.sender?.phone_number ?? 'null'}`,
-    );
+    if (payload.message_type !== 'incoming') {
+      console.log(
+        `[zenya][diag] type=${payload.message_type} source_id=${JSON.stringify(payload.source_id)} ` +
+        `sent_by_zenya=${payload.content_attributes?.sent_by_zenya ?? false} ` +
+        `sender=${JSON.stringify(payload.sender)} conv=${payload.conversation?.id} ` +
+        `labels=${JSON.stringify(payload.conversation?.labels)} content_len=${payload.content?.length ?? 0}`,
+      );
+    }
 
     // Activity/template: internal Chatwoot events, always skip
     if (ACTIVITY_MESSAGE_TYPES.has(payload.message_type!)) {
@@ -108,15 +110,14 @@ export function createWebhookRouter(): Hono {
     const conversationId = String(payload.conversation!.id);
     const phone = extractPhone(payload);
 
-    // Outgoing messages: only the store-phone path is auto-detected as human.
-    // Panel-typed messages and bot replies both have source_id=null and come through
-    // the same API (bot uses the admin's token), so they are indistinguishable at
-    // the webhook level — treating them would silence the bot itself.
-    //   - Bot via API → source_id null → skip (can't pause)
-    //   - Chatwoot panel → source_id null → skip (can't pause here; humans must mute manually)
-    //   - Store phone (Z-API mirror) → source_id = wamid.xxx → pause (agente-off)
+    // Outgoing messages: distinguish bot replies from human agent replies.
+    //   - Bot (Zenya): marks content_attributes.sent_by_zenya=true on send
+    //   - Human — Chatwoot panel: outgoing without sent_by_zenya
+    //   - Human — store's phone: outgoing without sent_by_zenya (source_id = wamid.xxx)
+    // Any outgoing NOT marked by the bot → human → auto-apply 'agente-off'.
     if (payload.message_type === 'outgoing') {
-      const isHumanReply = Boolean(payload.source_id);
+      const isBot = payload.content_attributes?.sent_by_zenya === true;
+      const isHumanReply = !isBot;
       if (isHumanReply && !payload.conversation?.labels?.includes('agente-off')) {
         try {
           const config = await loadTenantByAccountId(accountId);
