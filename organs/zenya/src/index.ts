@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { flowsRouter } from './routes/flows.js';
 import { clientsRouter } from './routes/clients.js';
 import { healthRouter } from './routes/health.js';
+import { cockpitRouter } from './routes/cockpit.js';
 import { ZenyaBaseError } from './errors/index.js';
 
 const app = new Hono();
@@ -25,5 +26,8 @@ app.route('/flows', flowsRouter);
 
 // Rotas de provisionamento de clientes Zenya
 app.route('/clients', clientsRouter);
+
+// Rotas do cockpit do cliente (Epic 10)
+app.route('/cockpit', cockpitRouter);
 
 export { app };
