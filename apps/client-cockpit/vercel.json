@@ -2,10 +2,5 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "env": {
-    "NEXT_PUBLIC_SUPABASE_URL": "@cockpit-supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@cockpit-supabase-anon-key",
-    "NEXT_PUBLIC_ZENYA_API_URL": "@cockpit-zenya-api-url"
-  }
+  "installCommand": "npm install"
 }
