@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
-import { clientAuthMiddleware } from '../middleware/client-auth.js';
+import { clientAuthMiddleware, type ClientAuthVars } from '../middleware/client-auth.js';
 
-const cockpitRouter = new Hono();
+const cockpitRouter = new Hono<{ Variables: ClientAuthVars }>();
 
 // GET /cockpit/conversations?limit=20&offset=0
 cockpitRouter.get('/conversations', clientAuthMiddleware, async (c) => {
-  const tenantId = c.get('tenantId') as string;
+  const tenantId = c.get('tenantId');
   const limit = Math.min(Number(c.req.query('limit') ?? 20), 100);
   const offset = Number(c.req.query('offset') ?? 0);
 
@@ -31,7 +31,7 @@ cockpitRouter.get('/conversations', clientAuthMiddleware, async (c) => {
 
 // GET /cockpit/metrics
 cockpitRouter.get('/metrics', clientAuthMiddleware, async (c) => {
-  const tenantId = c.get('tenantId') as string;
+  const tenantId = c.get('tenantId');
   const db = getDb();
 
   const [totalResult, todayResult] = await Promise.all([

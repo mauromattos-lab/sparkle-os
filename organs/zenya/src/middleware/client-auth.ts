@@ -7,12 +7,15 @@ const supabase = createClient(
   process.env['SUPABASE_SERVICE_ROLE_KEY']!,
 );
 
-export interface ClientAuthVars {
+export type ClientAuthVars = {
   tenantId: string;
   tenantName: string;
-}
+};
 
-export async function clientAuthMiddleware(c: Context, next: Next): Promise<Response | void> {
+export async function clientAuthMiddleware(
+  c: Context<{ Variables: ClientAuthVars }>,
+  next: Next,
+): Promise<Response | void> {
   const token = c.req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return c.json({ error: 'UNAUTHORIZED', message: 'Token não fornecido' }, 401);
 
