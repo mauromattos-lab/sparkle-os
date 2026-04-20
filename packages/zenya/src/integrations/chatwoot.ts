@@ -28,19 +28,12 @@ async function assertOk(res: Response, operation: string): Promise<void> {
 
 /**
  * Sends an outgoing text message to the conversation.
- * Marks the message with content_attributes.sent_by_zenya so the webhook can
- * distinguish bot replies from human agent replies (panel or phone).
  */
 export async function sendMessage(params: ChatwootParams, content: string): Promise<void> {
   const res = await fetch(apiUrl(params, '/messages'), {
     method: 'POST',
     headers: headers(params.token),
-    body: JSON.stringify({
-      content,
-      message_type: 'outgoing',
-      private: false,
-      content_attributes: { sent_by_zenya: true },
-    }),
+    body: JSON.stringify({ content, message_type: 'outgoing', private: false }),
   });
   await assertOk(res, 'sendMessage');
 }
@@ -106,8 +99,6 @@ export async function sendAudioMessage(params: ChatwootParams, audioBuffer: Buff
   );
   formData.append('message_type', 'outgoing');
   formData.append('content', '');
-  // Mark bot audio replies so the webhook can distinguish them from human audio.
-  formData.append('content_attributes', JSON.stringify({ sent_by_zenya: true }));
 
   const res = await fetch(apiUrl(params, '/messages'), {
     method: 'POST',

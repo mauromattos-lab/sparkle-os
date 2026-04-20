@@ -142,24 +142,20 @@ describe('POST /webhook/chatwoot', () => {
     );
   });
 
-  // Outgoing: bot (sent_by_zenya=true) → skip silent; anything else (panel ou celular) → auto-escalate
+  // Outgoing: source_id truthy (WhatsApp mirror from store phone) → auto-escalate.
+  // source_id null (bot via API OR human in panel) → skip (indistinguishable, can't pause).
   describe('outgoing message handling', () => {
-    it('skips bot replies (outgoing with sent_by_zenya=true) without escalating', async () => {
-      const payload = makePayload({
-        message_type: 'outgoing',
-        content_attributes: { sent_by_zenya: true },
-      });
+    it('skips outgoing without source_id (bot or panel) without escalating', async () => {
+      const payload = makePayload({ message_type: 'outgoing', source_id: null });
       const res = await postWebhook(app, payload);
       expect(res.status).toBe(200);
       const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
-      expect(body.ok).toBe(true);
-      expect(body.skipped).toBe(true);
       expect(body.human_reply).toBe(false);
       expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockEscalateToHuman).not.toHaveBeenCalled();
     });
 
-    it('auto-escalates human replies from the store phone (outgoing with source_id, no sent_by_zenya)', async () => {
+    it('auto-escalates human replies from the store phone (outgoing with source_id)', async () => {
       const payload = makePayload({
         message_type: 'outgoing',
         source_id: 'wamid.abc123',
@@ -172,19 +168,6 @@ describe('POST /webhook/chatwoot', () => {
       expect(mockEscalateToHuman).toHaveBeenCalledWith(
         expect.objectContaining({ tenantId: 'tenant-uuid-123', source: 'human-reply' }),
       );
-    });
-
-    it('auto-escalates human replies from the Chatwoot panel (outgoing, source_id null, no sent_by_zenya)', async () => {
-      const payload = makePayload({
-        message_type: 'outgoing',
-        source_id: null,
-        sender: { type: 'User', name: 'Julia' },
-      });
-      const res = await postWebhook(app, payload);
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
-      expect(body.human_reply).toBe(true);
-      expect(mockEscalateToHuman).toHaveBeenCalledOnce();
     });
 
     it('skips re-escalation when agente-off label is already present', async () => {
