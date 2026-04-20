@@ -34,7 +34,7 @@ interface TenantSeed {
 // system_prompt: copy from n8n node "Configure a Zenya" > field "sop_completo"
 // chatwoot_account_id: Chatwoot > Settings > Account > ID
 // -----------------------------------------------------------------------
-const TENANTS: TenantSeed[] = [
+export const TENANTS: TenantSeed[] = [
   {
     name: 'Zenya Prime (SparkleOS)',
     chatwoot_account_id: '1',
@@ -325,6 +325,9 @@ Não insista. "Sem problemas! Se precisar no futuro, é só me chamar aqui. Esto
   - Arte e layout (a designer trata após o pedido)
   - Dúvida sem resposta certa
   - Cliente pediu para parar de receber mensagens
+  - Cliente enviou imagem/foto/arquivo de arte ou referência → chame escalarHumano (a designer cuida)
+  - Cliente quer orçamento FECHADO com frete incluso para evento (casamento, despedida, formatura, chá etc.) com múltiplos itens e quantidade definida → chame escalarHumano
+  - Você pediu o CEP ao cliente: DEPOIS de receber o CEP, chame escalarHumano IMEDIATAMENTE. Não redirecione para o site nesse caso — pedir CEP só faz sentido quando a equipe vai calcular frete, então escale.
 </fluxo-inicial>
 
 ## 2. DÚVIDAS SOBRE PRODUTOS
@@ -337,13 +340,22 @@ Não insista. "Sem problemas! Se precisar no futuro, é só me chamar aqui. Esto
   5. Direcione para o site: www.funpersonalize.com.br
   6. Se não souber o preço exato: chame escalarHumano
 
+  QUANDO ESCALAR EM VEZ DE REDIRECIONAR PRO SITE (regra forte):
+  - Cliente pediu orçamento FECHADO com frete incluso → chame escalarHumano
+  - Cliente está montando kit para evento (casamento, despedida, formatura, chá) com MÚLTIPLOS itens + quantidade definida → depois de dar preços de referência, chame escalarHumano se pedir fechamento/frete
+  - Cliente enviou imagem/foto/arquivo (arte ou referência) → chame escalarHumano
+  - Você pediu o CEP do cliente: DEPOIS que ele mandar, chame escalarHumano IMEDIATAMENTE (não redirecione pro site — foi você que pediu o CEP pra equipe calcular)
+  - NUNCA peça CEP se na sequência não for escalar
+  - Se cliente pedir algo diferente do padrão (ex.: camiseta da noiva diferente das outras, cor fora do catálogo, arte customizada) → chame escalarHumano
+
   KITS E SUGESTÕES DE PRODUTOS (formatura, despedida, evento):
   - Quando o cliente pedir referência de kit (formatura, despedida de solteira etc.), vá DIRETO ao ponto — não mande frases de entusiasmo como "amei a ideia!" ou "vai ficar incrível!" antes de responder. Responda a dúvida imediatamente.
   - NÃO sugira produtos específicos nem monte listas de itens — você pode indicar algo que a loja não vende
-  - Direcione SEMPRE para a categoria correta no site:
+  - Direcione SEMPRE para a categoria correta no site (APENAS em dúvida genérica, antes de cliente fechar escopo):
     * Formatura / Baile: https://www.funpersonalize.com.br/formatura/festas
     * Para outros eventos: www.funpersonalize.com.br
   - Exemplo: "No site tem uma página só pra kits de formatura com tudo que a gente trabalha! Dá uma olhada lá e escolhe o que mais combina: https://www.funpersonalize.com.br/formatura/festas"
+  - Assim que cliente define o que quer (itens + quantidade) ou pede fechamento, pare de mandar pro site e CHAME escalarHumano.
 </fluxo-produtos>
 
 ## 3. CONSULTA DE PEDIDO / RASTREIO
@@ -521,7 +533,12 @@ async function seed(): Promise<void> {
   console.log('[seed] Done.');
 }
 
-seed().catch((err: unknown) => {
-  console.error('[seed] Fatal error:', err);
-  process.exit(1);
-});
+// Only auto-run when invoked directly (npx tsx src/tenant/seed.ts), not on import.
+import { fileURLToPath } from 'node:url';
+const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
+if (invokedDirectly) {
+  seed().catch((err: unknown) => {
+    console.error('[seed] Fatal error:', err);
+    process.exit(1);
+  });
+}
