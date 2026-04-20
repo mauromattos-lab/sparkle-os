@@ -39,7 +39,7 @@ Cliente acessa cockpit.sparkleai.tech (ou subdomínio do cliente)
 | 10.1 | Auth de Clientes — Supabase Auth + sessão por tenant | Draft | P1 — Blocker | — | @data-engineer |
 | 10.2 | API: endpoints /conversations e /metrics por cliente | Draft | P1 | 10.1 | @dev |
 | 10.3 | Frontend: app Next.js do cockpit do cliente (telas base) | Draft | P1 | 10.2 | @ux-design-expert |
-| 10.4 | Deploy e configuração de domínio do cockpit | Draft | P2 | 10.3 | @devops |
+| 10.4 | Deploy e configuração de domínio do cockpit | InProgress | P2 | 10.3 ✅ | @devops |
 
 ---
 

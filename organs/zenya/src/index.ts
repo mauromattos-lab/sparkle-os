@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { flowsRouter } from './routes/flows.js';
 import { clientsRouter } from './routes/clients.js';
 import { healthRouter } from './routes/health.js';
@@ -6,6 +7,24 @@ import { cockpitRouter } from './routes/cockpit.js';
 import { ZenyaBaseError } from './errors/index.js';
 
 const app = new Hono();
+
+// CORS — permite cockpit do cliente e piloting interface (ambos no Vercel)
+const ALLOWED_ORIGINS = (process.env['CORS_ALLOWED_ORIGINS'] ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  '/cockpit/*',
+  cors({
+    origin: (origin) =>
+      ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.vercel.app')
+        ? origin
+        : null,
+    allowMethods: ['GET', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type'],
+  }),
+);
 
 // Handler centralizado de erros — intercepta ZenyaBaseError e retorna resposta tipada.
 // Erros não-tipados são propagados como 500 genérico com mensagem sanitizada.
