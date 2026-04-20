@@ -1,7 +1,11 @@
 import { Hono } from 'hono';
-import { sql } from 'drizzle-orm';
-import { getDb } from '../db/client.js';
+import { createClient } from '@supabase/supabase-js';
 import { clientAuthMiddleware, type ClientAuthVars } from '../middleware/client-auth.js';
+
+const supabase = createClient(
+  process.env['SUPABASE_URL']!,
+  process.env['SUPABASE_SERVICE_KEY']!,
+);
 
 const cockpitRouter = new Hono<{ Variables: ClientAuthVars }>();
 
@@ -11,46 +15,39 @@ cockpitRouter.get('/conversations', clientAuthMiddleware, async (c) => {
   const limit = Math.min(Number(c.req.query('limit') ?? 20), 100);
   const offset = Number(c.req.query('offset') ?? 0);
 
-  const db = getDb();
-  const rows = await db.execute<{
-    id: string;
-    phone_number: string;
-    role: string;
-    content: string;
-    created_at: string;
-  }>(sql`
-    SELECT id, phone_number, role, content, created_at
-    FROM zenya_conversation_history
-    WHERE tenant_id = ${tenantId}
-    ORDER BY created_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `);
+  const { data, error } = await supabase
+    .from('zenya_conversation_history')
+    .select('id, phone_number, role, content, created_at')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-  return c.json({ data: rows, limit, offset });
+  if (error) return c.json({ error: 'DATABASE_ERROR', message: error.message }, 500);
+  return c.json({ data: data ?? [], limit, offset });
 });
 
 // GET /cockpit/metrics
 cockpitRouter.get('/metrics', clientAuthMiddleware, async (c) => {
   const tenantId = c.get('tenantId');
-  const db = getDb();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayIso = today.toISOString();
 
   const [totalResult, todayResult] = await Promise.all([
-    db.execute<{ count: string }>(sql`
-      SELECT COUNT(*)::text AS count
-      FROM zenya_conversation_history
-      WHERE tenant_id = ${tenantId}
-    `),
-    db.execute<{ count: string }>(sql`
-      SELECT COUNT(*)::text AS count
-      FROM zenya_conversation_history
-      WHERE tenant_id = ${tenantId}
-        AND created_at >= CURRENT_DATE
-    `),
+    supabase
+      .from('zenya_conversation_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId),
+    supabase
+      .from('zenya_conversation_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .gte('created_at', todayIso),
   ]);
 
   return c.json({
-    totalConversations: Number(totalResult[0]?.count ?? 0),
-    conversationsToday: Number(todayResult[0]?.count ?? 0),
+    totalConversations: totalResult.count ?? 0,
+    conversationsToday: todayResult.count ?? 0,
     systemStatus: 'active',
   });
 });

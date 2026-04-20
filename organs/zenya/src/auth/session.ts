@@ -1,5 +1,9 @@
-import { sql } from 'drizzle-orm';
-import { getDb } from '../db/client.js';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env['SUPABASE_URL']!,
+  process.env['SUPABASE_SERVICE_KEY']!,
+);
 
 export interface ClientSession {
   tenantId: string;
@@ -13,26 +17,18 @@ export class ClientNotFoundError extends Error {
   }
 }
 
-/**
- * Retorna tenantId e tenantName do tenant vinculado ao userId do Supabase Auth.
- * Lança ClientNotFoundError se o usuário não tiver tenant ativo.
- */
 export async function getClientSession(userId: string): Promise<ClientSession> {
-  const db = getDb();
+  const { data, error } = await supabase
+    .from('zenya_client_users')
+    .select('zenya_tenants(id, name)')
+    .eq('user_id', userId)
+    .limit(1)
+    .single<{ zenya_tenants: { id: string; name: string } | null }>();
 
-  const rows = await db.execute<{ id: string; name: string }>(sql`
-    SELECT zt.id, zt.name
-    FROM zenya_client_users zcu
-    JOIN zenya_tenants zt ON zt.id = zcu.tenant_id
-    WHERE zcu.user_id = ${userId}::uuid
-    LIMIT 1
-  `);
-
-  const row = rows[0];
-  if (!row) throw new ClientNotFoundError(userId);
+  if (error || !data?.zenya_tenants) throw new ClientNotFoundError(userId);
 
   return {
-    tenantId: row.id,
-    tenantName: row.name,
+    tenantId: data.zenya_tenants.id,
+    tenantName: data.zenya_tenants.name,
   };
 }
