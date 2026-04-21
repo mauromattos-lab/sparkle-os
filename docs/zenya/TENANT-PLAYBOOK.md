@@ -337,7 +337,7 @@ pm2 logs zenya-webhook --lines 100
 | Zenya Prime (SparkleOS) | `1` | Produção | base | Mauro | [`zenya-prime/prompt.md`](tenants/zenya-prime/prompt.md) |
 | Julia - Fun Personalize | `5` | Produção | base + loja_integrada | Julia, Mauro | [`fun-personalize/prompt.md`](tenants/fun-personalize/prompt.md) |
 | HL Importados | pendente cutover | Backlog | base + ultracash + google_calendar | Mauro, Hiago | [`hl-importados/prompt.md`](tenants/hl-importados/prompt.md) |
-| PLAKA | pendente onboarding | Onboarding | base | — | [`plaka/README.md`](tenants/plaka/README.md) |
+| PLAKA (Roberta) | aguardando número novo | Pré-onboarding | base + nuvemshop + google_sheets (planejado) | Admin a definir | [`plaka/prompt.md`](tenants/plaka/prompt.md) |
 | Scar AI — GuDesignerPro | `7` | Aguardando Z-API | base | Mauro, Gustavo | [`scar-ai/prompt.md`](tenants/scar-ai/prompt.md) |
 
 ---
