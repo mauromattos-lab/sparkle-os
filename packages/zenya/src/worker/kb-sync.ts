@@ -142,21 +142,33 @@ export async function syncTenantKB(tenantId: string): Promise<SyncReport> {
   const sb = getSupabase();
   const now = new Date().toISOString();
 
-  const entries = rows
-    .map((row) => {
-      const raw = String(row[0] ?? '').trim();
-      const answer = String(row[1] ?? '').trim();
-      if (!raw || !answer) return null;
-      return {
+  // Triggers podem vir como lista de palavras-chave separadas por '/' na mesma célula.
+  // Ex: "oxidou / escureceu / preto / enferrujou / manchou" — cada keyword vira uma
+  // entry separada apontando pra mesma resposta. Isso permite match por palavra-chave
+  // individual (via fuzzy lookup em sheets-kb.ts) em vez de exigir que o cliente digite
+  // a célula inteira.
+  const entries = rows.flatMap((row) => {
+    const raw = String(row[0] ?? '').trim();
+    const answer = String(row[1] ?? '').trim();
+    if (!raw || !answer) return [];
+
+    const triggers = raw
+      .split(/\s*\/\s*/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const triggerList = triggers.length > 0 ? triggers : [raw];
+
+    return triggerList
+      .map((trigger) => ({
         tenant_id: tenantId,
-        question_normalized: normalizeQuestion(raw),
-        question_raw: raw,
+        question_normalized: normalizeQuestion(trigger),
+        question_raw: trigger,
         answer,
         last_synced_at: now,
         updated_at: now,
-      };
-    })
-    .filter((e): e is NonNullable<typeof e> => !!e && !!e.question_normalized);
+      }))
+      .filter((e) => !!e.question_normalized);
+  });
 
   report.skipped = rows.length - entries.length;
 

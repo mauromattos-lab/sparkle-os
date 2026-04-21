@@ -109,23 +109,68 @@ export function createSheetsKBTools(tenantId: string): ToolSet {
           }
 
           const entry = (data as KbEntry | null) ?? null;
-          cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value: entry });
 
-          if (!entry) {
+          if (entry) {
+            cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value: entry });
             console.log(
-              `[sheets-kb] tenant=${tenantId} consultarKBSheets pergunta_normalizada="${normalized}" result=no-match`,
+              `[sheets-kb] tenant=${tenantId} consultarKBSheets pergunta_normalizada="${normalized}" result=hit-exact synced=${entry.last_synced_at}`,
             );
+            return {
+              sem_match: false,
+              resposta: entry.answer,
+              fonte_sincronizada_em: entry.last_synced_at,
+            };
+          }
+
+          // Fallback: fuzzy match por palavra-chave (substring word-bounded).
+          // Carrega todas as entries do tenant e verifica se alguma keyword
+          // aparece como palavra completa na pergunta normalizada do cliente.
+          // Heurística: match mais longo ganha (keyword mais específica).
+          const { data: allEntries, error: fuzzyErr } = await sb
+            .from('zenya_tenant_kb_entries')
+            .select('question_normalized, answer, last_synced_at')
+            .eq('tenant_id', tenantId);
+
+          if (fuzzyErr) {
+            console.error(
+              `[sheets-kb] tenant=${tenantId} fuzzy_lookup db_error: ${fuzzyErr.message}`,
+            );
+            cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value: null });
             return { sem_match: true };
           }
 
+          const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const candidates = (allEntries ?? [])
+            .map((row) => ({
+              kw: String(row['question_normalized'] ?? '').trim(),
+              answer: String(row['answer'] ?? ''),
+              last_synced_at: String(row['last_synced_at'] ?? ''),
+            }))
+            .filter((c) => c.kw.length >= 3 && c.answer)
+            .filter((c) => new RegExp(`\\b${escapeRegex(c.kw)}\\b`, 'i').test(normalized))
+            .sort((a, b) => b.kw.length - a.kw.length);
+
+          const hit = candidates[0];
+          if (hit) {
+            const hitEntry: KbEntry = { answer: hit.answer, last_synced_at: hit.last_synced_at };
+            cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value: hitEntry });
+            console.log(
+              `[sheets-kb] tenant=${tenantId} consultarKBSheets pergunta_normalizada="${normalized}" result=hit-fuzzy kw="${hit.kw}" synced=${hit.last_synced_at}`,
+            );
+            return {
+              sem_match: false,
+              resposta: hit.answer,
+              fonte_sincronizada_em: hit.last_synced_at,
+              match_type: 'fuzzy',
+              matched_keyword: hit.kw,
+            };
+          }
+
+          cache.set(key, { expires: Date.now() + CACHE_TTL_MS, value: null });
           console.log(
-            `[sheets-kb] tenant=${tenantId} consultarKBSheets pergunta_normalizada="${normalized}" result=hit synced=${entry.last_synced_at}`,
+            `[sheets-kb] tenant=${tenantId} consultarKBSheets pergunta_normalizada="${normalized}" result=no-match`,
           );
-          return {
-            sem_match: false,
-            resposta: entry.answer,
-            fonte_sincronizada_em: entry.last_synced_at,
-          };
+          return { sem_match: true };
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           console.error(
