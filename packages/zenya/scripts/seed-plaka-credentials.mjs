@@ -16,7 +16,11 @@
 //   ZENYA_MASTER_KEY                          — 64 hex chars (32 bytes) — mesma chave usada pelo core
 //   PLAKA_CHATWOOT_ACCOUNT_ID                 — pra localizar o tenant_id (UUID) via lookup
 //
-//   NUVEMSHOP_ACCESS_TOKEN, NUVEMSHOP_USER_ID  — credenciais Tiendanube
+//   NUVEMSHOP_ACCESS_TOKEN, NUVEMSHOP_USER_ID  — credenciais Nuvemshop/Tiendanube
+//                                                (USER_ID do seed é o store_id da loja — nome histórico
+//                                                 do parâmetro n8n; o adapter grava como `store_id`)
+//   NUVEMSHOP_USER_AGENT                       — header obrigatório do gateway Nuvemshop,
+//                                                default: "SparkleOS Zenya (mauro@sparkleai.tech)"
 //
 //   PLAKA_KB_SPREADSHEET_ID                    — ID da planilha "Roberta_Plaka_BaseConhecimento"
 //   PLAKA_KB_RANGES                            — múltiplos ranges A1 separados por `;` (preferido pra KB multi-aba)
@@ -112,9 +116,13 @@ if (!serviceAccount.client_email || !serviceAccount.private_key) {
   process.exit(1);
 }
 
+// Shape esperado pelo adapter nuvemshop.ts: { access_token, store_id, user_agent }.
+// NUVEMSHOP_USER_ID é o nome histórico do parâmetro do n8n — corresponde ao store_id.
 const nuvemshopCred = {
   access_token: process.env.NUVEMSHOP_ACCESS_TOKEN,
-  user_id: process.env.NUVEMSHOP_USER_ID,
+  store_id: process.env.NUVEMSHOP_USER_ID,
+  user_agent:
+    process.env.NUVEMSHOP_USER_AGENT ?? 'SparkleOS Zenya (mauro@sparkleai.tech)',
 };
 
 // Ranges: PLAKA_KB_RANGES (plural, CSV com `;`) tem precedência.
