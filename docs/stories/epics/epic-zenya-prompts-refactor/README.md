@@ -1,9 +1,12 @@
 # Epic: zenya-prompts-refactor
 
-**Status:** Open
+**Status:** ✅ Done (fechado 2026-04-21)
 **Owner:** @pm (Morgan)
 **Origem:** ADR-001 — `docs/architecture/adr/ADR-001-zenya-prompt-storage.md`
 **Data de abertura:** 2026-04-21
+**Data de fechamento:** 2026-04-21
+
+**Resumo da execução:** 4 stories Done. Scar/Prime/Julia alinhados no banco (md5 match preservando todos os campos não-prompt). HL e PLAKA com código pronto (cutovers dependem de destravas externos). Rule governance + TENANT-PLAYBOOK atualizados. Feature bônus universal `sendPrivateNote` + escalation summary estruturado implementados (82/82 testes passando).
 
 ---
 
