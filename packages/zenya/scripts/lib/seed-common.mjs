@@ -48,6 +48,57 @@ export function parseJsonEnv(raw, { name, fallback = [] } = {}) {
   }
 }
 
+/**
+ * Updates ONLY the `system_prompt` of an existing tenant, matching by a key.
+ * Preserves all other columns (admin_phones, admin_contacts, allowed_phones,
+ * active_tools). Use this when migrating a tenant's prompt source from
+ * hardcoded script to canonical `.md` — the other configuration was set
+ * directly in the database and must not be overwritten.
+ *
+ * Errors if the tenant does not exist (use applyTenantSeed for new tenants).
+ */
+export async function updateTenantPrompt({
+  supabase,
+  table = 'zenya_tenants',
+  matchBy = 'chatwoot_account_id',
+  matchValue,
+  systemPrompt,
+  dryRun = false,
+}) {
+  const hash = md5(systemPrompt);
+
+  if (dryRun) {
+    console.log('🧪 DRY RUN — não executando UPDATE');
+    console.log(
+      JSON.stringify(
+        {
+          table,
+          where: { [matchBy]: matchValue },
+          set: { system_prompt: `<${systemPrompt.length} chars, md5=${hash}>` },
+        },
+        null,
+        2,
+      ),
+    );
+    return { dryRun: true, hash, data: null };
+  }
+
+  const { data, error } = await supabase
+    .from(table)
+    .update({ system_prompt: systemPrompt })
+    .eq(matchBy, matchValue)
+    .select('id, name, chatwoot_account_id')
+    .single();
+
+  if (error) {
+    const err = new Error(`Erro ao atualizar prompt em ${table} (${matchBy}=${matchValue}): ${error.message}`);
+    err.cause = error;
+    throw err;
+  }
+
+  return { dryRun: false, hash, data };
+}
+
 export async function applyTenantSeed({
   supabase,
   table = 'zenya_tenants',
