@@ -1,6 +1,6 @@
 # Epic 5 — Content Engine: Automação e Integração
 
-**Status:** 🟢 Ready — validado @po (2026-04-12), 6/6 stories prontas para implementação
+**Status:** ✅ Done — 6/6 stories implementadas e aprovadas (validado @po 2026-04-12, implementado 2026-04-12 → 2026-04-13)
 **Criado por:** Morgan (@pm)
 **Data:** 2026-04-12
 **Fonte:** Sessão de design AEO Squad Plaka + decisões de Mauro
