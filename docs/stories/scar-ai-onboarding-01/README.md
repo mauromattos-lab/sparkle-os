@@ -141,11 +141,11 @@ Ordem de implementação. Cada task atômica, verificável. Checkbox preenchido 
 
 Adicionado em 2026-04-21 após ADR-001 ser aprovado. Fase 0 do epic `zenya-prompts-refactor` absorvida aqui — Scar AI nasce no padrão novo em vez de virar dívida técnica.
 
-- [ ] **F1.** Adicionar dependência `gray-matter` em `packages/zenya/package.json`.
-- [ ] **F2.** Criar pasta `docs/zenya/tenants/scar-ai/` e mover o prompt para `docs/zenya/tenants/scar-ai/prompt.md`, adicionando front-matter YAML no padrão ADR-001 D2. Remover `docs/stories/scar-ai-onboarding-01/prompt-scar-ai.md` (conteúdo migrado).
-- [ ] **F3.** Refatorar `packages/zenya/scripts/seed-scar-tenant.mjs` para usar `gray-matter` em vez de `split(/\n---\n/)`. Atualizar o path default para `../../docs/zenya/tenants/scar-ai/prompt.md`.
-- [ ] **F4.** Atualizar `docs/zenya/TENANT-PLAYBOOK.md` referenciando ADR-001 e documentando o novo caminho canônico para prompts de tenants.
-- [ ] **F5.** Rodar o seed refatorado na VPS (idempotente — apenas atualiza o prompt do tenant Scar AI já existente) e validar via `SELECT system_prompt FROM zenya_tenants WHERE id='ae522886-6b09-4876-8456-208ab49eb6ed'` que o conteúdo bate com o `.md`.
+- [x] **F1.** Adicionar dependência `gray-matter` em `packages/zenya/package.json`. → instalado versão `^4.0.3` local e na VPS.
+- [x] **F2.** Criar pasta `docs/zenya/tenants/scar-ai/` e mover o prompt para `docs/zenya/tenants/scar-ai/prompt.md`, adicionando front-matter YAML no padrão ADR-001 D2. Remover `docs/stories/scar-ai-onboarding-01/prompt-scar-ai.md` (conteúdo migrado). → front-matter com `tenant`, `version: 1`, `updated_at`, `author`, `sources[]`, `notes`.
+- [x] **F3.** Refatorar `packages/zenya/scripts/seed-scar-tenant.mjs` para usar `gray-matter` em vez de `split(/\n---\n/)`. Atualizar o path default para `../../docs/zenya/tenants/scar-ai/prompt.md`. → path default atualizado para `../../../docs/zenya/tenants/scar-ai/prompt.md`. Seed agora loga `prompt version` do front-matter.
+- [x] **F4.** Atualizar `docs/zenya/TENANT-PLAYBOOK.md` referenciando ADR-001 e documentando o novo caminho canônico para prompts de tenants. → adicionada nota no início do §4 (atualização completa fica com story `zenya-prompts-04-governance`).
+- [x] **F5.** Rodar o seed refatorado na VPS (idempotente — apenas atualiza o prompt do tenant Scar AI já existente) e validar via `SELECT system_prompt FROM zenya_tenants WHERE id='ae522886-6b09-4876-8456-208ab49eb6ed'` que o conteúdo bate com o `.md`. → seed rodado com sucesso, **md5 match validado**: `52c51ab7dd1fe7ade994135af4ce0338` (tanto do `.md` pós gray-matter quanto do banco).
 
 ## Dev Notes
 
@@ -195,7 +195,12 @@ Criar: `feature/scar-ai-onboarding-01` a partir de `main`.
 Claude Opus 4.7 (claude-opus-4-7) via Claude Code, agent `@dev` (Dex).
 
 ### File List
-- `packages/zenya/scripts/seed-scar-tenant.mjs` — **novo** (Fase A2)
+- `packages/zenya/scripts/seed-scar-tenant.mjs` — **novo** (Fase A2), **refatorado** (Fase F3) para usar `gray-matter`
+- `packages/zenya/package.json` — **modificado** (Fase F1): adicionada dep `gray-matter ^4.0.3`
+- `packages/zenya/package-lock.json` — **modificado** (Fase F1)
+- `docs/zenya/tenants/scar-ai/prompt.md` — **novo** (Fase F2): prompt canônico com front-matter YAML (ADR-001)
+- `docs/stories/scar-ai-onboarding-01/prompt-scar-ai.md` — **deletado** (Fase F2): conteúdo migrado para `docs/zenya/tenants/scar-ai/prompt.md`
+- `docs/zenya/TENANT-PLAYBOOK.md` — **modificado** (Fase F4): nota no §4 referenciando ADR-001 (atualização completa via story 4 do epic)
 - `docs/stories/scar-ai-onboarding-01/cutover-checklist.md` — **novo** (Fase E1 adiantada)
 
 ### Completion Notes
@@ -218,6 +223,7 @@ Nenhum debug log gerado nesta fase — sem erros, sem retries.
 - **2026-04-21 (dev)** — Fase A completa (3/19 tasks). Branch `feature/scar-ai-onboarding-01` criada a partir de `main`. Arquivo `seed-scar-tenant.mjs` criado e validado em smoke local.
 - **2026-04-21 (dev)** — Fases B1-B3 + E1 completas (7/19 tasks). Conta Chatwoot #7 criada por Mauro. Labels (ids 26, 27, 28) e webhook (id 29 → `api.sparkleai.tech/webhook/chatwoot`, subscrição `message_created`) criados via API. `cutover-checklist.md` gerado antecipadamente e já alinhado com a URL real do webhook de produção.
 - **2026-04-21 (dev)** — C1 completo (8/19 tasks). Seed rodado na VPS com `SCAR_CHATWOOT_ACCOUNT_ID=7` + admins Mauro e Gustavo. Tenant criado no Supabase ativo com `id = ae522886-6b09-4876-8456-208ab49eb6ed`. Observação: o `.env` local aponta para Supabase legado (bloqueado) — seed precisou rodar na VPS via SSH + scp dos arquivos da branch (ainda não pushada). Transferência temporária: `seed-scar-tenant.mjs` para `/root/SparkleOS/packages/zenya/scripts/` e `prompt-scar-ai.md` para `/root/SparkleOS/docs/stories/scar-ai-onboarding-01/`.
+- **2026-04-21 (dev)** — Fase F completa (13/19 tasks). Scar AI migrado para o padrão ADR-001: gray-matter instalado, prompt em `docs/zenya/tenants/scar-ai/prompt.md` com front-matter YAML, seed refatorado, playbook com referência ao ADR, seed rodado na VPS com sucesso. md5 do prompt no banco idêntico ao md5 do `.md` (gray-matter parse): `52c51ab7dd1fe7ade994135af4ce0338`. Scar AI agora nasce no padrão canônico — destravando o epic `zenya-prompts-refactor`.
 
 ## Histórico
 

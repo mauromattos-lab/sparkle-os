@@ -83,6 +83,12 @@ WhatsApp → Chatwoot inbox → webhook POST /webhook/chatwoot
 
 ## 4. System Prompt — Estrutura Padrão
 
+> **Novo padrão (2026-04-21):** a partir da story `scar-ai-onboarding-01`, o system prompt de cada tenant vive em `docs/zenya/tenants/{slug}/prompt.md` com front-matter YAML e é carregado em runtime pelo seed via `gray-matter`. Não hardcode mais `SYSTEM_PROMPT` como template literal em scripts `.mjs`.
+>
+> Referência: [`docs/architecture/adr/ADR-001-zenya-prompt-storage.md`](../architecture/adr/ADR-001-zenya-prompt-storage.md).
+>
+> Rollout retroativo dos 4 tenants legados está organizado no épico [`zenya-prompts-refactor`](../stories/epics/epic-zenya-prompts-refactor/README.md). A atualização completa deste playbook (fluxo passo-a-passo, tabela de tenants) será feita pela story `zenya-prompts-04-governance`.
+
 O `system_prompt` do tenant é o SOP completo. Estrutura recomendada:
 
 ```markdown

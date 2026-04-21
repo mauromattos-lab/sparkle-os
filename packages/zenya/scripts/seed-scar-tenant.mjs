@@ -1,27 +1,32 @@
 #!/usr/bin/env node
-// Seed do tenant Scar AI (GuDesignerPro) — executar no onboarding
+// Seed do tenant Scar AI (GuDesignerPro) — executar no onboarding.
+//
+// Este seed segue o padrão definido pelo ADR-001:
+// system prompt vive em `docs/zenya/tenants/scar-ai/prompt.md` com
+// front-matter YAML, carregado em runtime via gray-matter. Sem hardcode.
 //
 // Pré-requisitos (env):
-//   SUPABASE_URL, SUPABASE_SERVICE_KEY (Supabase ativo — uqpwmygaktkgbknhmknx)
+//   SUPABASE_URL, SUPABASE_SERVICE_KEY (Supabase ativo)
 //   SCAR_CHATWOOT_ACCOUNT_ID     — account_id na Chatwoot
-//   SCAR_ADMIN_PHONES            — CSV, ex: "+5512981303249,+5574814467555"
-//   SCAR_ADMIN_CONTACTS          — JSON, ex: '[{"phone":"+5574814467555","name":"Gustavo"}]'
+//   SCAR_ADMIN_PHONES            — CSV, ex: "+5512981303249,+557481446755"
+//   SCAR_ADMIN_CONTACTS          — JSON, ex: '[{"phone":"+5512981303249","name":"Mauro"}]'
 //
 // Opcionais:
 //   SCAR_ACTIVE_TOOLS            — CSV (default: vazio — Scar não usa integrações externas no v1)
 //   SCAR_ALLOWED_PHONES          — CSV para modo teste (default: vazio = produção aberta)
-//   SCAR_PROMPT_PATH             — path custom pro prompt (default: docs/stories/scar-ai-onboarding-01/prompt-scar-ai.md)
+//   SCAR_PROMPT_PATH             — override do path do prompt (default: docs/zenya/tenants/scar-ai/prompt.md)
 //
 // Uso:
 //   cd packages/zenya && node scripts/seed-scar-tenant.mjs
 //
-// Idempotente: upsert por chatwoot_account_id (mesmo padrão do seed HL).
-// Reexecução atualiza system_prompt e active_tools sem duplicar o tenant.
+// Idempotente: upsert por chatwoot_account_id. Reexecutar atualiza o
+// system_prompt e os metadados sem duplicar o tenant.
 
 import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import matter from 'gray-matter';
 import { createClient } from '@supabase/supabase-js';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'SCAR_CHATWOOT_ACCOUNT_ID'];
@@ -36,24 +41,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_PROMPT_PATH = path.resolve(
   __dirname,
-  '../../../docs/stories/scar-ai-onboarding-01/prompt-scar-ai.md',
+  '../../../docs/zenya/tenants/scar-ai/prompt.md',
 );
 const PROMPT_PATH = process.env.SCAR_PROMPT_PATH
   ? path.resolve(process.env.SCAR_PROMPT_PATH)
   : DEFAULT_PROMPT_PATH;
 
 let SYSTEM_PROMPT;
+let promptMeta;
 try {
   const raw = await readFile(PROMPT_PATH, 'utf-8');
-  // Remove o cabeçalho de metadata (# Prompt final... + "> Fonte..." + primeiro separador ---).
-  // Mantém o conteúdo do prompt a partir do segundo bloco em diante.
-  const parts = raw.split(/\n---\n/);
-  if (parts.length < 2) {
-    throw new Error('Arquivo de prompt não contém separador "---" esperado após metadata');
-  }
-  SYSTEM_PROMPT = parts.slice(1).join('\n---\n').trim();
+  const parsed = matter(raw);
+  SYSTEM_PROMPT = parsed.content.trim();
+  promptMeta = parsed.data;
   if (!SYSTEM_PROMPT) {
-    throw new Error('Prompt vazio após remover metadata');
+    throw new Error('Prompt vazio após extrair front-matter');
   }
 } catch (err) {
   console.error(`❌ Erro ao carregar prompt de ${PROMPT_PATH}:`, err.message);
@@ -109,6 +111,7 @@ if (error) {
 }
 
 console.log('✅ Tenant Scar AI (GuDesignerPro) criado/atualizado');
+console.log(`   Prompt version: ${promptMeta.version ?? 'n/a'} (source: ${PROMPT_PATH})`);
 console.log(JSON.stringify(data, null, 2));
 console.log('');
 console.log(`➡️  Próximos passos:`);
