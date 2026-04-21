@@ -170,20 +170,29 @@ export async function syncTenantKB(tenantId: string): Promise<SyncReport> {
       .filter((e) => !!e.question_normalized);
   });
 
-  report.skipped = rows.length - entries.length;
+  // Dedup por question_normalized (mesma keyword pode aparecer em mais de uma
+  // aba — Postgres ON CONFLICT rejeita batch com chave duplicada). First-wins.
+  const seen = new Set<string>();
+  const deduped = entries.filter((e) => {
+    if (seen.has(e.question_normalized)) return false;
+    seen.add(e.question_normalized);
+    return true;
+  });
 
-  if (entries.length === 0) return report;
+  report.skipped = entries.length - deduped.length;
+
+  if (deduped.length === 0) return report;
 
   const { error } = await sb
     .from('zenya_tenant_kb_entries')
-    .upsert(entries, { onConflict: 'tenant_id,question_normalized' });
+    .upsert(deduped, { onConflict: 'tenant_id,question_normalized' });
 
   if (error) {
     report.errors.push(`upsert: ${error.message}`);
     return report;
   }
 
-  report.upserted = entries.length;
+  report.upserted = deduped.length;
   return report;
 }
 
