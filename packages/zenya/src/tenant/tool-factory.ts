@@ -13,6 +13,8 @@ import { createCalendarTools } from '../integrations/google-calendar.js';
 import { createAsaasTools } from '../integrations/asaas.js';
 import { createLojaIntegradaTools } from '../integrations/loja-integrada.js';
 import { createUltracashTools } from '../integrations/ultracash.js';
+import { createNuvemshopTools } from '../integrations/nuvemshop.js';
+import { createSheetsKBTools } from '../integrations/sheets-kb.js';
 import { escalateToHuman } from './escalation.js';
 import type { TenantConfig } from './config-loader.js';
 
@@ -171,6 +173,16 @@ export function createTenantTools(
   // UltraCash — ERP/PDV stock lookup (HL Importados)
   if (config.active_tools.includes('ultracash')) {
     Object.assign(tools, createUltracashTools(tenantId));
+  }
+
+  // Nuvemshop — order lookup by number (PLAKA)
+  if (config.active_tools.includes('nuvemshop')) {
+    Object.assign(tools, createNuvemshopTools(tenantId));
+  }
+
+  // Sheets KB — consulta base de conhecimento snapshot (PLAKA)
+  if (config.active_tools.includes('sheets_kb')) {
+    Object.assign(tools, createSheetsKBTools(tenantId));
   }
 
   return tools;
