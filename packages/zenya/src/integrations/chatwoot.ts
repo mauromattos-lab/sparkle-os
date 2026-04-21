@@ -46,6 +46,25 @@ export async function sendMessage(params: ChatwootParams, content: string): Prom
 }
 
 /**
+ * Posts an internal private note on the conversation — visible only to Chatwoot
+ * agents, never sent to the customer. Used by `escalateToHuman` to leave a
+ * structured summary for the human agent who will pick up the conversation.
+ */
+export async function sendPrivateNote(params: ChatwootParams, content: string): Promise<void> {
+  const res = await fetch(apiUrl(params, '/messages'), {
+    method: 'POST',
+    headers: headers(params.token),
+    body: JSON.stringify({
+      content,
+      message_type: 'outgoing',
+      private: true,
+      content_attributes: { sent_by_zenya: true },
+    }),
+  });
+  await assertOk(res, 'sendPrivateNote');
+}
+
+/**
  * Adds a label to the conversation (e.g. 'agente-off' to disable the bot).
  */
 export async function addLabel(params: ChatwootParams, label: string): Promise<void> {

@@ -17,17 +17,23 @@
 //   HL_PROMPT_PATH               — override do path do prompt (default: docs/zenya/tenants/hl-importados/prompt.md)
 //
 // Uso:
-//   cd packages/zenya && node scripts/seed-hl-tenant.mjs
+//   cd packages/zenya && node scripts/seed-hl-tenant.mjs              # upsert real
+//   cd packages/zenya && node scripts/seed-hl-tenant.mjs --dry-run    # valida sem escrever
 //
 // Retorna o tenant_id (UUID) pra você colar no seed das credenciais.
 // Idempotente: upsert por chatwoot_account_id.
 
 import 'dotenv/config';
-import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import matter from 'gray-matter';
 import { createClient } from '@supabase/supabase-js';
+import {
+  applyTenantSeed,
+  isDryRun,
+  loadPromptFromMarkdown,
+  parseCsvEnv,
+  parseJsonEnv,
+} from './lib/seed-common.mjs';
 
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'HL_CHATWOOT_ACCOUNT_ID'];
 for (const key of REQUIRED) {
@@ -37,82 +43,61 @@ for (const key of REQUIRED) {
   }
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DEFAULT_PROMPT_PATH = path.resolve(
-  __dirname,
-  '../../../docs/zenya/tenants/hl-importados/prompt.md',
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROMPT_PATH = process.env.HL_PROMPT_PATH
   ? path.resolve(process.env.HL_PROMPT_PATH)
-  : DEFAULT_PROMPT_PATH;
+  : path.resolve(__dirname, '../../../docs/zenya/tenants/hl-importados/prompt.md');
 
-let SYSTEM_PROMPT;
+let promptContent;
 let promptMeta;
 try {
-  const raw = await readFile(PROMPT_PATH, 'utf-8');
-  const parsed = matter(raw);
-  SYSTEM_PROMPT = parsed.content.trim();
-  promptMeta = parsed.data;
-  if (!SYSTEM_PROMPT) {
-    throw new Error('Prompt vazio após extrair front-matter');
-  }
+  const loaded = await loadPromptFromMarkdown(PROMPT_PATH);
+  promptContent = loaded.content;
+  promptMeta = loaded.meta;
 } catch (err) {
   console.error(`❌ Erro ao carregar prompt de ${PROMPT_PATH}:`, err.message);
   process.exit(1);
 }
 
-const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-
-const ACTIVE_TOOLS = (process.env.HL_ACTIVE_TOOLS ?? 'ultracash,google_calendar')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const ALLOWED_PHONES = (process.env.HL_ALLOWED_PHONES ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const ADMIN_PHONES = (process.env.HL_ADMIN_PHONES ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-let adminContacts = [];
-if (process.env.HL_ADMIN_CONTACTS) {
-  try {
-    adminContacts = JSON.parse(process.env.HL_ADMIN_CONTACTS);
-  } catch (err) {
-    console.error('HL_ADMIN_CONTACTS deve ser JSON válido:', err.message);
-    process.exit(1);
-  }
+let adminContacts;
+try {
+  adminContacts = parseJsonEnv(process.env.HL_ADMIN_CONTACTS, { name: 'HL_ADMIN_CONTACTS' });
+} catch (err) {
+  console.error(err.message);
+  process.exit(1);
 }
 
 const row = {
   name: 'HL Importados',
-  system_prompt: SYSTEM_PROMPT,
-  active_tools: ACTIVE_TOOLS,
+  system_prompt: promptContent,
+  active_tools: parseCsvEnv(process.env.HL_ACTIVE_TOOLS, { fallback: 'ultracash,google_calendar' }),
   chatwoot_account_id: process.env.HL_CHATWOOT_ACCOUNT_ID,
-  allowed_phones: ALLOWED_PHONES,
-  admin_phones: ADMIN_PHONES,
+  allowed_phones: parseCsvEnv(process.env.HL_ALLOWED_PHONES),
+  admin_phones: parseCsvEnv(process.env.HL_ADMIN_PHONES),
   admin_contacts: adminContacts,
 };
 
-const { data, error } = await sb
-  .from('zenya_tenants')
-  .upsert(row, { onConflict: 'chatwoot_account_id' })
-  .select('id, name, chatwoot_account_id, active_tools')
-  .single();
+const dryRun = isDryRun();
+const sb = dryRun
+  ? null
+  : createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-if (error) {
-  console.error('❌ Erro ao upsert do tenant HL:', error.message);
+try {
+  const result = await applyTenantSeed({ supabase: sb, row, dryRun });
+
+  if (result.dryRun) {
+    console.log(`   Prompt version: ${promptMeta.version ?? 'n/a'} (source: ${PROMPT_PATH})`);
+    process.exit(0);
+  }
+
+  console.log('✅ Tenant HL Importados criado/atualizado');
+  console.log(`   Prompt version: ${promptMeta.version ?? 'n/a'} (source: ${PROMPT_PATH})`);
+  console.log(`   md5: ${result.hash}`);
+  console.log(JSON.stringify(result.data, null, 2));
+  console.log('');
+  console.log(`➡️  Próximo passo: exportar ULTRACASH_API_KEY e rodar seed-hl-ultracash.mjs`);
+  console.log(`    TENANT_ID=${result.data.id}`);
+} catch (err) {
+  console.error(`❌ ${err.message}`);
   process.exit(1);
 }
-
-console.log('✅ Tenant HL Importados criado/atualizado');
-console.log(`   Prompt version: ${promptMeta.version ?? 'n/a'} (source: ${PROMPT_PATH})`);
-console.log(JSON.stringify(data, null, 2));
-console.log('');
-console.log(`➡️  Próximo passo: exportar ULTRACASH_API_KEY e rodar seed-hl-ultracash.mjs`);
-console.log(`    TENANT_ID=${data.id}`);

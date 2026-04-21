@@ -12,6 +12,7 @@ import { addLabel, sendMessage, getChatwootParams, setContactAudioPreference } f
 import { createCalendarTools } from '../integrations/google-calendar.js';
 import { createAsaasTools } from '../integrations/asaas.js';
 import { createLojaIntegradaTools } from '../integrations/loja-integrada.js';
+import { createUltracashTools } from '../integrations/ultracash.js';
 import { escalateToHuman } from './escalation.js';
 import type { TenantConfig } from './config-loader.js';
 
@@ -45,18 +46,22 @@ export function createTenantTools(
     escalarHumano: tool({
       description:
         'Escala o atendimento para um humano quando o usuário solicitar ou quando a situação exigir. ' +
-        'Use quando o usuário pedir para falar com uma pessoa, estiver frustrado, ou o problema for complexo.',
+        'Use quando o usuário pedir para falar com uma pessoa, estiver frustrado, ou o problema for complexo. ' +
+        'O resumo_conversa, ultima_mensagem e motivo são usados para gerar uma nota privada no Chatwoot ' +
+        'visível apenas para o agente humano que assumir a conversa.',
       parameters: z.object({
         resumo_conversa: z.string().describe('Resumo breve do que foi discutido'),
         ultima_mensagem: z.string().describe('Última mensagem do usuário'),
         motivo: z.string().optional().describe('Motivo da escalação'),
       }),
-      execute: async ({ resumo_conversa, motivo }) => {
+      execute: async ({ resumo_conversa, ultima_mensagem, motivo }) => {
+        const summary = buildEscalationSummary({ resumo_conversa, ultima_mensagem, motivo });
         await escalateToHuman({
           tenantId,
           chatwoot: chatwootParams(),
           phone: ctx.phone,
           source: 'tool',
+          summary,
         });
         console.log(
           `[zenya] escalarHumano tool — tenant=${tenantId} conv=${ctx.conversationId}` +
@@ -163,5 +168,27 @@ export function createTenantTools(
     Object.assign(tools, createLojaIntegradaTools(tenantId));
   }
 
+  // UltraCash — ERP/PDV stock lookup (HL Importados)
+  if (config.active_tools.includes('ultracash')) {
+    Object.assign(tools, createUltracashTools(tenantId));
+  }
+
   return tools;
+}
+
+/**
+ * Builds the structured private-note summary posted on the Chatwoot conversation
+ * when the bot escalates to a human. Visible to agents only, never to the customer.
+ * Exported for unit testing.
+ */
+export function buildEscalationSummary(fields: {
+  resumo_conversa: string;
+  ultima_mensagem: string;
+  motivo?: string | undefined;
+}): string {
+  const lines = ['🔔 *Atendimento escalado — Zenya saiu da conversa*', ''];
+  if (fields.motivo) lines.push(`*Motivo:* ${fields.motivo}`);
+  lines.push(`*Última mensagem do cliente:* "${fields.ultima_mensagem}"`);
+  lines.push('', '*Resumo da conversa:*', fields.resumo_conversa);
+  return lines.join('\n');
 }
