@@ -31,7 +31,7 @@ vi.mock('../integrations/loja-integrada.js', () => ({
 
 import { zapiAddLabel } from '../integrations/zapi-labels.js';
 import { getCredentialJson } from '../tenant/credentials.js';
-import { addLabel, sendPrivateNote } from '../integrations/chatwoot.js';
+import { addLabel, sendMessage } from '../integrations/chatwoot.js';
 import { buildEscalationSummary, createTenantTools } from '../tenant/tool-factory.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
@@ -52,14 +52,13 @@ const CTX = { accountId: '1', conversationId: '99', phone: '+5531999998888' };
 type ToolWithExecute = { execute: (...args: unknown[]) => PromiseLike<Record<string, unknown>> };
 
 const ESCALACAO_ARGS = {
-  resumo_conversa: 'Cliente perguntou sobre prazo de entrega',
-  ultima_mensagem: 'Quero falar com alguém',
+  resumo: '[ATENDIMENTO] Cliente perguntou sobre prazo de entrega e quer falar com alguém',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(addLabel).mockResolvedValue(undefined as never);
-  vi.mocked(sendPrivateNote).mockResolvedValue(undefined as never);
+  vi.mocked(sendMessage).mockResolvedValue(undefined as never);
 });
 
 // TD-7.10-01: Behavioral test — escalarHumano degrades gracefully when zapiAddLabel throws
@@ -97,39 +96,38 @@ describe('escalarHumano — degradação graciosamente Z-API (TD-7.10-01)', () =
   });
 });
 
-describe('escalarHumano — resumo em nota privada no Chatwoot', () => {
-  it('posta resumo estruturado como private note ANTES de adicionar label agente-off', async () => {
+describe('escalarHumano — resumo como mensagem pública na conversa', () => {
+  it('posta resumo como mensagem pública ANTES de adicionar label agente-off', async () => {
     vi.mocked(getCredentialJson).mockRejectedValue(new Error('no creds'));
 
     const tools = createTenantTools(TENANT_ID, CONFIG, CTX);
     await (tools['escalarHumano'] as ToolWithExecute).execute({
-      resumo_conversa: 'Cliente quer pedido especial de iPhone 14',
-      ultima_mensagem: 'Consegue conseguir um 14 Pro?',
-      motivo: 'pedido fora do estoque',
+      resumo:
+        '[ATENDIMENTO] Cliente quer pedido especial de iPhone 14. Última msg: "Consegue conseguir um 14 Pro?". Motivo: fora do estoque.',
     });
 
-    expect(sendPrivateNote).toHaveBeenCalledOnce();
-    const noteContent = vi.mocked(sendPrivateNote).mock.calls[0]?.[1] ?? '';
-    expect(noteContent).toContain('Zenya saiu da conversa');
-    expect(noteContent).toContain('pedido fora do estoque');
-    expect(noteContent).toContain('Consegue conseguir um 14 Pro?');
-    expect(noteContent).toContain('Cliente quer pedido especial de iPhone 14');
+    expect(sendMessage).toHaveBeenCalledOnce();
+    const msgContent = vi.mocked(sendMessage).mock.calls[0]?.[1] ?? '';
+    expect(msgContent).toContain('[ATENDIMENTO]');
+    expect(msgContent).toContain('iPhone 14');
+    expect(msgContent).toContain('fora do estoque');
 
-    // sendPrivateNote must run before addLabel (summary visible when bot goes silent)
-    const noteCallOrder = vi.mocked(sendPrivateNote).mock.invocationCallOrder[0] ?? Infinity;
-    const labelCallOrder = vi.mocked(addLabel).mock.invocationCallOrder[0] ?? -Infinity;
-    expect(noteCallOrder).toBeLessThan(labelCallOrder);
+    // sendMessage must run before addLabel — the handoff message has to land BEFORE
+    // the bot goes silent so the client/atendente see the context.
+    const msgOrder = vi.mocked(sendMessage).mock.invocationCallOrder[0] ?? Infinity;
+    const labelOrder = vi.mocked(addLabel).mock.invocationCallOrder[0] ?? -Infinity;
+    expect(msgOrder).toBeLessThan(labelOrder);
   });
 
-  it('resolve { escalado: true } mesmo se sendPrivateNote falhar (non-critical)', async () => {
-    vi.mocked(sendPrivateNote).mockRejectedValue(new Error('Chatwoot note endpoint down'));
+  it('resolve { escalado: true } mesmo se sendMessage falhar (non-critical)', async () => {
+    vi.mocked(sendMessage).mockRejectedValue(new Error('Chatwoot message endpoint down'));
     vi.mocked(getCredentialJson).mockRejectedValue(new Error('no creds'));
 
     const tools = createTenantTools(TENANT_ID, CONFIG, CTX);
     const result = await (tools['escalarHumano'] as ToolWithExecute).execute(ESCALACAO_ARGS);
 
     expect(result).toMatchObject({ escalado: true });
-    // Critical path (agente-off) must still execute when private note fails
+    // Critical path (agente-off) must still execute when handoff message fails
     expect(addLabel).toHaveBeenCalledWith(expect.anything(), 'agente-off');
   });
 });

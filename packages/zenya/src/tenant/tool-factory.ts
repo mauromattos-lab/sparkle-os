@@ -47,31 +47,35 @@ export function createTenantTools(
      */
     escalarHumano: tool({
       description:
-        'Escala o atendimento para um humano quando o usuário solicitar ou quando a situação exigir. ' +
-        'Use quando o usuário pedir para falar com uma pessoa, estiver frustrado, ou o problema for complexo. ' +
-        'O resumo_conversa, ultima_mensagem e motivo são usados para gerar uma nota privada no Chatwoot ' +
-        'visível apenas para o agente humano que assumir a conversa.',
+        'Escala o atendimento para um humano. ANTES de chamar: (1) envie uma mensagem ao cliente avisando o handoff. (2) Se a pergunta é sobre pedido específico e o cliente ainda não informou número de pedido nem CPF, peça essa informação antes. ' +
+        'O parâmetro `resumo` é postado como MENSAGEM PÚBLICA na conversa (o cliente vê), então escreva em formato humano e começando com "[ATENDIMENTO]" para o atendente humano identificar na preview.',
       parameters: z.object({
-        resumo_conversa: z.string().describe('Resumo breve do que foi discutido'),
-        ultima_mensagem: z.string().describe('Última mensagem do usuário'),
-        motivo: z.string().optional().describe('Motivo da escalação'),
+        resumo: z
+          .string()
+          .describe(
+            'Resumo da conversa em formato livre começando com "[ATENDIMENTO]". ' +
+              'Inclua: quem é o cliente (se souber), o que ele quer, o que você já fez/informou, ' +
+              'dados do pedido se já consultou (número, status, rastreio), e a última pergunta pendente. ' +
+              'Exemplo: "[ATENDIMENTO] Cliente Manuela relatou oxidação no pedido 58177 dentro da garantia de 6 meses. ' +
+              'Já expliquei a política e ela quer falar com a equipe. Pedido confirmado enviado em 20/04/2026."',
+          ),
       }),
-      execute: async ({ resumo_conversa, ultima_mensagem, motivo }) => {
-        const summary = buildEscalationSummary({ resumo_conversa, ultima_mensagem, motivo });
+      execute: async ({ resumo }) => {
         await escalateToHuman({
           tenantId,
           chatwoot: chatwootParams(),
           phone: ctx.phone,
           source: 'tool',
-          summary,
+          summary: resumo,
         });
         console.log(
           `[zenya] escalarHumano tool — tenant=${tenantId} conv=${ctx.conversationId}` +
-          ` motivo=${motivo ?? 'não especificado'} resumo=${resumo_conversa.slice(0, 80)}`,
+            ` resumo=${resumo.slice(0, 120)}`,
         );
         return {
           escalado: true,
-          mensagem: 'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
+          mensagem:
+            'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
         };
       },
     }),

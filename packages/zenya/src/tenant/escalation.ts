@@ -4,13 +4,18 @@
 //   2. webhook auto-detection (human agent replied from the store's phone)
 //
 // Behavior:
-//   - (Optional) Posts a structured summary as a Chatwoot private note so the
-//     human agent picking up the conversation sees full context — invisible to
-//     the customer. Skipped silently on failure (non-critical).
+//   - (Optional) Sends the LLM-generated summary as a PUBLIC message on the
+//     conversation channel (WhatsApp). Convention: the summary starts with
+//     "[ATENDIMENTO]" so the human agent picking up can identify it on the
+//     conversation preview even without a Chatwoot-style private-note UI.
+//     The customer sees it too — that's intentional (handoff is transparent,
+//     and it makes the design universal: works for tenants that don't use
+//     Chatwoot, don't have a back-office, or pick up directly on the WhatsApp
+//     Business App). Skipped silently on failure (non-critical).
 //   - Adds Chatwoot label 'agente-off' (critical — silences the bot)
 //   - Adds Z-API native WhatsApp Business label 'humano' (non-critical, degrades gracefully)
 
-import { addLabel, sendPrivateNote, type ChatwootParams } from '../integrations/chatwoot.js';
+import { addLabel, sendMessage, type ChatwootParams } from '../integrations/chatwoot.js';
 import { zapiAddLabel, type ZApiCredentials } from '../integrations/zapi-labels.js';
 import { getCredentialJson } from './credentials.js';
 
@@ -22,30 +27,32 @@ export interface EscalationContext {
   /** Origin of the escalation — used for log traceability */
   source: 'tool' | 'human-reply';
   /**
-   * Optional structured summary to leave as a Chatwoot private note. Shown to
-   * the human agent picking up the conversation, never to the customer.
+   * Optional LLM-generated summary to post as a public message in the
+   * conversation channel. Convention: starts with "[ATENDIMENTO]" for the
+   * human agent to identify on preview. The customer will see it — that's
+   * the trade-off for universality (no private-note channel assumed).
    */
   summary?: string;
 }
 
 /**
  * Escalates a conversation to a human agent:
- *   - (Optional) Posts summary as Chatwoot private note
+ *   - (Optional) Posts summary as a PUBLIC message in the conversation
  *   - Adds 'agente-off' label in Chatwoot (silences the bot)
  *   - Adds native WhatsApp 'humano' label in Z-API (non-critical)
  *
  * Idempotent: Chatwoot addLabel no-ops if label already present. The summary
- * note is posted every call — callers should only pass `summary` on the
+ * message is posted every call — callers should only pass `summary` on the
  * initial escalation (the `escalarHumano` tool), not on `human-reply`
  * auto-detection (which has no LLM-generated summary).
  */
 export async function escalateToHuman(ctx: EscalationContext): Promise<void> {
   if (ctx.summary) {
     try {
-      await sendPrivateNote(ctx.chatwoot, ctx.summary);
+      await sendMessage(ctx.chatwoot, ctx.summary);
     } catch (err) {
       console.warn(
-        `[zenya] escalation private note failed (non-critical) — tenant=${ctx.tenantId} source=${ctx.source}: ${err}`,
+        `[zenya] escalation handoff message failed (non-critical) — tenant=${ctx.tenantId} source=${ctx.source}: ${err}`,
       );
     }
   }

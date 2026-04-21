@@ -139,7 +139,16 @@ export function createSheetsKBTools(tenantId: string): ToolSet {
             return { sem_match: true };
           }
 
+          // Fuzzy matcher em 2 níveis:
+          //   1) Word-bounded exato (regex \b{kw}\b) — match rigoroso.
+          //   2) Word-bounded + sufixo morfológico (\b{kw}[a-záéíóúâêôãõç]*\b) —
+          //      "demora" bate "demorando/demorou/demoram". Aplicado só a keywords
+          //      com >= 4 chars pra evitar falsos positivos ("sim" matching "simples").
+          //      Evita também que keyword longa casada como prefixo de outra palavra
+          //      absurda (ex: "pagamento" dentro de "pagamental" — fora do léxico real).
+          //   Desempate: maior kw.length ganha (match mais específico).
           const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const PT_LETTER = 'a-záéíóúâêôãõç';
           const candidates = (allEntries ?? [])
             .map((row) => ({
               kw: String(row['question_normalized'] ?? '').trim(),
@@ -147,7 +156,15 @@ export function createSheetsKBTools(tenantId: string): ToolSet {
               last_synced_at: String(row['last_synced_at'] ?? ''),
             }))
             .filter((c) => c.kw.length >= 3 && c.answer)
-            .filter((c) => new RegExp(`\\b${escapeRegex(c.kw)}\\b`, 'i').test(normalized))
+            .map((c) => {
+              const escaped = escapeRegex(c.kw);
+              const exact = new RegExp(`\\b${escaped}\\b`, 'i').test(normalized);
+              const morph =
+                c.kw.length >= 4 &&
+                new RegExp(`\\b${escaped}[${PT_LETTER}]{0,6}\\b`, 'i').test(normalized);
+              return { ...c, matched: exact || morph };
+            })
+            .filter((c) => c.matched)
             .sort((a, b) => b.kw.length - a.kw.length);
 
           const hit = candidates[0];
