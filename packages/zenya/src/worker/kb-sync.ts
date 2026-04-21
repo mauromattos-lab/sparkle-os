@@ -20,8 +20,18 @@ const SYNC_INTERVAL_MS = 15 * 60 * 1_000; // 15 minutes
 
 interface SheetsKbCredentials {
   spreadsheet_id: string;
-  /** Ex: "Sheet1!A:B" ou "Base!A2:B" (começa depois do header) */
-  range: string;
+  /**
+   * Range único no formato A1 (ex: "Sheet1!A:B"). Usado quando o KB cabe em
+   * uma aba só. Para KB multi-aba, use `ranges` (plural) abaixo — se ambos
+   * forem definidos, `ranges` tem precedência.
+   */
+  range?: string;
+  /**
+   * Múltiplos ranges A1 (ex: ["'Aba 1'!B4:C", "'Aba 2'!B4:C"]). O worker
+   * itera e concatena as linhas de todas as abas. Útil quando o KB de um
+   * tenant está distribuído em várias abas com o mesmo schema.
+   */
+  ranges?: string[];
   /** JSON completo do Service Account (client_email + private_key + etc) */
   service_account: {
     client_email: string;
@@ -65,13 +75,31 @@ async function fetchSheetRows(creds: SheetsKbCredentials): Promise<string[][]> {
   });
 
   const sheets = google.sheets({ version: 'v4', auth });
-  const res = await sheets.spreadsheets.values.get({
+
+  const ranges = creds.ranges && creds.ranges.length > 0
+    ? creds.ranges
+    : creds.range
+      ? [creds.range]
+      : null;
+
+  if (!ranges) {
+    throw new Error('sheets_kb credential precisa de `range` (string) ou `ranges` (array)');
+  }
+
+  // batchGet em uma chamada só (1 request HTTP) em vez de N chamadas seriais
+  const res = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: creds.spreadsheet_id,
-    range: creds.range,
+    ranges,
     valueRenderOption: 'FORMATTED_VALUE',
   });
 
-  return (res.data.values ?? []) as string[][];
+  const rows: string[][] = [];
+  for (const valueRange of res.data.valueRanges ?? []) {
+    for (const r of (valueRange.values ?? []) as string[][]) {
+      rows.push(r);
+    }
+  }
+  return rows;
 }
 
 /**

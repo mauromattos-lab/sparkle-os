@@ -19,7 +19,11 @@
 //   NUVEMSHOP_ACCESS_TOKEN, NUVEMSHOP_USER_ID  — credenciais Tiendanube
 //
 //   PLAKA_KB_SPREADSHEET_ID                    — ID da planilha "Roberta_Plaka_BaseConhecimento"
-//   PLAKA_KB_RANGE                             — range no formato A1 (ex: "Base!A:B"). Default: "Base!A:B"
+//   PLAKA_KB_RANGES                            — múltiplos ranges A1 separados por `;` (preferido pra KB multi-aba)
+//                                                Ex: "'Aba 1'!B4:C;'Aba 2'!B4:C;'Aba 3'!B4:C"
+//                                                Se definido, tem precedência sobre PLAKA_KB_RANGE.
+//   PLAKA_KB_RANGE                             — range único no formato A1 (ex: "Base!A:B"). Usado só se
+//                                                PLAKA_KB_RANGES não estiver definido. Default: "Base!A:B"
 //   PLAKA_SHEETS_SA_PATH  *ou*  PLAKA_SHEETS_SA_JSON
 //                                              — caminho do JSON da SA ou conteúdo inline
 //
@@ -113,11 +117,25 @@ const nuvemshopCred = {
   user_id: process.env.NUVEMSHOP_USER_ID,
 };
 
+// Ranges: PLAKA_KB_RANGES (plural, CSV com `;`) tem precedência.
+// Ex: "'Aba 1'!B4:C;'Aba 2'!B4:C"
+const rawRanges = process.env.PLAKA_KB_RANGES;
+const rangesArray = rawRanges
+  ? rawRanges
+      .split(';')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : null;
+
 const sheetsKbCred = {
   spreadsheet_id: process.env.PLAKA_KB_SPREADSHEET_ID,
-  range: process.env.PLAKA_KB_RANGE ?? 'Base!A:B',
   service_account: serviceAccount,
 };
+if (rangesArray && rangesArray.length > 0) {
+  sheetsKbCred.ranges = rangesArray;
+} else {
+  sheetsKbCred.range = process.env.PLAKA_KB_RANGE ?? 'Base!A:B';
+}
 
 let zapiCred = null;
 if (process.env.PLAKA_ZAPI_INSTANCE_ID) {
@@ -154,7 +172,12 @@ if (DRY_RUN) {
   }
   console.log('');
   console.log(`   service_account client_email: ${serviceAccount.client_email}`);
-  console.log(`   sheets range: ${sheetsKbCred.range}`);
+  if (sheetsKbCred.ranges) {
+    console.log(`   sheets ranges (${sheetsKbCred.ranges.length}):`);
+    for (const r of sheetsKbCred.ranges) console.log(`     - ${r}`);
+  } else {
+    console.log(`   sheets range: ${sheetsKbCred.range}`);
+  }
   console.log(`   nuvemshop user_id: ${nuvemshopCred.user_id}`);
   console.log(`   zapi presente: ${zapiCred ? 'sim' : 'não (opcional, pule agora)'}`);
   process.exit(0);
