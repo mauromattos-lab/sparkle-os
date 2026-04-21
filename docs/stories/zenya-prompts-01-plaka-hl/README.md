@@ -1,6 +1,6 @@
 # Story zenya-prompts-01-plaka-hl — Migrar HL Importados e preparar PLAKA para o padrão ADR-001
 
-**Status:** Ready for Review — implementação completa com AC 3 deferido (ver Completion Notes). Aguardando @qa.
+**Status:** Done — aprovada pelo @qa em 2026-04-21 com verdict PASS (deferral do AC 3 aceita).
 **Owner:** @pm criou o epic · @sm refinou · @po valida · @dev implementa
 **Epic:** `docs/stories/epics/epic-zenya-prompts-refactor/README.md`
 **ADR:** `docs/architecture/adr/ADR-001-zenya-prompt-storage.md`
@@ -154,9 +154,44 @@ Nenhum debug log — zero erros, zero retries.
 ### Change Log
 - **2026-04-21 (dev)** — Story 1 completa na branch `feature/scar-ai-onboarding-01`. 3 arquivos criados/modificados. Seed HL refatorado usando o mesmo padrão Scar. md5 calculado e guardado para validação futura no cutover. T7 não executado por decisão estratégica do Mauro (B): separar Story 1 (padrão) de HL-01 (cutover).
 
+## QA Results
+
+**Reviewed by:** @qa (Quinn, Guardian) · **Date:** 2026-04-21 · **Commit:** `54df63e`
+**Verdict:** **PASS (with-deferral)**
+**Gate file:** `docs/qa/gates/zenya-prompts-01-plaka-hl.yml`
+
+### Summary
+
+Refactor técnico limpo. Zero regressão. Reuso idêntico do padrão validado no Scar AI (Fase F, commit `3d5821f` — md5 match `52c51ab7...`). A Story 1 aplica a mesma arquitetura ao HL.
+
+### 7 Quality Checks
+
+- ✅ Code review — padrão consistente, `gray-matter` estável, path resolution idiomático
+- ⚠️ Unit tests — ausentes (padrão do projeto para seeds — aceito, documentado como tech debt low)
+- ✅ Acceptance criteria — 5/6 cumpridos + AC 3 **DEFERIDO** com justificativa forte
+- ✅ No regressions — nenhum código core tocado
+- ➖ Performance — N/A (script de seed)
+- ✅ Security — sem inputs externos novos; `gray-matter` sem CVEs
+- ✅ Documentation — completa, ADR linkado
+
+### AC 3 deferral — decisão aceita
+
+**Rationale:** AC 3 exige "diff zero vs banco" mas HL não existe no banco ainda (cutover HL-01 não ocorreu). Validação é logicamente inviável agora. A dev registrou md5 `8458c12abbbfda13bc16c655475bbb11` (5003 chars) do `.md` pós `gray-matter` — comparação se torna determinística no primeiro seed pós-cutover.
+
+**Blocking risk:** zero. O mesmo padrão foi validado empiricamente no Scar AI com md5 match perfeito. Não há razão arquitetural para esperar comportamento diferente no HL.
+
+### Tech debt registrada
+
+- `tech-debt-001` (severity: low): criar teste unitário que valida `matter()` não lança erro em cada `docs/zenya/tenants/{slug}/prompt.md` + presença de campos obrigatórios no front-matter. Sugerido para a story `zenya-prompts-04-governance`.
+
+### Handoff
+
+Story Done. Para push/PR: acionar `@devops *push` quando o usuário decidir. Nada bloqueia esta story isoladamente.
+
 ## Histórico
 
 - **2026-04-21** — Criada pelo @sm. Em Draft aguardando validação do @po e término da Fase F da Scar-AI-01.
 - **2026-04-21** — Fase F da Scar-AI-01 concluída (commit `3d5821f`). Gate Fase F destravado.
 - **2026-04-21** — @po valida. Score 10/10 → **GO**. Status Draft → Ready. Pronta para `@dev *develop-story`.
 - **2026-04-21** — @dev executa 8/8 tasks. Status Ready → **Ready for Review** com AC 3 deferido até o cutover da HL-01 (decisão estratégica do Mauro). Handoff para @qa.
+- **2026-04-21** — @qa valida. Verdict **PASS (with-deferral)**. Deferral do AC 3 aceita com md5 registrado. 1 tech debt low registrado para Story 4. Status Ready for Review → **Done**. Gate file: `docs/qa/gates/zenya-prompts-01-plaka-hl.yml`.

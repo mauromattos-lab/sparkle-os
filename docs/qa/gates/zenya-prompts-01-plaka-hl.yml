@@ -1,0 +1,114 @@
+storyId: zenya-prompts-01-plaka-hl
+epicRef: docs/stories/epics/epic-zenya-prompts-refactor/README.md
+adrRef: docs/architecture/adr/ADR-001-zenya-prompt-storage.md
+
+verdict: PASS
+verdictQualifier: with-deferral
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-21
+reviewedCommit: 54df63e
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Refactor técnico limpo do seed HL para o padrão ADR-001. Zero
+  regressão. Reuso idêntico do padrão validado no Scar AI (Fase F).
+  AC 3 deferido por impossibilidade lógica (HL ainda não existe no
+  banco) — deferral aceita com md5 registrado para validação no
+  cutover da HL-01.
+
+checks:
+  - id: code-review
+    result: PASS
+    severity: low
+    notes: |
+      Padrão consistente com seed-scar-tenant.mjs. gray-matter é lib
+      estável (ecosystem Jekyll/Yeoman). Path resolution via
+      import.meta.url é idiomático. Upsert idempotente preservado.
+
+  - id: unit-tests
+    result: CONCERNS
+    severity: low
+    notes: |
+      Sem testes unitários para o seed. Convenção do projeto para
+      seeds é smoke validation. Aceitável. Registrado como tech
+      debt de baixa prioridade.
+
+  - id: acceptance-criteria
+    result: PASS
+    severity: medium
+    details:
+      cumpridos: [AC1, AC2, AC4, AC5, AC6]
+      deferido: [AC3]
+    notes: |
+      AC 3 ("diff zero vs banco") logicamente inviável agora — HL não
+      existe no banco (cutover HL-01 não ocorreu). Dev registrou md5
+      8458c12abbbfda13bc16c655475bbb11 (5003 chars) para validação
+      determinística no primeiro seed pós-cutover.
+
+  - id: no-regressions
+    result: PASS
+    severity: low
+    notes: |
+      Nenhum código do core tocado. Refactor análogo ao Scar AI
+      (commit 3d5821f) já validado em produção — md5 match
+      52c51ab7dd1fe7ade994135af4ce0338. Mesma arquitetura aqui.
+
+  - id: performance
+    result: N/A
+    notes: 'Seed script executado manualmente no cutover.'
+
+  - id: security
+    result: PASS
+    severity: low
+    notes: |
+      Sem inputs externos novos. .md é artefato de repo controlado
+      por PR review. gray-matter 4.0.3 sem CVEs conhecidos.
+
+  - id: documentation
+    result: PASS
+    severity: low
+    notes: |
+      Dev Agent Record completo. ADR-001 linkado. File List correta.
+      Decisão B documentada no Change Log. Deferral do AC 3 explicada.
+
+deferrals:
+  - id: AC3
+    description: Validação "diff zero vs banco" deferida para o cutover da HL-01
+    reason: |
+      HL ainda não existe no banco. Validação logicamente inviável
+      agora. Dev registrou md5 do .md pós gray-matter
+      (8458c12abbbfda13bc16c655475bbb11) — quando HL-01 rodar o seed
+      novo pela primeira vez, comparar md5 no banco com esse valor.
+    deferredTo: Story HL-01 (cutover comercial)
+    blockingRisk: zero (validação é determinística dado o md5 registrado)
+
+concerns:
+  - id: tech-debt-001
+    severity: low
+    category: tests
+    description: |
+      Seeds de tenant não têm testes unitários. Se um prompt futuro
+      usar caracteres especiais que gray-matter interprete como YAML
+      (ex: ':' no início de linha fora de quote), pode haver parse
+      error silencioso. Considerar teste que valide matter(raw).content
+      contra um snapshot por tenant.
+    recommendation: |
+      Criar test file packages/zenya/src/__tests__/tenant-prompts.test.ts
+      na story zenya-prompts-04-governance que:
+      1. Carrega cada docs/zenya/tenants/{slug}/prompt.md
+      2. Valida que matter() não lança erro
+      3. Valida que content tem tamanho > N chars
+      4. Valida que front-matter tem campos obrigatórios (tenant,
+         version, updated_at)
+
+handoff:
+  to: '@devops (Gage)'
+  command: '*push'
+  condition: PASS com deferral aceita → pode prosseguir pra push/PR quando
+             o usuário decidir mergeá-la. Nada bloqueia essa story isoladamente.
+
+metadata:
+  reviewedPhases: 7
+  coderabbit:
+    ran: false
+    reason: 'Story é só refactor de armazenamento de prompt + stub. Sem código novo de produção. Scope não justifica execução do CodeRabbit (custo/benefício).'
