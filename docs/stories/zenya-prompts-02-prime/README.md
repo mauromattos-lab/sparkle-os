@@ -1,6 +1,6 @@
 # Story zenya-prompts-02-prime — Migrar Zenya Prime e implementar --dry-run genérico
 
-**Status:** Blocked — aguardando `zenya-prompts-01-plaka-hl` Done
+**Status:** Blocked — aguardando `zenya-prompts-01-plaka-hl` Done. @po já validou o conteúdo (10/10, GO condicional). Transiciona para Ready automaticamente quando a dependência for resolvida.
 **Owner:** @pm criou o epic · @sm refinou · @po valida · @dev implementa
 **Epic:** `docs/stories/epics/epic-zenya-prompts-refactor/README.md`
 **ADR:** `docs/architecture/adr/ADR-001-zenya-prompt-storage.md`
@@ -127,3 +127,4 @@ Ainda não documentado formalmente — pode ser "Zenya Prime", "Zenya", "Sparkle
 ## Histórico
 
 - **2026-04-21** — Criada pelo @sm. Em Draft bloqueada por story 1.
+- **2026-04-21** — @po valida conteúdo. Score 10/10 → **GO condicional** (desbloqueio automático quando story 1 fechar).

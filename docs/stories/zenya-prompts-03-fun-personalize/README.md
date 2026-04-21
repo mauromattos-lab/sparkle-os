@@ -1,6 +1,6 @@
 # Story zenya-prompts-03-fun-personalize — Migrar Fun Personalize com gates de produção
 
-**Status:** Blocked — aguardando `zenya-prompts-02-prime` Done (precisa do `--dry-run`)
+**Status:** Blocked — aguardando `zenya-prompts-02-prime` Done (precisa do `--dry-run`). @po já validou o conteúdo (10/10, GO condicional). Transiciona para Ready automaticamente quando a dependência for resolvida, mas execução ainda requer janela combinada com o cliente.
 **Owner:** @pm criou o epic · @sm refinou · @po valida · @dev implementa · **Mauro operacionaliza o cutover**
 **Epic:** `docs/stories/epics/epic-zenya-prompts-refactor/README.md`
 **ADR:** `docs/architecture/adr/ADR-001-zenya-prompt-storage.md`
@@ -148,3 +148,4 @@ Fun Personalize é tenant maduro — qualquer agente humano conhecendo o cliente
 ## Histórico
 
 - **2026-04-21** — Criada pelo @sm. Blocked por story 2.
+- **2026-04-21** — @po valida conteúdo. Score 10/10 → **GO condicional**. Nota do @po: esta story serve como template de mudança em produção com gates — vale ser citada no TENANT-PLAYBOOK pela story 4.

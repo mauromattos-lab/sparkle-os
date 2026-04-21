@@ -1,6 +1,6 @@
 # Story zenya-prompts-04-governance — Formalizar o padrão de prompts via rule + playbook
 
-**Status:** Blocked — aguardando `zenya-prompts-03-fun-personalize` Done
+**Status:** Blocked — aguardando `zenya-prompts-03-fun-personalize` Done. @po já validou o conteúdo (10/10, GO condicional). Transiciona para Ready automaticamente quando a dependência for resolvida.
 **Owner:** @pm criou o epic · @sm refinou · @po valida · @dev implementa
 **Epic:** `docs/stories/epics/epic-zenya-prompts-refactor/README.md`
 **ADR:** `docs/architecture/adr/ADR-001-zenya-prompt-storage.md`
@@ -123,3 +123,4 @@ FROM zenya_tenants ORDER BY name;
 ## Histórico
 
 - **2026-04-21** — Criada pelo @sm. Blocked por story 3.
+- **2026-04-21** — @po valida conteúdo. Score 10/10 → **GO condicional**. Nota do @po: adicionar no escopo da story a citação da story 3 (`zenya-prompts-03-fun-personalize`) como template de cutover com gates no TENANT-PLAYBOOK.
