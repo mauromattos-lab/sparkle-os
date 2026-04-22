@@ -2,7 +2,7 @@
 
 **Status:** ⚪ Draft
 **Criado por:** Morgan (@pm) — 2026-04-22
-**Depende de:** Epic 7.8 (cutover dos clientes do n8n para o core — em andamento) + Epic 15 (método — Done) + Epic 16 (prova do método em 1 tenant — Done operacionalmente, faltando formalização retroativa da 16.4)
+**Depende de:** Epic 15 (método — Done) + Epic 16 (prova em 1 tenant — **Done 4/4**). Wave B (tenants pós-cutover) adicionalmente depende de Epic 7.8.
 **Destrava:** Camadas 5-7 do [EPICS-OVERVIEW](./EPICS-OVERVIEW.md) — produto horizontal/vertical e automação de onboarding só fazem sentido com tenants saneados.
 
 **Objetivo:** Aplicar o ciclo brownfield do Epic 15 (baseline → smoke → fix → janela) a **todos os tenants já em produção que ainda não passaram por refino formal**. Encerrar a prática de "refino retroativo informal" que aconteceu com PLAKA e Scar AI.
@@ -52,12 +52,28 @@ Saída:
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|-----------|-----------|----------|
-| 17.1 | Refino brownfield — PLAKA (Roberta) | Draft | P1 | Epic 7.8, Epic 16 Done | @dev |
-| 17.2 | Refino brownfield — Scar AI (Gustavo) | Draft | P1 | Epic 7.8, Epic 16 Done | @dev |
-| 17.N | Refino brownfield — tenants adicionais de Epic 7.8 | — | P2 | Cutover concluído do tenant | @dev |
-| 17.Z | Retroalimentar Epic 15 — playbook v2 | Draft | P2 | Pelo menos 17.1 + 17.2 Done | @pm |
+**Wave A — tenants já migrados (executável agora):**
 
-> Stories 17.1 e 17.2 são os dois brownfields **já conhecidos**. Novas stories entram conforme cada cutover do Epic 7.8 for acontecendo.
+| Story | Título | Status | Prioridade | Depende de | Executor |
+|-------|--------|--------|-----------|-----------|----------|
+| 17.1 | Refino brownfield — PLAKA (Roberta, Nuvemshop + Sheets KB) | Draft | P1 | Epic 16 Done ✅ | @dev |
+| 17.2 | Refino brownfield — Scar AI / GuProDesigner (Gustavo, prompt-only PT/EN) | Draft | P1 | Epic 16 Done ✅ | @dev |
+
+**Wave B — tenants pós-cutover Epic 7.8 (aguardam migração):**
+
+| Story | Título | Status | Prioridade | Depende de | Executor |
+|-------|--------|--------|-----------|-----------|----------|
+| 17.3 | Refino brownfield — HL Importados (pós-cutover 7.8) | Blocked | P2 | Epic 7.8 story HL Done | @dev |
+| 17.4 | Refino brownfield — Ensinaja (pós-cutover 7.8) | Blocked | P2 | Epic 7.8 story Ensinaja Done | @dev |
+| 17.5 | Refino brownfield — Doceria Dona Geralda (pós-cutover 7.8) | Blocked | P2 | Epic 7.8 story Doceria Done | @dev |
+
+**Retroalimentação do playbook:**
+
+| Story | Título | Status | Prioridade | Depende de | Executor |
+|-------|--------|--------|-----------|-----------|----------|
+| 17.Z | Epic 15 v2 — adicionar variante "baixo volume + cliente engajado" + aprendizados Wave A/B | Draft | P2 | 17.1 + 17.2 Done (mín.) | @pm |
+
+> Roster explícito: PLAKA, Fun, Scar → core (Fun já refinada via Epic 16). HL, Ensinaja, Doceria → n8n (entram via 7.8 → 17.3-17.5). Ver memória `project_tenant_roster` pra estado vivo.
 
 ---
 
@@ -80,8 +96,8 @@ Saída:
 ## Sequência de Execução
 
 ```
-Wave 1 — Pré-requisito: Epic 16 Done (16.4 executado — faltando formalização retroativa)
-  │   Prova que o ciclo fecha em produção real (Julia rodando com prompt v3+v4).
+Wave 1 — Pré-requisito: Epic 16 Done ✅ (4/4 stories fechadas)
+  │   Prova que o ciclo fecha em produção real (Julia rodando com prompt v4).
 
 Wave 2 — Refino dos tenants já migrados (paralelo):
   17.1 — PLAKA (Roberta)

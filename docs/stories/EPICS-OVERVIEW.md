@@ -14,6 +14,48 @@
 
 ---
 
+## Processo de trabalho — SDC é o default
+
+> AIOX já prescreve os 4 workflows canônicos em `.claude/rules/workflow-execution.md`. Este quadro é só um atalho humano.
+
+### Story Development Cycle (SDC) — para qualquer trabalho novo
+
+```
+@sm *draft → @po *validate → @dev *develop → @qa *gate → @devops *push
+ (Draft)      (Ready)         (InProgress)    (InReview)    (Done)
+```
+
+Cada seta é uma mudança de status da story + um handoff AIOX. **Ninguém pula etapa** — desvio vira débito AIOX (ver memória `feedback_process_integrity`).
+
+### Mapa rápido — "preciso de X, chamo quem?"
+
+| Preciso... | Invoca | Comando |
+|-----------|--------|---------|
+| Criar epic | `@pm` | `*create-epic` |
+| Detalhar story de um epic | `@sm` | `*draft` |
+| Validar se story está pronta pra dev | `@po` | `*validate-story-draft` |
+| Implementar story | `@dev` | `*develop-story` |
+| Revisar qualidade antes de Done | `@qa` | `*gate` |
+| Push, PR, merge, release | `@devops` | `*push` / `*create-pr` |
+| Pesquisar mercado/concorrência | `@analyst` | `*research` |
+| Arquitetura / tecnologia nova | `@architect` | conforme task |
+| DDL / schema / RLS / query | `@data-engineer` | conforme task |
+| UX / UI | `@ux-design-expert` | conforme task |
+| Course correction de epic/processo | `@aiox-master` | `*correct-course` |
+
+### Quando invocar o agente errado, sem stress
+
+Cada agente tem na sua persona a seção "When to use others". Se você chamar `@pm` quando é job de `@sm`, o PM deveria te redirecionar. Se ele fizer o trabalho direto ao invés de delegar, é bug — avisa que corrige via memória.
+
+### Branch por story (convenção prática)
+
+- `feat/<epic>.<story>-<slug>` para stories de epic — ex: `feat/17.1-refino-plaka`
+- `fix/<slug>` para hotfix sem epic — ex: `fix/plaka-scheduler-resilience`
+- Merge via PR (@devops exclusivo) + `--delete-branch` após merge
+- **Nunca** push direto na main (hook bloqueia para não-@devops)
+
+---
+
 ## Camadas
 
 ### Camada 1 — Fundação
@@ -33,7 +75,7 @@
 
 | Epic | Título | Status |
 |------|--------|--------|
-| 7 | Zenya como Órgão Nativo do SparkleOS | 🟡 InProgress (9/10) — Story **7.8** (cutover dos clientes) aberta |
+| 7 | Zenya como Órgão Nativo do SparkleOS | 🟡 InProgress (9/10) — Story **7.8** aberta com **3 tenants a migrar**: HL Importados, Ensinaja, Doceria Dona Geralda |
 
 ### Camada 3 — Método de Refino
 > Playbook + smoke-template + taxonomia. Meta-framework que o Brownfield (Camada 4) consome.
@@ -47,8 +89,8 @@
 
 | Epic | Título | Status |
 |------|--------|--------|
-| 16 | Refino Brownfield — Fun Personalize (Julia) | ✅ Done — janela executada, Julia pediu remover resumo (prompt v3), rodando em produção. Pendente: formalização retroativa da 16.4 (story + gate) em `feature/scar-ai-onboarding-01`. |
-| 17 | Refino Brownfield — demais tenants migrados (PLAKA, Scar AI, etc.) | ⚪ Draft — criado 2026-04-22 |
+| 16 | Refino Brownfield — Fun Personalize (Julia) | ✅ **Done 4/4** — 16.1-16.3 formalizadas ~05:00 BRT + 16.4 formalizada tarde (gate PASS w/observations). Prompt v4 rodando em produção. |
+| 17 | Refino Brownfield — demais tenants | ⚪ Draft — Wave A (PLAKA, Scar AI, já no core) executável; Wave B (HL, Ensinaja, Doceria, aguardam 7.8) bloqueada. |
 
 ### Camada 5 — Produto Horizontal
 > Capacidades que beneficiam qualquer tenant.
