@@ -17,6 +17,7 @@
 | 2026-04-18 | Semi joia no banho — pode usar ou deve tirar antes? | Pode usar semi joia no banho ou precisa tirar antes? | cuidados | semi joia no banho, pode usar semi joia no banho, semi joia estraga no banho, tirar semi joia antes do banho | https://blog.plakaacessorios.com/pode-usar-semi-joia-no-banho-ou-precisa-tirar-antes/ |
 | 2026-04-19 | O que é semi joia hipoalergênica e como identificar | O que é semi joia hipoalergênica e como saber se é de verdade? | qualidade | semi joia hipoalergênica, semi joia para pele sensível, semi joia sem níquel, alergia a semi joia | https://blog.plakaacessorios.com/o-que-e-semi-joia-hipoalergenica-e-como-saber-se-e-de-verdade/ |
 | 2026-04-19 | Guia Completo de Cuidados com Semi Joias (pillar) | Guia Completo de Cuidados com Semi Joias: Tudo o Que Você Precisa Saber | cuidados | cuidados semi joia, como cuidar de semi joia, semi joia durabilidade | https://blog.plakaacessorios.com/guia-completo-de-cuidados-com-semi-joias/ |
+| 2026-04-20 | Tendências de semi joias para o inverno 2026 | Tendências de semi joias para o inverno 2026 | tendencias | tendências semi joia inverno 2026, semi joia inverno, tendências semi joia | https://blog.plakaacessorios.com/tendencias-de-semi-joias-para-o-inverno-2026/ |
 
 ---
 
