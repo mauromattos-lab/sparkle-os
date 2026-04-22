@@ -1,6 +1,6 @@
 # Epic 16 — Refino Brownfield da Fun Personalize (Julia)
 
-**Status:** 🟡 Em andamento — Fases 1-3 executadas informalmente na sessão 2026-04-22 (sem arquivos .story.md formais). Fase 4 pendente (aguarda janela com Julia + monitoramento 96h). **Dívida AIOX:** draftar retroativamente 16.1-16.3 se quiser rastreabilidade completa.
+**Status:** 🟡 Em andamento — Stories 16.1-16.3 ✅ Done (formalizadas retroativamente em 2026-04-22 ~05:00 BRT, gates PASS). Story 16.4 ⏳ pendente (aguarda janela com Julia + monitoramento 96h). Epic fecha quando 16.4 concluir.
 **Criado por:** Morgan (@pm) — 2026-04-22
 **Depende de:** Epic 15 (Método de Refino e Onboarding) — **Done** ✅
 **Destrava:** Aplicações futuras do playbook em outros tenants brownfield; dados reais pro Anexo A do brief PLAKA (Zenya Admin como tier)
@@ -59,14 +59,20 @@ Referências operacionais: [`TENANT-REFINEMENT-PLAYBOOK.md §3`](../zenya/TENANT
 
 ## Stories
 
-| Story | Título | Status | Depende de | Commits |
-|-------|--------|--------|-----------|---------|
-| 16.1 | Baseline + backup do prompt Fun | ✅ Executada informal | — | `8f03b03` |
-| 16.2 | Smoke derivado (9 conversas reais + 6 cenários REPL) | ✅ Executada informal | 16.1 | `8f03b03`, `ece6358` |
-| 16.3 | Fix iterativo: v2 → v3 (Julia removeu resumo) → v4 (horário comercial) | ✅ Executada informal | 16.2 | `8f03b03`, `a39188d`, `9de2a3d` |
-| 16.4 | Janela + whitelist + liberação + monitoramento 96h | ⏳ **Pendente** | 16.3 | — |
+| Story | Título | Status | Depende de | Commits | Gate |
+|-------|--------|--------|-----------|---------|------|
+| [16.1](./16.1.story.md) | Baseline + backup do prompt Fun | ✅ **Done** | — | `8f03b03` | [PASS](../qa/gates/16.1-baseline-backup.yml) |
+| [16.2](./16.2.story.md) | Smoke derivado (9 conversas reais + 6 cenários REPL) | ✅ **Done** | 16.1 | `8f03b03`, `ece6358` | [PASS](../qa/gates/16.2-smoke-derivado.yml) |
+| [16.3](./16.3.story.md) | Fix iterativo: v2 → v3 (Julia removeu resumo) → v4 (horário comercial) | ✅ **Done** | 16.2 | `8f03b03`, `a39188d`, `9de2a3d` | [PASS w/concerns](../qa/gates/16.3-fix-iterativo.yml) |
+| 16.4 | Janela + whitelist + liberação + monitoramento 96h | ⏳ **Pendente** | 16.3 | — | — |
 
-## Trabalho executado informalmente (2026-04-22 madrugada)
+## Execução — cronologia
+
+**16.1-16.3 executadas em modo exploratório conduzido pelo Mauro** na sessão 2026-04-22 madrugada. Inicialmente sem stories formais — formalizadas retroativamente em ~05:00 BRT quando Mauro pediu rastreabilidade AIOX completa. Gates @qa retroativos em `docs/qa/gates/16.x-*.yml`.
+
+**Concern ativo (via gate 16.3):** Fix #1 (aviso ao cliente antes de escalar) não validado visualmente em REPL. Validação definitiva depende de 16.4 (produção real com Julia).
+
+## ~~Trabalho executado informalmente~~ (histórico — agora formalizado acima)
 
 16.1-16.3 foram conduzidas em modo exploratório "com Mauro no meio", sem passar pelo fluxo `@sm *draft → @po *validate → @qa *gate`. Artefatos rastreáveis nos commits acima, além de:
 

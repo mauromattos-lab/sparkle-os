@@ -1,0 +1,57 @@
+storyId: 16.1
+storyTitle: "Baseline + backup do prompt Fun Personalize"
+epicRef: docs/stories/EPIC-16-INDEX.md
+
+verdict: PASS
+reviewedBy: '@qa (Quinn) — gate retroativo'
+reviewedAt: 2026-04-22
+reviewedCommit: 8f03b03
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Gate RETROATIVO — trabalho executado em modo exploratório antes da
+  story existir formalmente. Story draftada retroativamente pra fechar
+  dívida AIOX. Backup persistido corretamente, drift aparente investigado
+  e descartado (CRLF Windows vs LF banco Unix), rollback plan testado
+  via idempotência do seed script.
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: 'Nenhum código modificado. Só criação de backup via `cp`.'
+  - id: unit-tests
+    result: N/A
+    notes: 'Preparação brownfield — sem código testável.'
+  - id: acceptance-criteria
+    result: PASS
+    notes: |
+      AC1 backup criado ✅ (prompt-fun-v1-20260422-0354.md)
+      AC2 sync validado ✅ (diff -wB vazio, drift era só line endings)
+      AC3 rollback plan ✅ (via git checkout + seed idempotente)
+  - id: no-regressions
+    result: PASS
+    notes: 'Story isolada — zero arquivos de produção modificados.'
+  - id: performance
+    result: N/A
+  - id: security
+    result: PASS
+    notes: 'Backup em disco local do repo, sem credenciais.'
+  - id: documentation
+    result: PASS
+    notes: |
+      Aprendizado "CRLF vs LF não é drift real" documentado nas Dev Notes.
+      Pode virar addendum no TENANT-REFINEMENT-PLAYBOOK numa iteração futura.
+
+concerns: []
+
+handoff:
+  to: '@po (Pax)'
+  command: 'story 16.2 executada em sequência'
+  condition: PASS
+
+metadata:
+  retroactive: true
+  retroactive_reason: |
+    Story executada em modo exploratório conduzido por Mauro durante
+    sessão 2026-04-22 madrugada. Gate retroativo gerado quando Mauro
+    solicitou formalização completa em ~05:00 BRT.

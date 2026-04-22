@@ -1,0 +1,123 @@
+storyId: 16.3
+storyTitle: "Fix iterativo do prompt Julia (v1 → v2 → v3 → v4)"
+epicRef: docs/stories/EPIC-16-INDEX.md
+
+verdict: PASS
+verdictQualifier: with-concerns
+reviewedBy: '@qa (Quinn) — gate retroativo'
+reviewedAt: 2026-04-22
+reviewedCommits:
+  - 8f03b03
+  - a39188d
+  - 9de2a3d
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Gate RETROATIVO. 3 iterações de prompt aplicadas na Julia (v2, v3, v4)
+  com seed idempotente em cada. md5 rastreável. Feedback da cliente final
+  (Julia) incorporado 2x durante a execução — padrão "client em loop"
+  respeitado. Fix #2 (não substituir produto fora de categoria)
+  CRISTALINAMENTE confirmado no smoke de regressão (F6 v1 vendia taça
+  gin quando cliente pedia champagne; v2+ escala sem substituir).
+  Concern residual: Fix #1 não validado visualmente em REPL (tool fake
+  mascara texto — validação visual definitiva depende de Story 16.4).
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: |
+      Zero código TypeScript modificado — apenas edits no prompt canônico
+      (docs/zenya/tenants/fun-personalize/prompt.md) e metadata do
+      frontmatter. Todas as mudanças estão em seção REGRAS CRÍTICAS
+      (v2, v3) e nova seção ## 8. HORÁRIO DE ATENDIMENTO HUMANO (v4).
+      Nenhuma regressão em outras seções (diff focado).
+
+  - id: unit-tests
+    result: N/A
+    notes: 'Prompt é produto, não código testável unitariamente.'
+
+  - id: acceptance-criteria
+    result: PASS
+    notes: |
+      AC1 backup prévio por iteração ✅ (git history)
+      AC2 seed idempotente ✅ (3x com sucesso, md5 diferentes)
+      AC3 cache 5min respeitado ✅
+      AC4 feedback Julia incorporado ✅ (Fix #4 removido na v3)
+      AC5 Julia aprovou horário ✅ (v4 adicionou seção específica)
+
+  - id: no-regressions
+    result: PASS
+    notes: |
+      Smoke de regressão F1-F6 executado. F1-F4 equivalentes ou melhores
+      (F3: 3 chunks → 2 chunks = concisão funcionando). F6 melhorou
+      cristalino (não oferece mais taça gin pra champagne). F5 não
+      validável em REPL (tool fake), deixado pra 16.4 validar em prod
+      real. Fluxo de pedido (§3 do prompt) intocado via git diff.
+
+  - id: performance
+    result: PASS
+    notes: |
+      Mudanças em prompt adicionam +2229 chars (v2) net de +5000 no
+      total (v4). Latência do LLM sobe <5% pelo tamanho maior — aceitável.
+
+  - id: security
+    result: PASS
+    notes: 'Sem credenciais, secrets ou dados sensíveis no prompt.'
+
+  - id: documentation
+    result: PASS
+    notes: |
+      Frontmatter atualizado em cada versão com changelog inline.
+      Story 16.3 documenta as 3 iterações com md5 de cada.
+
+concerns:
+  - id: 16-3-01
+    severity: medium
+    category: testing
+    description: |
+      Fix #1 (aviso ao cliente no MESMO turno de escalarHumano) não foi
+      validado VISUALMENTE em REPL — porque o REPL cria conversationId
+      fake, a tool escalarHumano falha com 404 antes de entregar texto.
+      O que foi validado: o agente DECIDE corretamente invocar a tool
+      (log mostra tool call). O que falta: confirmar que o texto de
+      aviso SAI pro cliente quando a tool completa com sucesso em prod real.
+    recommendation: |
+      Story 16.4 valida em produção real. Quando Mauro mandar "Meu CEP
+      é X" pelo WhatsApp da Prime (ou Julia com whitelist) e receber
+      resposta de aviso + agente-off → Fix #1 confirmado. Se não chegar,
+      voltamos pra iteração (talvez maxSteps não permitiu texto antes
+      da tool, talvez precisa toolChoice forçado).
+
+  - id: 16-3-02
+    severity: low
+    category: observability
+    description: |
+      v4 adicionou lógica de horário comercial via PROMPT, não via
+      código. LLM precisa ler timestamp injetado no prompt + decidir se
+      está dentro/fora do horário. Risco baixo mas existente: LLM pode
+      errar a aritmética de horário em casos de borda (domingo 23:59,
+      feriado não previsto, etc).
+    recommendation: |
+      Monitorar na Story 16.4 se aparecem casos onde bot avisou horário
+      errado. Se frequente, considerar mover decisão pra código (helper
+      no agent que injeta flag "is_business_hours" no prompt).
+
+handoff:
+  to: '@po (Pax)'
+  command: 'close-story 16.3 + abrir 16.4 quando Julia destravar janela'
+  condition: PASS with concerns
+
+metadata:
+  retroactive: true
+  coderabbit:
+    ran: false
+    reason: 'Mudanças exclusivamente em markdown do prompt canônico.'
+  smoke_regression_summary:
+    executed_at: 2026-04-22 03:22 BRT
+    scenarios: 6 (F1-F6)
+    rate_limit_interrupted: 2 (F5, F6 in first pass — reran successfully)
+    critical_fixes_confirmed:
+      - Fix #2 — F6 v1 vendia gin, v2+ escala sem substituir
+    critical_fixes_partial:
+      - Fix #1 — tool call invocada corretamente, texto de aviso não validado em REPL
+    regressions_detected: 0

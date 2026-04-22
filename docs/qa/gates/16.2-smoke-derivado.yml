@@ -1,0 +1,71 @@
+storyId: 16.2
+storyTitle: "Smoke derivado da fonte real (Fun Personalize)"
+epicRef: docs/stories/EPIC-16-INDEX.md
+
+verdict: PASS
+reviewedBy: '@qa (Quinn) — gate retroativo'
+reviewedAt: 2026-04-22
+reviewedCommits:
+  - 8f03b03
+  - ece6358
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Gate RETROATIVO. Smoke derivado da fonte real (9 conversas + 6 cenários
+  REPL) executado corretamente — NÃO foi adivinhado, cumpre aprendizado
+  feedback_test_from_source.md. 7 gaps identificados com severidade e
+  evidência rastreável. G7 (Buscar_produto top-5 sem threshold)
+  corretamente separado como não-prompt, registrado em
+  docs/stories/16/investigacoes-pendentes.md.
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: 'Nenhum código modificado. Apenas análise + documentação.'
+  - id: unit-tests
+    result: N/A
+  - id: acceptance-criteria
+    result: PASS
+    notes: |
+      AC1 varredura 9 conversas ✅ (conv 205-213)
+      AC2 smoke exploratório 6 cenários ✅ (F1-F6)
+      AC3 catálogo de gaps ✅ (G1-G7 com severidade + evidência)
+      AC4 investigações pendentes registradas ✅ (docs/stories/16/investigacoes-pendentes.md)
+  - id: no-regressions
+    result: PASS
+    notes: 'Zero arquivos de produção modificados. Smoke local via REPL.'
+  - id: performance
+    result: N/A
+  - id: security
+    result: PASS
+    notes: |
+      Smoke usa conversationId fake (REPL) — zero risco de leakage pra
+      conversa real. Credenciais só acessadas via env vars.
+  - id: documentation
+    result: PASS
+    notes: |
+      Gap G7 corretamente classificado como "não-prompt" e movido pra
+      investigação pendente separada. Evita confusão futura.
+
+concerns:
+  - id: 16-2-01
+    severity: low
+    category: tooling
+    description: |
+      Smoke teve 2 cenários interrompidos por OpenAI rate limit TPM
+      (30k tokens/min). Não é bug, é consumo concentrado. Rodadas
+      futuras devem espaçar cenários ou aumentar TPM limit no account.
+    recommendation: |
+      Considerar `delay entre cenários` ou `tier mais alto no OpenAI` em
+      futuras execuções de smoke longo.
+
+handoff:
+  to: '@po (Pax)'
+  command: 'story 16.3 executada em sequência'
+  condition: PASS
+
+metadata:
+  retroactive: true
+  coderabbit:
+    ran: false
+    reason: 'Análise qualitativa de conversas + REPL. Sem código executável novo.'
