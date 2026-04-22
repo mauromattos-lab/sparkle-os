@@ -1,17 +1,17 @@
 # Runbook de Cutover — HL Importados (n8n → core)
 
-**Janela:** 2026-04-22 à noite (horário a combinar com Mauro)
+**Janela:** 2026-04-22 às **23h BRT**
 **Executor:** @devops (Gage) + Mauro (autoriza secrets)
-**Pré-requisitos confirmados:** Z-API do Hiago já configurada no Chatwoot · Código na main (commit `1382286`) · Seed scripts prontos
+**Pré-requisitos confirmados:** Z-API do Hiago já configurada no Chatwoot · Código na main (commit `1382286`) · Seed scripts prontos · UltraCash API testada (2026-04-20)
 **Duração estimada:** 15-20 min fim a fim (cutover + smoke)
 
 ---
 
-## 🔐 Decisões que Mauro precisa confirmar antes de iniciar
+## 🔐 Decisões fechadas (2026-04-22)
 
-1. **Horário exato da janela** — 22h? 23h? meia-noite? (impacta Mauro acordado monitorando smoke)
-2. **Whitelist inicial** — `HL_ALLOWED_PHONES="+55..."` com apenas Mauro + Hiago por 30min, **ou** já abrir geral (Hiago está ciente de ajustes)?
-3. **Variáveis faltantes** — `HL_CHATWOOT_ACCOUNT_ID`, `HL_ADMIN_PHONES`, `ULTRACASH_API_KEY`: confirmar que já estão em `.env` da VPS ou passar via shell na hora.
+- **Horário:** 23h BRT
+- **Whitelist:** NÃO — liberar aberto direto. Hiago está ciente de que o início pode precisar de ajustes.
+- **Env vars:** Mauro indica que já está tudo na `.env` da VPS (`HL_CHATWOOT_ACCOUNT_ID`, `HL_ADMIN_PHONES`, `ULTRACASH_API_KEY`). Pré-voo confirma. Se faltar algo, Mauro passa via shell na hora.
 
 ---
 
@@ -31,13 +31,17 @@
 
 ```bash
 # No shell da VPS, dentro de /opt/sparkleos/packages/zenya
-export HL_CHATWOOT_ACCOUNT_ID="<ID da conta HL no Chatwoot>"
-export HL_ADMIN_PHONES="+55<mauro>,+55<hiago>"
-export HL_ADMIN_CONTACTS='[{"phone":"+55<mauro>","name":"Mauro"},{"phone":"+55<hiago>","name":"Hiago"}]'
-# Opcional — whitelist inicial de 30min:
-# export HL_ALLOWED_PHONES="+55<mauro>,+55<hiago>"
-
+# Se as vars já estão no .env, só rodar:
 node scripts/seed-hl-tenant.mjs
+
+# Caso precise passar via shell (pré-voo revelou que falta):
+# export HL_CHATWOOT_ACCOUNT_ID="<ID da conta HL no Chatwoot>"
+# export HL_ADMIN_PHONES="+55<mauro>,+55<hiago>"
+# export HL_ADMIN_CONTACTS='[{"phone":"+55<mauro>","name":"Mauro"},{"phone":"+55<hiago>","name":"Hiago"}]'
+# node scripts/seed-hl-tenant.mjs
+
+# Whitelist NÃO é usada (decisão: aberto direto).
+# HL_ALLOWED_PHONES deve ficar undefined → array vazio no banco → sem filtro.
 ```
 
 **Saída esperada:** log com `tenant_id: <UUID>` criado/atualizado. **Guardar esse UUID** pro passo 2.
@@ -79,16 +83,9 @@ pm2 logs zenya-webhook --lines 50  # acompanhar 30s
 
 **Critério de sucesso:** os 3 smokes passam sem erro aparente. Se falhar qualquer um, **pausar e investigar** antes de liberar geral.
 
-## 🟢 Liberação geral (se aplicável)
+## 🟢 Liberação geral
 
-Se iniciou com whitelist:
-```bash
-# Após 30min de smoke OK, remover whitelist:
-# (via psql ou Supabase SQL Editor)
-UPDATE zenya_tenants
-  SET allowed_phones = ARRAY[]::TEXT[]
-  WHERE chatwoot_account_id = '<HL_CHATWOOT_ACCOUNT_ID>';
-```
+**Skipar** — nesta janela a decisão é abrir direto (sem whitelist). Após smoke PASS, a HL já está atendendo todos os clientes pelo core.
 
 ## 🧯 Rollback (executar se qualquer passo falhar)
 
