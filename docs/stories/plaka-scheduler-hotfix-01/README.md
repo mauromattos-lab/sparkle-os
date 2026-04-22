@@ -94,3 +94,41 @@ claude-opus-4-7 (Dex)
 - 2026-04-21 — Backfill do post 2026-04-20 em `posts-history.md` (verificado via Ghost Admin API).
 - 2026-04-21 — Guard de execução direta adicionado ao `daily-pipeline.mjs` para evitar side-effect no import.
 - 2026-04-21 — Status: InProgress → InReview. Handoff dev→qa gerado.
+- 2026-04-22 — @qa review PASS — 7/7 checks verde. Gate file em `docs/qa/gates/plaka-scheduler-hotfix-01.yml`. AC6 deferido ao @devops (verificação em prod via workflow_dispatch).
+
+## QA Results
+
+**Reviewer:** Quinn (@qa) · **Data:** 2026-04-22 · **Veredito:** ✅ **PASS** · **Gate file:** `docs/qa/gates/plaka-scheduler-hotfix-01.yml`
+
+### Resumo executivo
+Hotfix cirúrgico de 5 arquivos (commit `8bb52a7`, +235/-21 linhas) resolve 2 bugs independentes do scheduler do blog PLAKA. Aprovado para push + disparo imediato.
+
+### Checks (7/7 PASS)
+
+| # | Check | Veredito | Destaque |
+|---|-------|----------|----------|
+| 1 | Code review | PASS | `stripTrailingCommas` é fallback conservador (só age após JSON.parse falhar). `jsonMode` é opt-in — retrocompat preservada. Guard de execução direta é portable Linux/Windows. |
+| 2 | Unit tests | PASS | 9/9 pass em 137ms. Inclui reprodução literal do JSON que crashou em prod (run 24723933245). |
+| 3 | Acceptance Criteria | PASS | AC1–AC5 verificáveis localmente; AC6 deferido ao @devops (depende de push). |
+| 4 | Regression | PASS | `generateBriefing`, `writePost`, `revisionLoop`, `publishToGhost`, `resolveFeatureImage`, `processImage` intocados. |
+| 5 | Performance | PASS | Regex é O(n) único, só no fallback. `response_format: json_object` sem overhead. |
+| 6 | Security | PASS | `permissions: contents: write` é escopo mínimo. Nenhuma superfície nova de injection. |
+| 7 | Documentation | PASS | Story completa, JSDoc adicionado, commit message estruturado com referências a evidências. |
+
+### NFRs
+- **Reliability:** PASS (parse com 2 camadas de fallback; workflow commit garantido)
+- **Maintainability:** PASS (função exportada, testável, bem documentada)
+- **Testability:** PASS (guard habilita import sem side-effect)
+- **Observability:** CONCERNS menor (pipeline ainda usa `console.log` — fora de escopo do hotfix)
+
+### Deferidos (não bloqueiam)
+- **AC6 — Verificação em prod:** depende de `@devops` push → PR → merge → `workflow_dispatch force=true`. Deve ser executado imediatamente para cobrir o post que falhou em 2026-04-21 (próximo run agendado: 2026-04-23 09:00 BRT).
+- **CodeRabbit scan:** não rodou no QA gate. Mudança cirúrgica em 5 arquivos bem localizados; review manual cobriu padrões que CodeRabbit sinalizaria. Opcional rodar na CI do PR.
+
+### Risk profile
+**Overall: LOW** — Mudança cirúrgica, escopo bem definido, teste para o bug exato, fallback conservador, permissão workflow mínima.
+
+### Next action
+Handoff `qa→devops` gerado em `.aiox/handoffs/handoff-qa-to-devops-20260422-plaka-scheduler.yaml`. Aguardando @devops para push + workflow_dispatch.
+
+— Quinn, guardião da qualidade 🛡️

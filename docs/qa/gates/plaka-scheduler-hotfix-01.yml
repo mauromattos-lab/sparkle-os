@@ -1,0 +1,112 @@
+storyId: plaka-scheduler-hotfix-01
+storyPath: docs/stories/plaka-scheduler-hotfix-01/README.md
+reviewer: Quinn (@qa)
+reviewedAt: 2026-04-22
+branch: fix/plaka-scheduler-resilience
+commit: 8bb52a7
+verdict: PASS
+
+summary: |
+  Hotfix cirúrgico de 5 arquivos (+235/-21) que resolve 2 bugs independentes do
+  scheduler diário do blog PLAKA. Fix #2 (bloqueador de prod) — parseRexVeredicto
+  agora tolera 3 modos de falha de LLM (trailing commas, markdown code fence,
+  texto envolvente) com fallback em 2 camadas. Fix #1 (latente) — workflow
+  declara permissions: contents: write, escopo mínimo necessário. Backfill do
+  post de 2026-04-20 aplicado. 9 smoke tests cobrem o parse defensivo, incluindo
+  reprodução literal do JSON que crashou em prod (run 24723933245).
+
+checks:
+  code_review:
+    status: PASS
+    notes:
+      - "stripTrailingCommas é regex conservadora (/,(\\s*[\\]}])/g) — só aplica após JSON.parse direto falhar, nunca corrompe caminho feliz"
+      - "parseRexVeredicto agora exportada (linha 107) permite teste unit; guarda cláusulas para string vazia/null (108-110) e ausência de chaves (115-117)"
+      - "callClaude recebe options={} como 4º arg, jsonMode opt-in: chamadas existentes (generateBriefing, writePost, revisionLoop) seguem intactas — retrocompat preservada"
+      - "Guard de execução direta (669-677) usa fileURLToPath + resolve — portable em Linux (GitHub Actions) e Windows (dev local). Verificado: import do módulo expõe APENAS 'parseRexVeredicto' sem disparar main()"
+      - "response_format: json_object aplicado em validatePost (linha 272 no original — confirmado no diff): user message menciona 'JSON' explicitamente, requisito da OpenAI quando json_object é ativo"
+
+  unit_tests:
+    status: PASS
+    notes:
+      - "node --test daily-pipeline.test.mjs → 9 pass / 0 fail / 0 cancelled / 0 skipped / duration 137ms"
+      - "Cobertura: JSON válido, trailing comma em }, trailing comma em ] aninhado, markdown fence, texto ao redor, reprodução literal do bug (run 24723933245), string vazia, sem chaves, JSON irrecuperável"
+      - "Teste 'reproduz o bug do run 24723933245' usa shape literal do JSON que crashou em prod — regressão bloqueada"
+
+  acceptance_criteria:
+    status: PASS
+    notes:
+      - "AC1 (parse defensivo): PASS — 3 modos de falha cobertos com fallback em 2 camadas"
+      - "AC2 (jsonMode): PASS — callClaude opt-in + validatePost ativo + user msg menciona 'JSON'"
+      - "AC3 (workflow permissions): PASS — contents: write adicionado no job daily-content"
+      - "AC4 (backfill 20/04): PASS — entry adicionada em posts-history.md, slug verificado via Ghost Admin API"
+      - "AC5 (smoke tests): PASS — 9 cenários cobrindo >= 4 ACs especificados"
+      - "AC6 (verificação em prod): DEFERRED — depende de push + workflow_dispatch pelo @devops"
+
+  regression:
+    status: PASS
+    notes:
+      - "generateBriefing (linha 179), writePost (213), revisionLoop (282), publishToGhost (506), resolveFeatureImage (362), processImage (429) — sem alterações"
+      - "Step 0 (scheduling gate), step 6 (escalação), step 10 (posts-history), step 11 (notificação) — sem alterações"
+
+  performance:
+    status: PASS
+    notes:
+      - "stripTrailingCommas é regex O(n) única, só invocada no fallback de exceção — zero impacto no caminho feliz"
+      - "response_format: json_object tem latência idêntica ao modo padrão (confirmado na doc OpenAI)"
+      - "Guard de execução direta adiciona 1 comparação de string no startup — trivial"
+
+  security:
+    status: PASS
+    notes:
+      - "permissions: contents: write é escopo mínimo — NÃO adiciona actions:write, packages:write, id-token:write"
+      - "Uso de contents:write restrito a stefanzweifel/git-auto-commit-action@v5 (action auditada, pinned na major v5)"
+      - "response_format não altera exposição de dados — apenas format do output"
+      - "stripTrailingCommas não executa JSON — apenas regex replace. Nenhuma superfície para injection"
+
+  documentation:
+    status: PASS
+    notes:
+      - "Story README completa com Contexto, 6 ACs, Escopo IN/OUT, Arquivos Esperados, Riscos+Mitigações, Plano de Verificação, Dev Agent Record, Change Log, File List"
+      - "Commit message estruturado: 'Bug #1', 'Bug #2', 'Extras' + referências aos GH Action runs que evidenciam o problema"
+      - "JSDoc em parseRexVeredicto, stripTrailingCommas, callClaude explicando semântica e @throws"
+
+issues: []
+
+deferred_items:
+  - id: AC6
+    description: "Verificação em produção via workflow_dispatch force=true"
+    blocked_by: "@devops push"
+    severity: info
+    action: "Executar imediatamente após merge pra cobrir o post que falhou em 2026-04-21 (próximo run agendado é 2026-04-23 09:00 BRT)"
+  - id: coderabbit_scan
+    description: "CodeRabbit scan --base main não executado no QA gate"
+    severity: low
+    action: "Opcional — pode rodar na CI do PR via GitHub action do CodeRabbit"
+    rationale: "Hotfix urgente (prod offline); mudança cirúrgica em 5 arquivos bem localizados; review manual cobriu os padrões que CodeRabbit flagaria"
+
+non_functional_requirements:
+  reliability: PASS (parse agora tem 2 camadas de fallback; workflow publish agora tem commit garantido)
+  maintainability: PASS (função exportada + testável; JSDoc clara; separação de responsabilidades — stripTrailingCommas isolada)
+  testability: PASS (9 smoke tests + guard de execução direta habilita qualquer importação sem side-effect)
+  observability: CONCERNS_MINOR (erros de parse agora têm preview, mas pipeline ainda usa console.log — fora de escopo do hotfix)
+
+risk_profile:
+  overall: LOW
+  rationale: "Mudança cirúrgica, escopo bem definido, cobertura de teste para o bug exato, fallback conservador (só ativa após exceção), sem alteração de lógica de negócio. Workflow permission é escopo mínimo necessário."
+
+recommendations:
+  must_do:
+    - "@devops: push fix/plaka-scheduler-resilience → PR → merge → workflow_dispatch force=true"
+  should_do:
+    - "Após merge, monitorar o próximo run agendado (2026-04-23 09:00 BRT) para confirmar que o auto-commit do posts-history.md passa sem 403"
+  nice_to_have:
+    - "Considerar renomear callClaude → callOpenAI em story futura (nome confuso — já fora de escopo por decisão do @dev)"
+    - "Adicionar observabilidade estruturada (Pino/Winston) em iteração futura — fora de escopo do hotfix"
+
+next_action: |
+  Handoff qa→devops ativo:
+  - @devops *push (com confirmação do Mauro — operação remota sensível)
+  - @devops *create-pr
+  - @devops dispara workflow via gh workflow run plaka-daily-content.yml -f force=true
+  - Monitorar run com gh run watch
+  - Confirmar: post publicado no Ghost + posts-history.md commitado automaticamente
