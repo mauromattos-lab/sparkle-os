@@ -1,6 +1,6 @@
 # Epic 15 — Método de Refino e Onboarding de Tenants Zenya
 
-**Status:** Draft
+**Status:** ✅ Done — 3/3 stories fechadas (15.1 PASS, 15.2 PASS, 15.3 PASS) em 2026-04-22
 **Criado por:** Morgan (@pm) — 2026-04-22
 **Depende de:** — (nenhum epic bloqueante)
 **Destrava:** Epic 14 (Onboarding Automático) — automação precisa de método manual bem definido antes
@@ -57,9 +57,9 @@ Artefatos do método (em disco, não na cabeça)
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|-----------|-----------|----------|
-| [15.1](./15.1.story.md) | TENANT-REFINEMENT-PLAYBOOK — método documentado | Draft | P1 | — | @dev |
-| [15.2](./15.2.story.md) | smoke-template.mjs — template genérico de smoke | Draft | P1 | 15.1 (conceitual) | @dev |
-| [15.3](./15.3.story.md) | TENANT-PLAYBOOK §9 taxonomia de tenant | Draft | P1 | **15.1 + 15.2** | @dev |
+| [15.1](./15.1.story.md) | TENANT-REFINEMENT-PLAYBOOK — método documentado | ✅ Done | P1 | — | @dev |
+| [15.2](./15.2.story.md) | smoke-template.mjs — template genérico de smoke | ✅ Done | P1 | 15.1 (conceitual) | @dev |
+| [15.3](./15.3.story.md) | TENANT-PLAYBOOK §9 taxonomia de tenant | ✅ Done | P1 | **15.1 + 15.2** | @dev |
 
 **Observação de paralelismo:** 15.2 e 15.3 podem ser implementadas em paralelo após 15.1 existir como referência. Não há bloqueio entre elas.
 
@@ -114,3 +114,7 @@ Com Epic 15 Done, abre-se naturalmente o **refino brownfield da Fun Personalize*
 
 - **2026-04-22** — Epic criado por @pm. Aguardando @sm refinar as 3 stories individuais via `*draft`.
 - **2026-04-22** — 3 stories detalhadas por @sm River (`15.1`, `15.2`, `15.3`). Todas em Draft, prontas pra validação `@po *validate-story-draft`.
+- **2026-04-22** — @po Pax validou as 3 com **10/10 GO**. Status Draft → Ready.
+- **2026-04-22** — @dev Dex implementou: `TENANT-REFINEMENT-PLAYBOOK.md` (238 linhas), `smoke-template.mjs` (372 linhas, 32% comentário), `TENANT-PLAYBOOK.md §9` (+17/-1 linhas). Status Ready → Ready for Review.
+- **2026-04-22** — @qa Quinn aprovou as 3 com **PASS**. Gate files em `docs/qa/gates/15.x-*.yml`. Tech debts low registrados (não-bloqueantes).
+- **2026-04-22** — @po Pax fechou as 3 stories. **Epic 15 → Done (3/3)**. Destravado: refino brownfield da Fun Personalize (novo epic).
