@@ -171,11 +171,23 @@ export function createWebhookRouter(): Hono {
         const resolvedContents: string[] = [];
         let inputIsAudio = false;
         for (const m of pending) {
+          // Defensive audio detection: queue.ts extracts audio_url from
+          // attachments[file_type=audio].data_url, but also try payload attachments
+          // directly here in case of shape drift (Chatwoot fork or Z-API update).
+          let audioUrl: string | undefined = m.audio_url;
+          if (!audioUrl && !m.content) {
+            const atts = (m as unknown as { attachments?: Array<Record<string, unknown>> }).attachments;
+            const audioAtt = Array.isArray(atts)
+              ? atts.find((a) => a['file_type'] === 'audio' && typeof a['data_url'] === 'string')
+              : null;
+            audioUrl = audioAtt?.['data_url'] as string | undefined;
+          }
+
           if (m.content) {
             resolvedContents.push(m.content);
-          } else if (m.audio_url) {
+          } else if (audioUrl) {
             inputIsAudio = true;
-            const transcription = await transcribeAudioUrl(m.audio_url);
+            const transcription = await transcribeAudioUrl(audioUrl);
             if (transcription) {
               resolvedContents.push(transcription);
             } else {
@@ -183,6 +195,10 @@ export function createWebhookRouter(): Hono {
             }
           }
         }
+        console.log(
+          `[zenya][audio-diag] conv=${conversationId} pending=${pending.length} ` +
+          `inputIsAudio=${inputIsAudio} mergedLen=${resolvedContents.join('\n').length}`,
+        );
 
         // Merge all pending messages into a single input for the agent
         // If no pending found (race condition), fall back to the current message
