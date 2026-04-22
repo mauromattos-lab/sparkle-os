@@ -83,6 +83,12 @@ WhatsApp → Chatwoot inbox → webhook POST /webhook/chatwoot
 
 ## 4. System Prompt — Estrutura Padrão
 
+> **Padrão oficial (ADR-001):** o `system_prompt` de cada tenant vive em `docs/zenya/tenants/{slug}/prompt.md` com front-matter YAML, versionado no git, carregado em runtime pelo seed via `gray-matter`. **Não** hardcode `SYSTEM_PROMPT` como template literal em `.mjs`, **não** edite `zenya_tenants.system_prompt` direto no banco (exceto rollback emergencial).
+>
+> Referência: [`docs/architecture/adr/ADR-001-zenya-prompt-storage.md`](../architecture/adr/ADR-001-zenya-prompt-storage.md).
+>
+> Utilitário compartilhado: [`packages/zenya/scripts/lib/seed-common.mjs`](../../packages/zenya/scripts/lib/seed-common.mjs) expõe `applyTenantSeed`, `isDryRun` e `loadPromptFromMarkdown`. Todos os seeds de tenant usam esse módulo.
+
 O `system_prompt` do tenant é o SOP completo. Estrutura recomendada:
 
 ```markdown
@@ -192,42 +198,118 @@ Ativo quando `allowed_phones` tem números cadastrados.
 - Comando `/reset` disponível apenas em modo teste → limpa histórico da sessão
 - Para liberar produção: `UPDATE zenya_tenants SET allowed_phones = '{}' WHERE chatwoot_account_id = 'X'`
 
+> **Padrão de onboarding (2026-04-21):** todo tenant novo **nasce em modo teste**. `allowed_phones` é preenchido no seed com números admin (Mauro + dono do negócio) e só é limpo (`= '{}'`) após smokes locais e smokes em produção com whitelist passarem. Decisão validada no método de refino PLAKA — detalhes em `docs/stories/plaka-01/lessons-for-pm.md`.
+
 ---
 
-## 9. Adicionando um Novo Cliente
+## 9. Criando um Novo Tenant
+
+> 📖 **Quando usar:** este §9 é a **referência técnica** do core (schema, seed, credenciais). Para o processo operacional completo (seed → smokes → produção → monitoramento), consulte [`TENANT-REFINEMENT-PLAYBOOK.md`](./TENANT-REFINEMENT-PLAYBOOK.md) — é o guia de execução passo a passo com seção específica para greenfield vs brownfield.
+
+### 9.0 Tipos de tenant — qual fluxo aplicar
+
+Nem todo tenant precisa de todos os passos. Decida primeiro em qual categoria ele se encaixa para saber quais subseções do §9 e qual variante do smoke template aplicam:
+
+| Tipo | Exemplo real | `active_tools` | Subseções §9 aplicáveis | Variante smoke |
+|------|-------------|----------------|------------------------|----------------|
+| **Prompt-only** | Scar AI (GuDesignerPro) | `[]` | 9.1–9.5, 9.7 | A (prompt-only) |
+| **Prompt + KB** | PLAKA (Roberta) | `[nuvemshop, sheets_kb]` | 9.1–9.8 completo + sync de KB | B (com KB) |
+| **Prompt + KB + integrações externas** | HL Importados (UltraCash), Fun Personalize (Loja Integrada) | `[ultracash]` / `[loja_integrada]` | 9.1–9.8 + seed de credenciais integração (§9.6) + smoke contra endpoint real | B + cenários específicos |
+
+**Tenants atípicos** (multi-role admin, catálogo condicional, stemming custom, etc.): não forçar no template — tratar caso a caso consultando `@architect`.
+
+Referência de template: [`packages/zenya/scripts/smoke-template.mjs`](../../packages/zenya/scripts/smoke-template.mjs) (Story 15.2). Exemplo real funcionando: [`smoke-scar.mjs`](../../packages/zenya/scripts/smoke-scar.mjs).
 
 ### 9.1 Pré-requisitos no Chatwoot
-- Criar conta ou usar conta existente
+- Criar conta (ou usar conta existente)
 - Criar inbox WhatsApp (Z-API recomendado)
-- Configurar webhook: Settings → Integrations → Webhooks → `https://<vps-ip>:3004/webhook/chatwoot` → evento `message_created`
+- Configurar webhook: Settings → Integrations → Webhooks → `https://api.sparkleai.tech/webhook/chatwoot` → evento `message_created`
 - Anotar: `account_id`
 
-### 9.2 Inserir tenant no banco
-```sql
-INSERT INTO zenya_tenants (
-  name, system_prompt, active_tools, chatwoot_account_id,
-  allowed_phones, admin_phones, admin_contacts
-) VALUES (
-  'Nome do Cliente',
-  '-- SOP aqui --',
-  ARRAY['loja_integrada'],
-  '10',
-  ARRAY['+5531999998888'],   -- modo teste inicial
-  ARRAY['+5531999997777'],   -- número pessoal do proprietário
-  '[{"phone": "+5531999997777", "name": "Nome do Proprietário"}]'::jsonb
-);
+### 9.2 Criar o prompt canônico do tenant
+Arquivo **obrigatório:** `docs/zenya/tenants/{slug}/prompt.md` com front-matter YAML.
+
+```markdown
+---
+tenant: {slug}
+version: 1
+updated_at: YYYY-MM-DD
+author: Mauro
+sources:
+  - briefing + 3 áudios do cliente em docs/mauro-sessao-{cliente}-YYYYMMDD.md
+notes: |
+  Observações livres — quem é o tenant, canais, restrições.
+---
+
+# PAPEL
+...
 ```
 
-### 9.3 Adicionar credenciais de integração (se necessário)
-Usar script `packages/zenya/scripts/seed-zapi-credentials.mjs` como referência.
-Credenciais são criptografadas com AES-256-GCM (ZENYA_MASTER_KEY).
+Referência de estrutura do SOP: ver [§4](#4-system-prompt--estrutura-padrão).
 
-### 9.4 Testar
-- Mandar mensagem pelo número de teste
-- Verificar logs: `pm2 logs zenya-webhook`
+### 9.3 Criar o script de seed do tenant
+Copiar `packages/zenya/scripts/seed-scar-tenant.mjs` como template e trocar:
+- Prefixo das env vars (ex: `NOVOCLIENTE_CHATWOOT_ACCOUNT_ID`)
+- `name` no objeto `row`
+- `PROMPT_PATH` default (apontar para o novo `.md`)
+
+Todo seed DEVE usar `applyTenantSeed` de `./lib/seed-common.mjs` — sem duplicar lógica de upsert.
+
+### 9.4 Validar com `--dry-run`
+```bash
+cd packages/zenya && \
+NOVOCLIENTE_CHATWOOT_ACCOUNT_ID=X NOVOCLIENTE_ADMIN_PHONES="+55..." \
+NOVOCLIENTE_ADMIN_CONTACTS='[{"phone":"+55...","name":"..."}]' \
+node scripts/seed-novocliente-tenant.mjs --dry-run
+```
+
+Output esperado: JSON da row + md5 do `system_prompt`. **Se o tenant já existe no banco**, o md5 do `.md` TEM que bater com `SELECT md5(system_prompt) FROM zenya_tenants WHERE name='...'` antes de rodar sem `--dry-run`.
+
+### 9.5 Executar o seed real
+Remova `--dry-run` e rode — o `applyTenantSeed` faz UPSERT idempotente por `chatwoot_account_id`. Reexecutar é seguro.
+
+### 9.6 Adicionar credenciais de integração (se necessário)
+Usar script `packages/zenya/scripts/seed-zapi-credentials.mjs` como referência.
+Credenciais são criptografadas com AES-256-GCM (`ZENYA_MASTER_KEY`).
+
+### 9.7 Testar
+
+#### 9.7.1 Smoke local antes de conectar WhatsApp (recomendado)
+
+Antes de criar inbox Z-API / parear QR code do cliente, rodar smoke local via REPL — conversa com o tenant através do AI SDK pulando Z-API/Chatwoot:
+
+```bash
+cd packages/zenya
+node --env-file=.env scripts/chat-tenant.mjs --tenant=<chatwoot_account_id>
+```
+
+O que isso cobre (sem expor o cliente final):
+- Detecção de idioma / tom / catálogo pelo prompt
+- Invocação correta de tools (ver no log que a tool FOI chamada, não só que o texto fala dela — ver `feedback_llm_simulates_tool.md`)
+- Fluxo de escalação (a mensagem `[ATENDIMENTO]` é gerada?)
+- Objeções previstas no prompt (ex: "tá caro", "faz mais barato?")
+
+O que **não** cobre (precisa Z-API ligada): transporte WhatsApp real, Chatwoot webhook end-to-end, áudio via Whisper, formatação de mídia.
+
+Origem do padrão: método de refino PLAKA + Scar AI, consolidado em [`TENANT-REFINEMENT-PLAYBOOK.md`](./TENANT-REFINEMENT-PLAYBOOK.md). Template de smoke reutilizável: [`packages/zenya/scripts/smoke-template.mjs`](../../packages/zenya/scripts/smoke-template.mjs). Brief-fonte histórico: [`docs/stories/plaka-01/lessons-for-pm.md`](../stories/plaka-01/lessons-for-pm.md).
+
+#### 9.7.2 Smoke em produção (com whitelist)
+
+Após conectar Z-API e pm2 reload, `allowed_phones` continua preenchido — manda mensagem pelo número admin e confirma o fluxo real WhatsApp → Chatwoot → core → resposta.
+
+- Verificar logs: `pm2 logs zenya-webhook --lines 50`
 - Validar resposta e ferramentas
 - Testar canal admin pelo número pessoal do proprietário
-- Liberar: `UPDATE zenya_tenants SET allowed_phones = '{}' WHERE chatwoot_account_id = 'X'`
+
+#### 9.7.3 Liberar produção
+
+Somente após smokes locais e de produção OK:
+```sql
+UPDATE zenya_tenants SET allowed_phones = '{}' WHERE chatwoot_account_id = 'X';
+```
+
+### 9.8 Template de cutover com gates em produção
+Para tenants comerciais em uso ativo (ex: Fun Personalize), use [`docs/stories/zenya-prompts-03-fun-personalize/README.md`](../stories/zenya-prompts-03-fun-personalize/README.md) como template — inclui backup textual, janela de manutenção, rollback e smoke test obrigatório.
 
 ---
 
@@ -252,7 +334,14 @@ pm2 reload zenya-webhook
 ```
 
 ### Atualizar SOP de um tenant
-Editar `system_prompt` diretamente no Supabase. Cache de 5 minutos — próxima mensagem já pega o novo prompt.
+Fluxo padrão (ADR-001):
+1. Editar `docs/zenya/tenants/{slug}/prompt.md` (bump `version` no front-matter se mudança material)
+2. Commit + push
+3. Rodar `node packages/zenya/scripts/seed-{slug}-tenant.mjs --dry-run` — confirmar que o md5 mudou (senão, ninguém editou o texto de verdade)
+4. Rodar sem `--dry-run` para fazer o upsert idempotente
+5. Cache de 5 minutos expira automaticamente — próxima mensagem já pega o novo prompt
+
+**Emergência:** edição direta no Supabase (`UPDATE zenya_tenants SET system_prompt = ...`) é permitida apenas como rollback/hotfix, seguida de sincronização do `.md` via PR em ≤24h. Fora disso, o `.md` é a única fonte de verdade.
 
 ### Adicionar ferramenta a um tenant
 ```sql
@@ -290,11 +379,13 @@ pm2 logs zenya-webhook --lines 100
 
 ## 12. Clientes Ativos
 
-| Tenant | `chatwoot_account_id` | Status | Ferramentas | Admins |
-|--------|----------------------|--------|-------------|--------|
-| Zenya Prime (SparkleOS) | `1` | Produção | base | Mauro |
-| Julia - Fun Personalize | `5` | Produção | base + loja_integrada | Julia, Mauro |
-| Gustavo - Designer/Streamers | pendente | Onboarding | base | Gustavo |
+| Tenant | `chatwoot_account_id` | Status | Ferramentas | Admins | Prompt canônico |
+|--------|----------------------|--------|-------------|--------|-----------------|
+| Zenya Prime (SparkleOS) | `1` | Produção | base | Mauro | [`zenya-prime/prompt.md`](tenants/zenya-prime/prompt.md) |
+| Julia - Fun Personalize | `5` | Produção | base + loja_integrada | Julia, Mauro | [`fun-personalize/prompt.md`](tenants/fun-personalize/prompt.md) |
+| HL Importados | pendente cutover | Backlog | base + ultracash + google_calendar | Mauro, Hiago | [`hl-importados/prompt.md`](tenants/hl-importados/prompt.md) |
+| PLAKA (Roberta) | aguardando número novo | Pré-onboarding | base + nuvemshop + google_sheets (planejado) | Admin a definir | [`plaka/prompt.md`](tenants/plaka/prompt.md) |
+| Scar AI — GuDesignerPro | `7` | Aguardando Z-API | base | Mauro, Gustavo | [`scar-ai/prompt.md`](tenants/scar-ai/prompt.md) |
 
 ---
 

@@ -1,0 +1,98 @@
+storyId: 15.1
+storyTitle: "TENANT-REFINEMENT-PLAYBOOK — método de refino documentado"
+epicRef: docs/stories/EPIC-15-INDEX.md
+
+verdict: PASS
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-22
+reviewedCommit: 8e76825
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Documento operacional sólido. 238 linhas, 7 seções obrigatórias (AC1),
+  tom consistente com TENANT-PLAYBOOK, 17 referências a tenants reais
+  (PLAKA/Scar/HL/Fun/Roberta) — zero exemplos fictícios (AC3). Tom
+  imperativo no §2 confirmado (executável, não descritivo). Rollback
+  plan SQL explícito no §3 pra brownfield. Links pro código e memórias
+  presentes no §6. Versão 1.0 fixada no §7.
+
+checks:
+  - id: code-review
+    result: PASS
+    severity: low
+    notes: |
+      Markdown bem-formado. Estrutura de cabeçalhos consistente
+      (## N. §, ### N.X). Tabelas usadas onde apropriado (§3, §4, §7).
+      Blocos de código identificados (```bash, ```sql).
+
+  - id: unit-tests
+    result: N/A
+    notes: 'Documento — sem unit tests. Lint equivalente a test.'
+
+  - id: acceptance-criteria
+    result: PASS
+    severity: low
+    details:
+      cumpridos: [AC1, AC2, AC3, AC5, AC6]
+      verificados_com_concern: [AC4]
+    notes: |
+      AC1 (7 seções): ✅ grep confirmou §1-§7 presentes.
+      AC2 (tom consistente TENANT-PLAYBOOK): ✅ leitura comparativa.
+      AC3 (zero inventados): ✅ 17 refs a tenants reais, 0 fictícias.
+      AC4 (links funcionando): CONCERN — markdown-link-check não rodado
+        (ferramenta não no ambiente QA). Links foram inspecionados
+        manualmente, todos apontam pra arquivos reais no repo.
+      AC5 (200-400 linhas): ✅ 238 linhas.
+      AC6 (exemplo GF=Scar, BF=Fun): ✅ explícito no §3.
+
+  - id: no-regressions
+    result: PASS
+    severity: low
+    notes: |
+      Arquivo NOVO. Nenhum arquivo existente alterado por esta story.
+
+  - id: performance
+    result: N/A
+    notes: 'Documento.'
+
+  - id: security
+    result: PASS
+    severity: low
+    notes: |
+      Sem credenciais, secrets ou dados sensíveis. Comandos de exemplo
+      usam placeholders (`<tenant>`, `+551299...`).
+
+  - id: documentation
+    result: PASS
+    severity: low
+    notes: |
+      Self-documenting (é o documento). Links cruzados presentes.
+      Ownership definido no §7 (`@pm` revisa).
+
+concerns:
+  - id: tech-debt-15-1
+    severity: low
+    category: tooling
+    description: |
+      markdown-lint e markdown-link-check não rodaram em CI. Se docs
+      continuam crescendo, vale adicionar lint de markdown no pipeline.
+    recommendation: |
+      Criar story futura (fora do Epic 15) adicionando markdownlint +
+      link-check como GitHub Action. Custo baixo, valor alto pra docs.
+
+handoff:
+  to: '@po (Pax)'
+  command: '*close-story 15.1'
+  condition: PASS → story pode ser fechada e marcada Done.
+
+metadata:
+  reviewedPhases: 7
+  toolsRun:
+    - grep (AC validation)
+    - wc (line count)
+  toolsDeferred:
+    - markdownlint (ferramenta não instalada localmente)
+    - markdown-link-check (ferramenta não instalada localmente)
+  coderabbit:
+    ran: false
+    reason: 'Story é 100% docs. CodeRabbit otimizado pra código; markdown não é foco principal da ferramenta.'

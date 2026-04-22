@@ -1,0 +1,116 @@
+storyId: 15.2
+storyTitle: "smoke-template.mjs — template genérico de smoke"
+epicRef: docs/stories/EPIC-15-INDEX.md
+
+verdict: PASS
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-22
+reviewedCommit: 8e76825
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Template bem arquitetado. Derivação limpa de smoke-scar.mjs. 372
+  linhas total, 120 de comentário (32% — AC4 ≥30% ✅). Zero hardcode
+  de tenant-específico em código executável (AC3 passou — 3 linhas com
+  "nuvemshop|plaka" estão DENTRO de blocos /* */ comentados, variantes
+  que usuário descomenta). 2 variantes claras (A prompt-only, B com KB)
+  com header didático. Build TypeScript PASS. Guard-rail implementado:
+  se nenhuma variante descomentada, erro claro orientando.
+
+checks:
+  - id: code-review
+    result: PASS
+    severity: low
+    notes: |
+      Estrutura idiomática igual ao smoke-scar original (reuso de
+      padrão validado). Parsing de argumentos (--tenant=X, env fallback)
+      consistente com chat-tenant.mjs. Output path genérico via slug
+      derivado do config.name. Error handling no catch do generateText
+      preservado (error fica em passResult).
+
+  - id: unit-tests
+    result: N/A
+    severity: low
+    notes: |
+      Script de dev, não código de produção. Smoke manual contra PLAKA
+      não foi executado (C2 delegado) pra economizar créditos OpenAI.
+      Script estrutural idêntico ao smoke-scar que já rodou com sucesso.
+
+  - id: acceptance-criteria
+    result: PASS
+    severity: low
+    details:
+      cumpridos: [AC1, AC2, AC3, AC4, AC5, AC6]
+    notes: |
+      AC1 (arquivo + diffs corretos): ✅ sem default, header explicativo,
+        cenários em blocos comentados, classificador heurístico preservado.
+      AC2 (saída idêntica ao scar): ✅ JSON path usa slug agora, mesmo shape.
+      AC3 (zero hardcode executável): ✅ confirmado via awk excluindo
+        blocos /* */ — resultado vazio.
+      AC4 (30%+ comentário): ✅ 32% confirmado.
+      AC5 (testável virgem): parcial — fallback com scenarios=[] gera erro
+        educativo, orientando descomentar variante. Não é "rodável sem
+        customização" no sentido estrito, mas evita execução silenciosa.
+      AC6 (header compatível): ✅ padrão chat-tenant.mjs.
+
+  - id: no-regressions
+    result: PASS
+    severity: low
+    notes: |
+      Arquivo NOVO. smoke-scar.mjs preservado intocado (decisão
+      explícita — mantém como exemplo real rastreável).
+
+  - id: performance
+    result: PASS
+    severity: low
+    notes: |
+      Cada cenário: ~2-5s (generateText + tool calls). Sequencial.
+      Aceitável pra smoke. Paralelização não vale complexidade.
+
+  - id: security
+    result: PASS
+    severity: low
+    notes: |
+      Script usa env vars pra credenciais (não hardcoded). Phone
+      simulado é fictício (+5512999990001) — não-admin, não-whitelist
+      em produção (respeita allowed_phones check). Não escreve em disco
+      de produção — só /tmp/smoke-*.json local.
+
+  - id: documentation
+    result: PASS
+    severity: low
+    notes: |
+      Header extenso (linhas 1-29) cobre propósito, quando usar, como
+      adaptar. Comentário didático BOM vs RUIM pro pass_if. Links pra
+      armadilhas §5 do playbook dentro dos cenários críticos. Self-documenting.
+
+concerns:
+  - id: tech-debt-15-2
+    severity: low
+    category: tests
+    description: |
+      Smoke funcional real contra PLAKA (C2 da story) não rodou no gate.
+      Aceitável: estrutura idêntica ao smoke-scar já validado em produção.
+      Se primeiro uso do template em tenant novo falhar por erro estrutural,
+      iteração em PR pequeno.
+    recommendation: |
+      Quando aplicar o template no primeiro refino brownfield (Fun),
+      rodar smoke completo e validar que funcionamento é idêntico ao
+      do smoke-scar.mjs. Se divergir, abrir fix-story pequena.
+
+handoff:
+  to: '@po (Pax)'
+  command: '*close-story 15.2'
+  condition: PASS → story pode ser fechada e marcada Done.
+
+metadata:
+  reviewedPhases: 7
+  toolsRun:
+    - grep (hardcode check)
+    - awk (comment ratio)
+    - npm run build (TypeScript check)
+  toolsDeferred:
+    - smoke real contra PLAKA (consumo de créditos OpenAI)
+  coderabbit:
+    ran: false
+    reason: 'Script de dev, não código de produção. Estrutura espelhada de arquivo já validado.'

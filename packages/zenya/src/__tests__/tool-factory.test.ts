@@ -12,6 +12,7 @@ vi.mock('../tenant/credentials.js', () => ({
 vi.mock('../integrations/chatwoot.js', () => ({
   addLabel: vi.fn(),
   sendMessage: vi.fn(),
+  sendPrivateNote: vi.fn(),
   getChatwootParams: vi.fn().mockReturnValue({ accountId: '1', conversationId: '99' }),
   setContactAudioPreference: vi.fn(),
 }));
@@ -30,8 +31,8 @@ vi.mock('../integrations/loja-integrada.js', () => ({
 
 import { zapiAddLabel } from '../integrations/zapi-labels.js';
 import { getCredentialJson } from '../tenant/credentials.js';
-import { addLabel } from '../integrations/chatwoot.js';
-import { createTenantTools } from '../tenant/tool-factory.js';
+import { addLabel, sendMessage } from '../integrations/chatwoot.js';
+import { buildEscalationSummary, createTenantTools } from '../tenant/tool-factory.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
 const TENANT_ID = 'tenant-td-01';
@@ -51,13 +52,13 @@ const CTX = { accountId: '1', conversationId: '99', phone: '+5531999998888' };
 type ToolWithExecute = { execute: (...args: unknown[]) => PromiseLike<Record<string, unknown>> };
 
 const ESCALACAO_ARGS = {
-  resumo_conversa: 'Cliente perguntou sobre prazo de entrega',
-  ultima_mensagem: 'Quero falar com alguém',
+  resumo: '[ATENDIMENTO] Cliente perguntou sobre prazo de entrega e quer falar com alguém',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(addLabel).mockResolvedValue(undefined as never);
+  vi.mocked(sendMessage).mockResolvedValue(undefined as never);
 });
 
 // TD-7.10-01: Behavioral test — escalarHumano degrades gracefully when zapiAddLabel throws
@@ -92,5 +93,60 @@ describe('escalarHumano — degradação graciosamente Z-API (TD-7.10-01)', () =
     expect(addLabel).toHaveBeenCalledWith(expect.anything(), 'agente-off');
     // zapiAddLabel never reached when getCredentialJson throws
     expect(zapiAddLabel).not.toHaveBeenCalled();
+  });
+});
+
+describe('escalarHumano — resumo como mensagem pública na conversa', () => {
+  it('posta resumo como mensagem pública ANTES de adicionar label agente-off', async () => {
+    vi.mocked(getCredentialJson).mockRejectedValue(new Error('no creds'));
+
+    const tools = createTenantTools(TENANT_ID, CONFIG, CTX);
+    await (tools['escalarHumano'] as ToolWithExecute).execute({
+      resumo:
+        '[ATENDIMENTO] Cliente quer pedido especial de iPhone 14. Última msg: "Consegue conseguir um 14 Pro?". Motivo: fora do estoque.',
+    });
+
+    expect(sendMessage).toHaveBeenCalledOnce();
+    const msgContent = vi.mocked(sendMessage).mock.calls[0]?.[1] ?? '';
+    expect(msgContent).toContain('[ATENDIMENTO]');
+    expect(msgContent).toContain('iPhone 14');
+    expect(msgContent).toContain('fora do estoque');
+
+    // sendMessage must run before addLabel — the handoff message has to land BEFORE
+    // the bot goes silent so the client/atendente see the context.
+    const msgOrder = vi.mocked(sendMessage).mock.invocationCallOrder[0] ?? Infinity;
+    const labelOrder = vi.mocked(addLabel).mock.invocationCallOrder[0] ?? -Infinity;
+    expect(msgOrder).toBeLessThan(labelOrder);
+  });
+
+  it('resolve { escalado: true } mesmo se sendMessage falhar (non-critical)', async () => {
+    vi.mocked(sendMessage).mockRejectedValue(new Error('Chatwoot message endpoint down'));
+    vi.mocked(getCredentialJson).mockRejectedValue(new Error('no creds'));
+
+    const tools = createTenantTools(TENANT_ID, CONFIG, CTX);
+    const result = await (tools['escalarHumano'] as ToolWithExecute).execute(ESCALACAO_ARGS);
+
+    expect(result).toMatchObject({ escalado: true });
+    // Critical path (agente-off) must still execute when handoff message fails
+    expect(addLabel).toHaveBeenCalledWith(expect.anything(), 'agente-off');
+  });
+});
+
+describe('buildEscalationSummary', () => {
+  it('inclui motivo quando presente', () => {
+    const s = buildEscalationSummary({
+      resumo_conversa: 'A',
+      ultima_mensagem: 'B',
+      motivo: 'C',
+    });
+    expect(s).toContain('*Motivo:* C');
+    expect(s).toContain('*Última mensagem do cliente:* "B"');
+    expect(s).toContain('*Resumo da conversa:*\nA');
+  });
+
+  it('omite linha de motivo quando ausente', () => {
+    const s = buildEscalationSummary({ resumo_conversa: 'A', ultima_mensagem: 'B' });
+    expect(s).not.toContain('*Motivo:*');
+    expect(s).toContain('*Última mensagem do cliente:* "B"');
   });
 });

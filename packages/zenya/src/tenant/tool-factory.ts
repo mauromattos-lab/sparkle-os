@@ -12,6 +12,9 @@ import { addLabel, sendMessage, getChatwootParams, setContactAudioPreference } f
 import { createCalendarTools } from '../integrations/google-calendar.js';
 import { createAsaasTools } from '../integrations/asaas.js';
 import { createLojaIntegradaTools } from '../integrations/loja-integrada.js';
+import { createUltracashTools } from '../integrations/ultracash.js';
+import { createNuvemshopTools } from '../integrations/nuvemshop.js';
+import { createSheetsKBTools } from '../integrations/sheets-kb.js';
 import { escalateToHuman } from './escalation.js';
 import type { TenantConfig } from './config-loader.js';
 
@@ -44,27 +47,35 @@ export function createTenantTools(
      */
     escalarHumano: tool({
       description:
-        'Escala o atendimento para um humano quando o usuário solicitar ou quando a situação exigir. ' +
-        'Use quando o usuário pedir para falar com uma pessoa, estiver frustrado, ou o problema for complexo.',
+        'Escala o atendimento para um humano. ANTES de chamar: (1) envie uma mensagem ao cliente avisando o handoff. (2) Se a pergunta é sobre pedido específico e o cliente ainda não informou número de pedido nem CPF, peça essa informação antes. ' +
+        'O parâmetro `resumo` é postado como MENSAGEM PÚBLICA na conversa (o cliente vê), então escreva em formato humano e começando com "[ATENDIMENTO]" para o atendente humano identificar na preview.',
       parameters: z.object({
-        resumo_conversa: z.string().describe('Resumo breve do que foi discutido'),
-        ultima_mensagem: z.string().describe('Última mensagem do usuário'),
-        motivo: z.string().optional().describe('Motivo da escalação'),
+        resumo: z
+          .string()
+          .describe(
+            'Resumo da conversa em formato livre começando com "[ATENDIMENTO]". ' +
+              'Inclua: quem é o cliente (se souber), o que ele quer, o que você já fez/informou, ' +
+              'dados do pedido se já consultou (número, status, rastreio), e a última pergunta pendente. ' +
+              'Exemplo: "[ATENDIMENTO] Cliente Manuela relatou oxidação no pedido 58177 dentro da garantia de 6 meses. ' +
+              'Já expliquei a política e ela quer falar com a equipe. Pedido confirmado enviado em 20/04/2026."',
+          ),
       }),
-      execute: async ({ resumo_conversa, motivo }) => {
+      execute: async ({ resumo }) => {
         await escalateToHuman({
           tenantId,
           chatwoot: chatwootParams(),
           phone: ctx.phone,
           source: 'tool',
+          summary: resumo,
         });
         console.log(
           `[zenya] escalarHumano tool — tenant=${tenantId} conv=${ctx.conversationId}` +
-          ` motivo=${motivo ?? 'não especificado'} resumo=${resumo_conversa.slice(0, 80)}`,
+            ` resumo=${resumo.slice(0, 120)}`,
         );
         return {
           escalado: true,
-          mensagem: 'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
+          mensagem:
+            'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
         };
       },
     }),
@@ -163,5 +174,37 @@ export function createTenantTools(
     Object.assign(tools, createLojaIntegradaTools(tenantId));
   }
 
+  // UltraCash — ERP/PDV stock lookup (HL Importados)
+  if (config.active_tools.includes('ultracash')) {
+    Object.assign(tools, createUltracashTools(tenantId));
+  }
+
+  // Nuvemshop — order lookup by number (PLAKA)
+  if (config.active_tools.includes('nuvemshop')) {
+    Object.assign(tools, createNuvemshopTools(tenantId));
+  }
+
+  // Sheets KB — consulta base de conhecimento snapshot (PLAKA)
+  if (config.active_tools.includes('sheets_kb')) {
+    Object.assign(tools, createSheetsKBTools(tenantId));
+  }
+
   return tools;
+}
+
+/**
+ * Builds the structured private-note summary posted on the Chatwoot conversation
+ * when the bot escalates to a human. Visible to agents only, never to the customer.
+ * Exported for unit testing.
+ */
+export function buildEscalationSummary(fields: {
+  resumo_conversa: string;
+  ultima_mensagem: string;
+  motivo?: string | undefined;
+}): string {
+  const lines = ['🔔 *Atendimento escalado — Zenya saiu da conversa*', ''];
+  if (fields.motivo) lines.push(`*Motivo:* ${fields.motivo}`);
+  lines.push(`*Última mensagem do cliente:* "${fields.ultima_mensagem}"`);
+  lines.push('', '*Resumo da conversa:*', fields.resumo_conversa);
+  return lines.join('\n');
 }

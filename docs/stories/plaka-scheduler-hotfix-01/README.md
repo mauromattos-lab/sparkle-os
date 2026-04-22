@@ -94,6 +94,8 @@ claude-opus-4-7 (Dex)
 - 2026-04-21 — Backfill do post 2026-04-20 em `posts-history.md` (verificado via Ghost Admin API).
 - 2026-04-21 — Guard de execução direta adicionado ao `daily-pipeline.mjs` para evitar side-effect no import.
 - 2026-04-21 — Status: InProgress → InReview. Handoff dev→qa gerado.
+<<<<<<< HEAD
+=======
 - 2026-04-22 — @qa review PASS — 7/7 checks verde. Gate file em `docs/qa/gates/plaka-scheduler-hotfix-01.yml`. AC6 deferido ao @devops (verificação em prod via workflow_dispatch).
 - 2026-04-22 — @devops push + PR #1 + squash merge (`a1428cd`) + workflow_dispatch force=true. Run `24787261371` SUCCESS em 54s. Post `Como escolher a semi joia certa para um look despojado` publicado no Ghost + `posts-history.md` auto-commitado (`4fede85`). **Bug #1 e Bug #2 resolvidos em produção.**
 - 2026-04-22 — Evidência adicional: scheduled run `24779950434` (13:06 UTC, antes do merge) falhou com **o mesmo trailing comma** (`"sa.",\n  ]`), reproduzindo o padrão do 21/04. Confirma que o fix era necessário e endereça o root cause correto.
@@ -135,3 +137,4 @@ Hotfix cirúrgico de 5 arquivos (commit `8bb52a7`, +235/-21 linhas) resolve 2 bu
 Handoff `qa→devops` gerado em `.aiox/handoffs/handoff-qa-to-devops-20260422-plaka-scheduler.yaml`. Aguardando @devops para push + workflow_dispatch.
 
 — Quinn, guardião da qualidade 🛡️
+>>>>>>> origin/main
