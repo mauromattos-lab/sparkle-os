@@ -1,6 +1,6 @@
 # Epic 16 — Refino Brownfield da Fun Personalize (Julia)
 
-**Status:** Draft
+**Status:** 🟡 Em andamento — Fases 1-3 executadas informalmente na sessão 2026-04-22 (sem arquivos .story.md formais). Fase 4 pendente (aguarda janela com Julia + monitoramento 96h). **Dívida AIOX:** draftar retroativamente 16.1-16.3 se quiser rastreabilidade completa.
 **Criado por:** Morgan (@pm) — 2026-04-22
 **Depende de:** Epic 15 (Método de Refino e Onboarding) — **Done** ✅
 **Destrava:** Aplicações futuras do playbook em outros tenants brownfield; dados reais pro Anexo A do brief PLAKA (Zenya Admin como tier)
@@ -59,12 +59,23 @@ Referências operacionais: [`TENANT-REFINEMENT-PLAYBOOK.md §3`](../zenya/TENANT
 
 ## Stories
 
-| Story | Título | Status | Prioridade | Depende de | Executor |
-|-------|--------|--------|-----------|-----------|----------|
-| 16.1 | Baseline + backup do prompt Fun | Draft | P1 | — | @sm → @po → @dev |
-| 16.2 | Smoke derivado da fonte real (prompt + KB + 20-30 conversas reais) | Draft | P1 | 16.1 | @sm → @po → @dev |
-| 16.3 | Fix iterativo dos gaps priorizados por ROI | Draft | P1 | 16.2 | @sm → @po → @dev |
-| 16.4 | Janela de produção + whitelist + liberação + monitoramento 96h | Draft | P1 | 16.3 | @sm → @po → @dev + Mauro |
+| Story | Título | Status | Depende de | Commits |
+|-------|--------|--------|-----------|---------|
+| 16.1 | Baseline + backup do prompt Fun | ✅ Executada informal | — | `8f03b03` |
+| 16.2 | Smoke derivado (9 conversas reais + 6 cenários REPL) | ✅ Executada informal | 16.1 | `8f03b03`, `ece6358` |
+| 16.3 | Fix iterativo: v2 → v3 (Julia removeu resumo) → v4 (horário comercial) | ✅ Executada informal | 16.2 | `8f03b03`, `a39188d`, `9de2a3d` |
+| 16.4 | Janela + whitelist + liberação + monitoramento 96h | ⏳ **Pendente** | 16.3 | — |
+
+## Trabalho executado informalmente (2026-04-22 madrugada)
+
+16.1-16.3 foram conduzidas em modo exploratório "com Mauro no meio", sem passar pelo fluxo `@sm *draft → @po *validate → @qa *gate`. Artefatos rastreáveis nos commits acima, além de:
+
+- Backup v1: `docs/stories/16/backups/prompt-fun-v1-20260422-0354.md`
+- Investigação pendente: `docs/stories/16/investigacoes-pendentes.md` (tool `Buscar_produto` retornando top-5 sem match real)
+
+**Prompt Julia evoluiu:** v1 (base portado n8n) → v2 (4 fixes) → v3 (Julia removeu Fix #4) → v4 (+ seção de horário comercial seg-sex 8h-18h).
+
+**Dívida AIOX:** pra rastreabilidade formal, amanhã dá pra retomar com `@sm *draft 16.1/16.2/16.3` refletindo o que já foi feito → `@po *validate` → `@qa *gate` (10-15min). Alternativamente, aceitar a execução informal como válida e fechar o epic quando 16.4 completar.
 
 **Sequencial** — diferente do Epic 15, aqui as 4 stories são estritamente sequenciais. Cada uma depende da anterior concluída. Sem paralelismo.
 
