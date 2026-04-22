@@ -40,8 +40,15 @@ docs/zenya/raw/
 .gemini/
 
 # SparkleOS additions
-# AIOS Runtime — session state, handoffs, decision logs (gitignored)
+# AIOX Runtime — session state, handoffs, decision logs (gitignored)
 .aios/
+.aiox/handoffs/
+.aiox/sessions/
+.aiox/decisions/
+
+# Vercel local build artifacts
+.vercel/
+apps/**/.vercel/
 
 # TypeScript build info
 *.tsbuildinfo
