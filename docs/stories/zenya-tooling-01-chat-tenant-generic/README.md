@@ -97,9 +97,9 @@ Dois artefatos desse método são tenant-específicos hoje e precisam virar gen�
 
 ## Definição de pronto
 
-- [ ] `chat-tenant.mjs` criado com `--tenant=<id>` funcionando
-- [ ] Smoke cross-tenant passou (PLAKA + Scar AI carregam, `/info` mostra nome certo)
-- [ ] `chat-plaka.mjs` deletado; nenhuma ref órfã no repo
+- [x] `chat-tenant.mjs` criado com `--tenant=<id>` funcionando (estrutura; runtime pendente validação)
+- [ ] Smoke cross-tenant passou (PLAKA + Scar AI carregam, `/info` mostra nome certo) — aguarda Mauro rodar
+- [x] `chat-plaka.mjs` deletado; nenhuma ref órfã no repo
 - [x] `feedback_errors_can_hide_bugs.md` criado + index atualizado (@pm, sessão 2026-04-21)
 - [x] TENANT-PLAYBOOK §8 + §9.7.1 atualizados (@pm, sessão 2026-04-21)
 - [ ] @qa aprovou PASS ou CONCERNS
@@ -114,26 +114,20 @@ Dois artefatos desse método são tenant-específicos hoje e precisam virar gen�
 - [x] **PM2.** Criar memória `feedback_errors_can_hide_bugs.md` + atualizar `MEMORY.md`.
 - [x] **PM3.** Editar TENANT-PLAYBOOK §8 + §9.7.1.
 
-### Fase Dev — Extração (pendente, ~30-60min)
+### Fase Dev — Extração (parcial, feita na sessão 2026-04-22 pelo @pm autorizado em modo autônomo)
 
-- [ ] **D1.** Rodar `grep -r "chat-plaka" --include="*.md" --include="*.mjs" --include="*.ts" --include="*.json"` pra mapear referências. Anotar resultado no File List pra decidir updates.
-- [ ] **D2.** Copiar `chat-plaka.mjs` → `chat-tenant.mjs`. Aplicar refactor:
-  - Parse `--tenant=<id>` via `process.argv`. Fallback: `process.env.CHATWOOT_ACCOUNT_ID`. Se ambos faltarem, erro explícito.
-  - Remover `PLAKA_CHATWOOT_ACCOUNT_ID` default.
-  - Trocar header/comentários "PLAKA / Roberta" → genérico "tenant carregado por chatwoot_account_id".
-  - Output de boas-vindas usa `config.name` (já disponível no código atual).
-- [ ] **D3.** Smoke regressão: `node --env-file=.env scripts/chat-tenant.mjs --tenant=2` — mandar "oi" e confirmar resposta como Roberta (PLAKA).
-- [ ] **D4.** Smoke cross-tenant: `node --env-file=.env scripts/chat-tenant.mjs --tenant=7` — mandar "oi" e confirmar resposta como Scar AI (GuDesignerPro, PT) + "hi" e confirmar resposta em EN.
-- [ ] **D5.** Se D1 encontrou referências a `chat-plaka.mjs` fora do próprio arquivo, atualizar cada referência pra apontar ao `chat-tenant.mjs` (com argumento `--tenant=2`).
-- [ ] **D6.** Deletar `chat-plaka.mjs`. Commitar com mensagem:
-  ```
-  refactor(zenya): extrai chat-tenant.mjs genérico de chat-plaka.mjs
-
-  - Aceita --tenant=<chatwoot_account_id> ou env CHATWOOT_ACCOUNT_ID
-  - Carrega nome, prompt, tools, allowed/admin phones do banco
-  - Smoke validado em PLAKA (account=2) e Scar AI (account=7)
-  - Remove chat-plaka.mjs (substituído)
-  ```
+- [x] **D1.** Grep executado: `grep -r "chat-plaka"`. 4 matches — 3 documentais (este README, `lessons-for-pm.md`, handoff artifact) + o próprio arquivo. Nenhuma ref operacional precisa update.
+- [x] **D2.** `chat-plaka.mjs` → `chat-tenant.mjs` escrito. Mudanças:
+  - Parse `--tenant=<id>` via `process.argv.slice(2)` + fallback `process.env.CHATWOOT_ACCOUNT_ID`. Se ambos faltarem: erro explícito + hint de uso.
+  - Removido `PLAKA_CHATWOOT_ACCOUNT_ID` default.
+  - Header genérico: "conversa com qualquer tenant Zenya SEM passar por WhatsApp/Z-API".
+  - Linha de boas-vindas usa `config.name` (já carregado do banco).
+  - Output da resposta: `\x1b[35m${config.name} > ...` (era hardcode "Roberta").
+  - `/info` agora mostra `tenant=${config.name}` + `tools=[...]`.
+- [ ] **D3.** Smoke regressão (aguarda Mauro rodar no ambiente local com `.env`): `node --env-file=.env scripts/chat-tenant.mjs --tenant=2` → resposta como Roberta (PLAKA).
+- [ ] **D4.** Smoke cross-tenant (aguarda Mauro rodar): `node --env-file=.env scripts/chat-tenant.mjs --tenant=7` → "oi" em PT, "hi" em EN como Scar AI.
+- [x] **D5.** Refs órfãs: nenhuma — só docs históricos (OK deixar como estão).
+- [x] **D6.** `chat-plaka.mjs` deletado + commit `2e12586` na branch `feature/scar-ai-onboarding-01`. Git detectou rename com 76% de similaridade.
 
 ### Fase QA — Validação (pendente, ~15min)
 
@@ -165,3 +159,4 @@ Essa story formaliza em doc (§8 + §9.7.1) o que já funciona na prática: todo
 ## Change Log
 
 - **2026-04-21 (@pm Morgan)** — Story criada. Fase PM completa (3/3): memória + TENANT-PLAYBOOK + este README. Fase Dev (6 tasks) e Fase QA (4 tasks) ficam engatilhadas aguardando `@dev *develop-story`.
+- **2026-04-22 (@pm Morgan, autorizado em modo autônomo por Mauro)** — Fase Dev executada parcialmente pelo @pm (desvio documentado do pattern AIOX @sm→@po→@dev por autorização explícita e escopo trivial: refactor de ~80 linhas sem lógica nova). Tasks D1, D2, D5, D6 ✅. Commit `2e12586`. D3/D4 (smokes) aguardam execução no ambiente local do Mauro (dependem de `.env` + Supabase). Fase QA (Q1-Q4) ainda pendente.
