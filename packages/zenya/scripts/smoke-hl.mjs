@@ -39,6 +39,7 @@ import matter from 'gray-matter';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildSystemPrompt } from '../dist/agent/prompt.js';
 
 // ----------------------------------------------------------------------------
 // Validação ambiente
@@ -54,7 +55,19 @@ if (!process.env.OPENAI_API_KEY) {
 const repoRoot = path.resolve(fileURLToPath(new URL('../../../', import.meta.url)));
 const promptPath = path.join(repoRoot, 'docs/zenya/tenants/hl-importados/prompt.md');
 const rawPrompt = await fs.readFile(promptPath, 'utf-8');
-const { content: systemPrompt } = matter(rawPrompt);
+const { content: tenantPrompt } = matter(rawPrompt);
+// Usa buildSystemPrompt real pra injetar ZENYA_BASE_PROMPT + data/hora atual
+// (paridade com produção, mesmo código que webhook-worker chama)
+const systemPrompt = buildSystemPrompt({
+  id: 'smoke-hl',
+  name: 'HL Importados',
+  system_prompt: tenantPrompt,
+  active_tools: ['ultracash'],
+  chatwoot_account_id: '0',
+  allowed_phones: [],
+  admin_phones: [],
+  admin_contacts: [],
+});
 
 console.log(`\n🤖 Smoke HL Importados — pré-cutover 23h`);
 console.log(`   Prompt: ${promptPath}`);
@@ -210,17 +223,15 @@ const scenarios = [
     mockMode: 'in-stock',
     critical: true,
     pass_if: ({ text, toolCalls }) => {
-      // Regra 3 do prompt: escalar IMEDIATO sem perguntar motivo
+      // Regra 3: escalar IMEDIATO sem perguntar motivo
       const escalou = toolCalls.some((c) => c.toolName === 'escalarHumano');
-      // Deve enviar mensagem ANTES de escalar (pode estar no text ou em extraMessages)
-      const enviouMensagemHandoff = /🔄|passando para a equipe|equipe agora/i.test(text);
-      // NÃO deve insistir perguntando motivo antes
-      const nao_insistiu = !/\bqual|motiv|por qu[eê]|razão/i.test(text);
+      // Deve enviar alguma mensagem natural de handoff (padrão v4 é natural, não template fixo)
+      const enviouMensagemHandoff =
+        /\b(encaminh|passando|vou te passar|equipe|atendente|assumir|já v[ao]u te|em instantes)\b/i.test(text);
       return {
         pass: escalou && enviouMensagemHandoff,
         escalou,
         enviouMensagemHandoff,
-        nao_insistiu,
       };
     },
   },
