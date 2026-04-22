@@ -204,6 +204,22 @@ Ativo quando `allowed_phones` tem números cadastrados.
 
 ## 9. Criando um Novo Tenant
 
+> 📖 **Quando usar:** este §9 é a **referência técnica** do core (schema, seed, credenciais). Para o processo operacional completo (seed → smokes → produção → monitoramento), consulte [`TENANT-REFINEMENT-PLAYBOOK.md`](./TENANT-REFINEMENT-PLAYBOOK.md) — é o guia de execução passo a passo com seção específica para greenfield vs brownfield.
+
+### 9.0 Tipos de tenant — qual fluxo aplicar
+
+Nem todo tenant precisa de todos os passos. Decida primeiro em qual categoria ele se encaixa para saber quais subseções do §9 e qual variante do smoke template aplicam:
+
+| Tipo | Exemplo real | `active_tools` | Subseções §9 aplicáveis | Variante smoke |
+|------|-------------|----------------|------------------------|----------------|
+| **Prompt-only** | Scar AI (GuDesignerPro) | `[]` | 9.1–9.5, 9.7 | A (prompt-only) |
+| **Prompt + KB** | PLAKA (Roberta) | `[nuvemshop, sheets_kb]` | 9.1–9.8 completo + sync de KB | B (com KB) |
+| **Prompt + KB + integrações externas** | HL Importados (UltraCash), Fun Personalize (Loja Integrada) | `[ultracash]` / `[loja_integrada]` | 9.1–9.8 + seed de credenciais integração (§9.6) + smoke contra endpoint real | B + cenários específicos |
+
+**Tenants atípicos** (multi-role admin, catálogo condicional, stemming custom, etc.): não forçar no template — tratar caso a caso consultando `@architect`.
+
+Referência de template: [`packages/zenya/scripts/smoke-template.mjs`](../../packages/zenya/scripts/smoke-template.mjs) (Story 15.2). Exemplo real funcionando: [`smoke-scar.mjs`](../../packages/zenya/scripts/smoke-scar.mjs).
+
 ### 9.1 Pré-requisitos no Chatwoot
 - Criar conta (ou usar conta existente)
 - Criar inbox WhatsApp (Z-API recomendado)
@@ -275,7 +291,7 @@ O que isso cobre (sem expor o cliente final):
 
 O que **não** cobre (precisa Z-API ligada): transporte WhatsApp real, Chatwoot webhook end-to-end, áudio via Whisper, formatação de mídia.
 
-Origem do padrão: método de refino PLAKA, documentado em `docs/stories/plaka-01/lessons-for-pm.md` e na story `docs/stories/zenya-tooling-01-chat-tenant-generic/README.md`.
+Origem do padrão: método de refino PLAKA + Scar AI, consolidado em [`TENANT-REFINEMENT-PLAYBOOK.md`](./TENANT-REFINEMENT-PLAYBOOK.md). Template de smoke reutilizável: [`packages/zenya/scripts/smoke-template.mjs`](../../packages/zenya/scripts/smoke-template.mjs). Brief-fonte histórico: [`docs/stories/plaka-01/lessons-for-pm.md`](../stories/plaka-01/lessons-for-pm.md).
 
 #### 9.7.2 Smoke em produção (com whitelist)
 
