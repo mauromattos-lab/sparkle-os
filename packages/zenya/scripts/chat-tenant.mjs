@@ -1,21 +1,26 @@
 #!/usr/bin/env node
-// Chat REPL no terminal — conversa com o tenant PLAKA (Roberta) SEM passar
+// Chat REPL no terminal — conversa com qualquer tenant Zenya SEM passar
 // por WhatsApp/Z-API. Útil pra validar prompt, KB e tools antes de conectar
 // qualquer canal real.
 //
 // Arquitetura:
-//   [terminal] → generateText(AI SDK) → Roberta prompt + tools → output no console
+//   [terminal] → generateText(AI SDK) → system prompt + tools do tenant → output no console
 //   (pula Z-API, Chatwoot webhook, Whisper/ElevenLabs — só a lógica do agente)
 //
 // Pré-requisitos:
 //   .env com SUPABASE_URL, SUPABASE_SERVICE_KEY, OPENAI_API_KEY, ZENYA_MASTER_KEY
-//   Tenant PLAKA já seedado (seed-plaka-tenant + seed-plaka-credentials)
+//   Tenant alvo já seedado (seed-<nome>-tenant + credenciais se aplicável)
 //   `npm run build` rodado (usa dist/)
 //
 // Uso:
 //   cd packages/zenya
-//   node --env-file=.env scripts/chat-plaka.mjs            # usa tel default (Mauro)
-//   node --env-file=.env scripts/chat-plaka.mjs +5531XXXXXXXXX  # simula outro cliente
+//   node --env-file=.env scripts/chat-tenant.mjs --tenant=2           # PLAKA (account_id=2)
+//   node --env-file=.env scripts/chat-tenant.mjs --tenant=7           # Scar AI (account_id=7)
+//   node --env-file=.env scripts/chat-tenant.mjs --tenant=7 +5574...  # simula outro cliente
+//   CHATWOOT_ACCOUNT_ID=2 node --env-file=.env scripts/chat-tenant.mjs  # via env
+//
+// O tenant é resolvido por `chatwoot_account_id` (obrigatório via --tenant=<id> ou env).
+// Nome do agente, prompt, active_tools e whitelists vêm do banco.
 //
 // Comandos no prompt:
 //   /sair ou /exit      — encerra
@@ -37,8 +42,22 @@ for (const key of REQUIRED) {
   }
 }
 
-const CHATWOOT_ACCOUNT_ID = process.env.PLAKA_CHATWOOT_ACCOUNT_ID ?? '2';
-const phone = process.argv[2] ?? '+5512981303249';
+const args = process.argv.slice(2);
+let tenantArg = null;
+let phoneArg = null;
+for (const arg of args) {
+  if (arg.startsWith('--tenant=')) tenantArg = arg.slice('--tenant='.length);
+  else if (!phoneArg && !arg.startsWith('--')) phoneArg = arg;
+}
+
+const CHATWOOT_ACCOUNT_ID = tenantArg ?? process.env.CHATWOOT_ACCOUNT_ID;
+if (!CHATWOOT_ACCOUNT_ID) {
+  console.error('ERRO: informe o tenant com --tenant=<chatwoot_account_id> ou env CHATWOOT_ACCOUNT_ID');
+  console.error('Uso: node scripts/chat-tenant.mjs --tenant=7 [+5521999999999]');
+  process.exit(1);
+}
+
+const phone = phoneArg ?? '+5512981303249';
 const conversationId = `repl-${Date.now()}`;
 
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -117,7 +136,7 @@ rl.on('line', async (line) => {
   }
 
   if (msg === '/info') {
-    console.log(`  tenant=${tenant.id} phone=${phone} admin=${isAdmin} msgs=${history.length}`);
+    console.log(`  tenant=${config.name} (id=${tenant.id}) phone=${phone} admin=${isAdmin} tools=[${config.active_tools.join(',')}] msgs=${history.length}`);
     rl.prompt();
     return;
   }
@@ -153,7 +172,7 @@ rl.on('line', async (line) => {
     history.push({ role: 'assistant', content: result.text });
 
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-    console.log(`\n\x1b[35mRoberta > ${result.text}\x1b[0m`);
+    console.log(`\n\x1b[35m${config.name} > ${result.text}\x1b[0m`);
     console.log(`\x1b[2m(${elapsed}s, ${result.usage?.totalTokens ?? '?'} tokens, ${result.finishReason})\x1b[0m\n`);
   } catch (err) {
     process.stdout.write(`\r\x1b[2K`);

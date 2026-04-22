@@ -198,6 +198,8 @@ Ativo quando `allowed_phones` tem números cadastrados.
 - Comando `/reset` disponível apenas em modo teste → limpa histórico da sessão
 - Para liberar produção: `UPDATE zenya_tenants SET allowed_phones = '{}' WHERE chatwoot_account_id = 'X'`
 
+> **Padrão de onboarding (2026-04-21):** todo tenant novo **nasce em modo teste**. `allowed_phones` é preenchido no seed com números admin (Mauro + dono do negócio) e só é limpo (`= '{}'`) após smokes locais e smokes em produção com whitelist passarem. Decisão validada no método de refino PLAKA — detalhes em `docs/stories/plaka-01/lessons-for-pm.md`.
+
 ---
 
 ## 9. Criando um Novo Tenant
@@ -255,11 +257,40 @@ Usar script `packages/zenya/scripts/seed-zapi-credentials.mjs` como referência.
 Credenciais são criptografadas com AES-256-GCM (`ZENYA_MASTER_KEY`).
 
 ### 9.7 Testar
-- Mandar mensagem pelo número de teste
+
+#### 9.7.1 Smoke local antes de conectar WhatsApp (recomendado)
+
+Antes de criar inbox Z-API / parear QR code do cliente, rodar smoke local via REPL — conversa com o tenant através do AI SDK pulando Z-API/Chatwoot:
+
+```bash
+cd packages/zenya
+node --env-file=.env scripts/chat-tenant.mjs --tenant=<chatwoot_account_id>
+```
+
+O que isso cobre (sem expor o cliente final):
+- Detecção de idioma / tom / catálogo pelo prompt
+- Invocação correta de tools (ver no log que a tool FOI chamada, não só que o texto fala dela — ver `feedback_llm_simulates_tool.md`)
+- Fluxo de escalação (a mensagem `[ATENDIMENTO]` é gerada?)
+- Objeções previstas no prompt (ex: "tá caro", "faz mais barato?")
+
+O que **não** cobre (precisa Z-API ligada): transporte WhatsApp real, Chatwoot webhook end-to-end, áudio via Whisper, formatação de mídia.
+
+Origem do padrão: método de refino PLAKA, documentado em `docs/stories/plaka-01/lessons-for-pm.md` e na story `docs/stories/zenya-tooling-01-chat-tenant-generic/README.md`.
+
+#### 9.7.2 Smoke em produção (com whitelist)
+
+Após conectar Z-API e pm2 reload, `allowed_phones` continua preenchido — manda mensagem pelo número admin e confirma o fluxo real WhatsApp → Chatwoot → core → resposta.
+
 - Verificar logs: `pm2 logs zenya-webhook --lines 50`
 - Validar resposta e ferramentas
 - Testar canal admin pelo número pessoal do proprietário
-- Liberar produção: `UPDATE zenya_tenants SET allowed_phones = '{}' WHERE chatwoot_account_id = 'X'`
+
+#### 9.7.3 Liberar produção
+
+Somente após smokes locais e de produção OK:
+```sql
+UPDATE zenya_tenants SET allowed_phones = '{}' WHERE chatwoot_account_id = 'X';
+```
 
 ### 9.8 Template de cutover com gates em produção
 Para tenants comerciais em uso ativo (ex: Fun Personalize), use [`docs/stories/zenya-prompts-03-fun-personalize/README.md`](../stories/zenya-prompts-03-fun-personalize/README.md) como template — inclui backup textual, janela de manutenção, rollback e smoke test obrigatório.
