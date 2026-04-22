@@ -57,9 +57,9 @@ Artefatos do método (em disco, não na cabeça)
 
 | Story | Título | Status | Prioridade | Depende de | Executor |
 |-------|--------|--------|-----------|-----------|----------|
-| 15.1 | TENANT-REFINEMENT-PLAYBOOK — método documentado | Draft | P1 | — | @sm → @po → @dev |
-| 15.2 | smoke-template.mjs — template genérico de smoke | Draft | P1 | 15.1 (referência) | @sm → @po → @dev |
-| 15.3 | TENANT-PLAYBOOK §9 taxonomia de tenant | Draft | P1 | 15.1 (referência) | @sm → @po → @dev |
+| [15.1](./15.1.story.md) | TENANT-REFINEMENT-PLAYBOOK — método documentado | Draft | P1 | — | @dev |
+| [15.2](./15.2.story.md) | smoke-template.mjs — template genérico de smoke | Draft | P1 | 15.1 (conceitual) | @dev |
+| [15.3](./15.3.story.md) | TENANT-PLAYBOOK §9 taxonomia de tenant | Draft | P1 | **15.1 + 15.2** | @dev |
 
 **Observação de paralelismo:** 15.2 e 15.3 podem ser implementadas em paralelo após 15.1 existir como referência. Não há bloqueio entre elas.
 
@@ -113,3 +113,4 @@ Com Epic 15 Done, abre-se naturalmente o **refino brownfield da Fun Personalize*
 ## Histórico
 
 - **2026-04-22** — Epic criado por @pm. Aguardando @sm refinar as 3 stories individuais via `*draft`.
+- **2026-04-22** — 3 stories detalhadas por @sm River (`15.1`, `15.2`, `15.3`). Todas em Draft, prontas pra validação `@po *validate-story-draft`.
