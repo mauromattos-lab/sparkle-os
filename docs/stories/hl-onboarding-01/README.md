@@ -125,3 +125,48 @@ Deixar ativo:
 
 - **Story B** — `integrations/google-drive.ts` (envio de arquivos pelo agente). Não é bloqueador pro cutover da HL; pode ser adicionada on-demand.
 - **Story C** — validar paridade Google Calendar + Asaas com uso real da HL (monitorar após cutover).
+
+---
+
+## QA Results
+
+**Gate:** PASS with concerns · 2026-04-22 · @qa (Quinn)
+**Gate file:** [`docs/qa/gates/hl-onboarding-01-pre-cutover.yml`](../../qa/gates/hl-onboarding-01-pre-cutover.yml)
+
+### 7 checks — todos PASS
+
+| Check | Resultado | Observação |
+|-------|-----------|------------|
+| Code review | ✅ PASS | `smoke-hl.mjs` (400 linhas) e `chat-hl-local.mjs` (349 linhas) seguem padrão do projeto. Prompt v4.3 com changelog de 9 versões rastreável |
+| Unit tests | ✅ PASS | 102/102 passam em 13 test files (vitest). Zero regressão |
+| Acceptance criteria | ✅ PASS | ACs 1-8 confirmados. AC9 (cutover) é pós-gate, não bloqueia |
+| No regressions | ✅ PASS | Diff: apenas 1 prompt.md + 2 scripts novos + 1 doc. Zero código TS core modificado |
+| Performance | ✅ PASS | Prompt cresceu ~130% (9 iterações com fixes reais). Latência marginal (~5-8%) |
+| Security | ✅ PASS | Secret scan: 0 ocorrências. `ULTRACASH_API_KEY` gitignored. Sanitização testada |
+| Documentation | ✅ PASS | Story README, CUTOVER-RUNBOOK, smoke-report completos e alinhados |
+
+### Concerns documentadas (não bloqueantes)
+
+**1. Flakiness residual ~20% na invocação de `escalarHumano`** (medium)
+LLM ocasionalmente promete handoff no texto sem invocar a função. Equivalente ao baseline de Julia/PLAKA/Scar em prod. **Waiver concedido** pra cutover porque: Hiago ciente + baseline consistente + rollback 1min + monitoring ativo do Mauro + fix planejado em Epic 17 Wave A (guard em software aplicável a todos os tenants).
+
+**2. Sem dashboard dedicado por tenant** (low)
+Monitoring pós-cutover será manual via `pm2 logs zenya-webhook` + Chatwoot UI. Aceitável como baseline; dashboard é trabalho de infra pra roadmap futuro.
+
+### Validações adicionais
+
+- **API UltraCash testada novamente no gate:** HTTP 200, 192 produtos catalogados (90 com estoque) ✅
+- **Smoke estabilidade:** 4/6 runs = 7/7 PASS; 2/6 runs = 6/7 (1 falha não-crítica). Reliability ~75%
+- **REPL manual (Mauro):** 2/2 cenários validaram tool invocada + mensagem limpa
+
+### Decisão
+
+✅ **AUTORIZADO cutover 23h BRT 2026-04-22** com monitoring ativo.
+
+### Handoff
+
+@qa → @devops: executar push da branch + CUTOVER-RUNBOOK.md às 23h conforme planejado.
+
+### Follow-up pós-cutover
+
+Abrir em Epic 17 Wave A: story "Guard em software no webhook.ts — detecta promessa de handoff no texto sem invocação da função escalarHumano e força a chamada". Prioridade P1. Aplicável a **todos** os tenants (não só HL).
