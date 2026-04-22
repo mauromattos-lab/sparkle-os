@@ -1,0 +1,111 @@
+storyId: 15.3
+storyTitle: "TENANT-PLAYBOOK §9 — taxonomia de tenant + links cruzados"
+epicRef: docs/stories/EPIC-15-INDEX.md
+
+verdict: PASS
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-22
+reviewedCommit: 8e76825
+branch: feature/scar-ai-onboarding-01
+
+summary: |
+  Edição cirúrgica no §9 do TENANT-PLAYBOOK. Diff contido (+17/-1) e
+  estritamente dentro do §9 (verificado via grep — §10 em 316, mudanças
+  entre 204-291). Nova §9.0 inserida em 209 com taxonomia de 3 tipos +
+  tabela + links pro template e smoke-scar de exemplo. Block-quote de
+  referência forward pro TENANT-REFINEMENT-PLAYBOOK no topo do §9.
+  §9.7.1 atualizado com links pros novos artefatos (playbook + template).
+  §9.1-§9.8 intactos, numeração preservada.
+
+checks:
+  - id: code-review
+    result: PASS
+    severity: low
+    notes: |
+      Edição minimalista e correta. Block-quote bem formatada (📖 emoji
+      como indicador de tipo de conteúdo). Tabela com 3 colunas claras.
+      Aviso sobre tenants atípicos (escape hatch pro @architect) presente.
+
+  - id: unit-tests
+    result: N/A
+    notes: 'Documento.'
+
+  - id: acceptance-criteria
+    result: PASS
+    severity: low
+    details:
+      cumpridos: [AC1, AC2, AC3, AC4, AC5]
+      verificados_com_concern: [AC6]
+    notes: |
+      AC1 (§9.0 criado com título exato): ✅ linha 209, título correto,
+        taxonomia de 3 tipos + tabela + links.
+      AC2 (link forward topo §9): ✅ block-quote com 📖 inserida logo
+        após "## 9. Criando um Novo Tenant".
+      AC3 (§9.7.1 atualizado): ✅ referência antiga substituída por
+        links pro TENANT-REFINEMENT-PLAYBOOK + smoke-template.mjs.
+      AC4 (diff contido em §9): ✅ verificado via git diff hunks
+        (@@ 204 e @@ 291), ambos dentro do §9 (§10 em 316).
+      AC5 (links resolvem): ✅ alvos existem —
+        TENANT-REFINEMENT-PLAYBOOK.md criado pela Story 15.1 (commit
+        mesmo), smoke-template.mjs criado pela Story 15.2 (mesmo commit).
+        Validação determinística.
+      AC6 (markdown lint PASS): CONCERN — markdownlint não rodado
+        (ferramenta não instalada). Inspeção manual: zero warnings
+        esperados (tabelas bem formatadas, blockquote idiomática,
+        links relativos corretos).
+
+  - id: no-regressions
+    result: PASS
+    severity: low
+    notes: |
+      §9.1-§9.8 preservados idênticos (grep confirmou numeração estável:
+      9.1 pré-reqs, 9.2 prompt, 9.3 seed, 9.4 dry-run, 9.5 exec, 9.6
+      credenciais, 9.7 testar, 9.7.1-9.7.3 preservados, 9.8 cutover).
+
+  - id: performance
+    result: N/A
+    notes: 'Documento.'
+
+  - id: security
+    result: PASS
+    severity: low
+    notes: 'Sem mudanças em código ou credenciais.'
+
+  - id: documentation
+    result: PASS
+    severity: low
+    notes: |
+      Meta-documentação bem-feita: §9.0 explica ao leitor por onde
+      navegar no §9 baseado no tipo de tenant. Remove fricção do
+      "ler tudo pra achar o que importa".
+
+concerns:
+  - id: tech-debt-15-3
+    severity: low
+    category: docs
+    description: |
+      Validação visual (render no GitHub) não foi executada — requer
+      push e preview em PR. Mauro ou @devops pode validar após merge.
+      Se tabela ou bloquequote quebrarem, fix rápido em PR.
+    recommendation: |
+      Após push + PR, conferir renderização em GitHub preview. Se
+      quebrar, abrir fix-story de 1 linha (geralmente é escape de
+      caractere ou blank line que resolve).
+
+handoff:
+  to: '@po (Pax)'
+  command: '*close-story 15.3'
+  condition: PASS → story pode ser fechada. Com ela, Epic 15 completo (3/3).
+
+metadata:
+  reviewedPhases: 7
+  toolsRun:
+    - git diff --stat (AC4 validation)
+    - grep (subsection integrity check)
+  toolsDeferred:
+    - markdownlint
+    - markdown-link-check
+    - GitHub preview render check (post-push)
+  coderabbit:
+    ran: false
+    reason: 'Edição de docs (17 linhas). Escopo não justifica CodeRabbit.'
