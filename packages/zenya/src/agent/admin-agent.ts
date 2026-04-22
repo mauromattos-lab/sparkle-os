@@ -256,7 +256,8 @@ export async function runAdminAgent(params: AdminAgentParams): Promise<void> {
           const ssml = await formatSSML(reply);
           const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey());
           await sendAudioMessage(chatwootParams, audioBuffer);
-        } catch {
+        } catch (audioErr) {
+          console.warn('[zenya] admin-agent: audio generation failed, falling back to text:', audioErr);
           await chunkAndSend(reply, chatwootParams);
         }
       } else {
