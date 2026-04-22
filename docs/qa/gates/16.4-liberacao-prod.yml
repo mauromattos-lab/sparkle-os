@@ -1,0 +1,114 @@
+storyId: 16.4
+storyTitle: "Liberação em produção e validação contínua com a Julia"
+epicRef: docs/stories/EPIC-16-INDEX.md
+
+verdict: PASS
+verdictQualifier: with-observations
+reviewedBy: '@qa (Quinn) — gate retroativo'
+reviewedAt: 2026-04-22
+reviewedCommits:
+  - 8f03b03  # prompt v2
+  - a39188d  # prompt v3
+  - 9de2a3d  # prompt v4
+branch: main  # Epic 16 consolidado via PR #3
+
+summary: |
+  Gate RETROATIVO. Story 16.4 documenta a liberação em produção do
+  prompt v4 da Fun Personalize (Julia). Execução ocorreu em modo
+  orgânico — não seguiu literalmente o playbook (whitelist formal +
+  96h de monitoramento dedicado), mas atingiu o objetivo (tenant
+  refinado, cliente satisfeito, sem incidentes). PASS with observations
+  porque o desvio do playbook é consciente e documentado, mas não
+  deve ser precedente para outros tenants brownfield.
+
+checks:
+  - id: code-review
+    result: N/A
+    notes: 'Story 16.4 não introduziu código. Apenas ativação de artefato existente (prompt v4 aplicado via seed).'
+
+  - id: unit-tests
+    result: N/A
+    notes: 'Story operacional, não implementacional.'
+
+  - id: acceptance-criteria
+    result: PASS
+    notes: |
+      AC1 prompt v4 ativo em produção ✅ (confirmado por Mauro 2026-04-22)
+      AC2 Julia validou cada iteração ✅ (feedback incorporado v2→v3→v4)
+      AC3 sem incidentes reportados ✅ (silent success = OK)
+      AC4 concern de 16.3 transferido ✅ (ver observations abaixo)
+      AC5 Epic 16 vira Done ✅ (stories 16.1-16.4 todas Done)
+
+  - id: no-regressions
+    result: PASS
+    notes: |
+      Julia está atendendo clientes reais desde a ativação do v4.
+      Ausência de queixas + confirmação do Mauro indica que não
+      introduzimos regressão visível. Smoke de 16.2 permanece base
+      de comparação caso suspeita futura apareça.
+
+  - id: performance
+    result: PASS
+    notes: 'Sem impacto perceptível reportado.'
+
+  - id: security
+    result: PASS
+    notes: 'Sem mudança de superfície — prompt já em produção, só conteúdo ajustado.'
+
+  - id: documentation
+    result: PASS
+    notes: |
+      Story 16.4 documenta honestamente o desvio do playbook (execução
+      orgânica ao invés de whitelist+96h formal). EPIC-16-INDEX
+      atualizado. Lições persistidas para Epic 15 v2.
+
+observations:
+  - id: 16-4-01
+    severity: low
+    category: process
+    description: |
+      Execução desviou do playbook TENANT-REFINEMENT-PLAYBOOK §2 passos
+      5-7 (whitelist formal + janela negociada + monitoramento 96h
+      explícito). No caso da Julia, fixes foram aplicados diretamente
+      em produção, com a própria dona como cliente-validadora informal.
+    rationale: |
+      Desvio justificado pelo perfil do tenant (volume baixo, cliente
+      engajado, dono do negócio). Documentado na story 16.4 com
+      proposta de adicionar "Variante para tenant de baixo volume" no
+      playbook via Epic 15 v2 (rotear via story 17.Z).
+    action: |
+      Epic 17 story 17.Z (retroalimentar Epic 15 v2) deve incluir
+      essa variante. Até lá, Epic 16 encerra com observação registrada
+      e não deve virar precedente para Ensinaja, Doceria ou HL Importados.
+
+  - id: 16-4-02
+    severity: low
+    category: testing
+    description: |
+      Fix #1 (aviso ao cliente antes de escalar), que era concern aberto
+      em 16.3, não foi validado com smoke em produção real dentro de
+      16.4 — foi **transferido para monitoramento contínuo**. Critério
+      de validação: se em 30 dias não aparecer queixa da Julia sobre
+      escalação sem aviso, considera-se validado implicitamente.
+      Critério de reabertura: Julia relatar caso específico onde bot
+      escalou sem avisar antes.
+    action: |
+      Monitorar. Se 30 dias (2026-05-22) passarem sem reclamação,
+      concern 16-3-01 fecha automaticamente. Se aparecer caso,
+      reabre como story 17.X (sob Epic 17).
+
+handoff:
+  to: '@po (Pax)'
+  command: 'close-story 16.4 e fechar Epic 16 definitivamente (3/4 → 4/4 Done)'
+  condition: PASS with observations
+
+metadata:
+  retroactive: true
+  coderabbit:
+    ran: false
+    reason: 'Story operacional sem diff de código.'
+  deviation_from_playbook:
+    section: 'TENANT-REFINEMENT-PLAYBOOK §2 passos 5-7'
+    kind: 'process'
+    documented_in: 'docs/stories/16.4.story.md'
+    approved_by: 'Mauro (autor do tenant) + @pm retroativamente'

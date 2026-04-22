@@ -1,6 +1,6 @@
 # Epic 16 — Refino Brownfield da Fun Personalize (Julia)
 
-**Status:** 🟡 Em andamento — Stories 16.1-16.3 ✅ Done (formalizadas retroativamente em 2026-04-22 ~05:00 BRT, gates PASS). Story 16.4 ⏳ pendente (aguarda janela com Julia + monitoramento 96h). Epic fecha quando 16.4 concluir.
+**Status:** ✅ **Done** — 4/4 stories fechadas em 2026-04-22. 16.1-16.3 formalizadas retroativamente (~05:00 BRT, gates PASS). 16.4 formalizada retroativamente à tarde (gate PASS with observations — execução orgânica em produção com feedback direto da Julia, desvio do playbook documentado).
 **Criado por:** Morgan (@pm) — 2026-04-22
 **Depende de:** Epic 15 (Método de Refino e Onboarding) — **Done** ✅
 **Destrava:** Aplicações futuras do playbook em outros tenants brownfield; dados reais pro Anexo A do brief PLAKA (Zenya Admin como tier)
@@ -64,7 +64,7 @@ Referências operacionais: [`TENANT-REFINEMENT-PLAYBOOK.md §3`](../zenya/TENANT
 | [16.1](./16.1.story.md) | Baseline + backup do prompt Fun | ✅ **Done** | — | `8f03b03` | [PASS](../qa/gates/16.1-baseline-backup.yml) |
 | [16.2](./16.2.story.md) | Smoke derivado (9 conversas reais + 6 cenários REPL) | ✅ **Done** | 16.1 | `8f03b03`, `ece6358` | [PASS](../qa/gates/16.2-smoke-derivado.yml) |
 | [16.3](./16.3.story.md) | Fix iterativo: v2 → v3 (Julia removeu resumo) → v4 (horário comercial) | ✅ **Done** | 16.2 | `8f03b03`, `a39188d`, `9de2a3d` | [PASS w/concerns](../qa/gates/16.3-fix-iterativo.yml) |
-| 16.4 | Janela + whitelist + liberação + monitoramento 96h | ⏳ **Pendente** | 16.3 | — | — |
+| [16.4](./16.4.story.md) | Liberação em produção + validação contínua com a Julia | ✅ **Done** | 16.3 | `9de2a3d` | [PASS w/observations](../qa/gates/16.4-liberacao-prod.yml) |
 
 ## Execução — cronologia
 
@@ -132,9 +132,10 @@ Referências operacionais: [`TENANT-REFINEMENT-PLAYBOOK.md §3`](../zenya/TENANT
 
 ## Próximos movimentos após fechamento
 
-- Avaliar se padrão se confirma: aplicar em HL Importados seguindo mesma receita?
-- **Abrir discussão sobre Anexo A (Zenya Admin como tier)** — agora com N=3 tenants estáveis e dados de uso real.
-- Publicar o playbook oficialmente (v1.1) se emergiram ajustes significativos.
+- **Aplicar o playbook em PLAKA e Scar AI** via Epic 17 (stories 17.1 e 17.2) — tenants já migrados que passaram por refino informal.
+- **Aplicar em HL Importados, Ensinaja, Doceria Dona Geralda** só **depois do cutover Epic 7.8** — hoje ainda estão em n8n, refino só faz sentido no core.
+- **Retroalimentar Epic 15 v2** via story 17.Z — adicionar variante "tenant de baixo volume com cliente engajado" que 16.4 demonstrou ser válida (orgânica em vez de whitelist+96h).
+- **Abrir discussão sobre Anexo A (Zenya Admin como tier)** — com N=3 tenants estáveis no core (PLAKA, Fun, Scar) dá pra dimensionar.
 
 ---
 
