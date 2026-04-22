@@ -42,8 +42,23 @@ function readRepoFile(relPath) {
 
 /**
  * Chama a OpenAI API com retry (429/500/503) e backoff exponencial.
+ *
+ * @param {string} systemPrompt
+ * @param {string} userMessage
+ * @param {number} maxTokens
+ * @param {{ jsonMode?: boolean }} [options] — jsonMode força response_format=json_object
  */
-async function callClaude(systemPrompt, userMessage, maxTokens = 4096) {
+async function callClaude(systemPrompt, userMessage, maxTokens = 4096, options = {}) {
+  const body = {
+    model: 'gpt-4o',
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ],
+  };
+  if (options.jsonMode) body.response_format = { type: 'json_object' };
+
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -51,14 +66,7 @@ async function callClaude(systemPrompt, userMessage, maxTokens = 4096) {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        max_tokens: maxTokens,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage },
-        ],
-      }),
+      body: JSON.stringify(body),
     });
     if (res.ok) return (await res.json()).choices[0].message.content;
     if ([429, 500, 503].includes(res.status) && attempt < 2) {
@@ -80,14 +88,48 @@ function extractBlock(text) {
 }
 
 /**
- * Parseia o JSON de veredicto do Rex.
- * Rex deve responder: { "veredicto": "...", "feedback": "..." }
+ * Remove trailing commas antes de `]` ou `}` — erro comum de LLM.
  */
-function parseRexVeredicto(text) {
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error(`Rex não retornou JSON válido:\n${text.slice(0, 300)}`);
-  return JSON.parse(text.slice(start, end + 1));
+function stripTrailingCommas(jsonText) {
+  return jsonText.replace(/,(\s*[\]}])/g, '$1');
+}
+
+/**
+ * Parseia o JSON de veredicto do Rex com tolerância a malformações comuns de LLM:
+ *   - JSON envolto em bloco markdown ```json ... ```
+ *   - Texto adicional antes/depois do JSON
+ *   - Trailing commas antes de ] ou }
+ *
+ * Rex deve responder: { "veredicto": "...", "feedback": "..." }
+ *
+ * @throws se nem parse direto nem parse sanitizado funcionar.
+ */
+export function parseRexVeredicto(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    throw new Error('Rex retornou resposta vazia ou inválida');
+  }
+
+  const unwrapped = extractBlock(text);
+  const start = unwrapped.indexOf('{');
+  const end = unwrapped.lastIndexOf('}');
+  if (start === -1 || end === -1) {
+    throw new Error(`Rex não retornou JSON válido:\n${text.slice(0, 300)}`);
+  }
+
+  const candidate = unwrapped.slice(start, end + 1);
+
+  try {
+    return JSON.parse(candidate);
+  } catch (firstErr) {
+    try {
+      return JSON.parse(stripTrailingCommas(candidate));
+    } catch (secondErr) {
+      throw new Error(
+        `Rex retornou JSON malformado. Parse direto: ${firstErr.message}. ` +
+        `Parse sanitizado: ${secondErr.message}.\nPreview: ${candidate.slice(0, 300)}`
+      );
+    }
+  }
 }
 
 /**
@@ -224,11 +266,11 @@ async function validatePost(post, iteration = 1) {
     post,
     '',
     '---',
-    'Responda APENAS com JSON no formato:',
+    'Responda APENAS com um objeto JSON no formato:',
     '{ "veredicto": "APROVADO" | "REVISAO" | "ESCALADO", "feedback": "..." }',
   ].join('\n');
 
-  const raw = await callClaude(systemPrompt, userMsg, 1024);
+  const raw = await callClaude(systemPrompt, userMsg, 1024, { jsonMode: true });
   const result = parseRexVeredicto(raw);
   // Normalizar veredictos com variações (ex: APROVADO_COM_OBSERVACOES → APROVADO)
   if (result.veredicto?.startsWith('APROVADO')) result.veredicto = 'APROVADO';
@@ -622,7 +664,14 @@ async function main() {
   console.log('\n✅ Pipeline concluído com sucesso\n');
 }
 
-main().catch(err => {
-  console.error('\n[FATAL]', err.message);
-  process.exit(1);
-});
+// Executar main() apenas quando invocado diretamente (node daily-pipeline.mjs),
+// não quando importado por testes ou outros módulos.
+const invokedDirectly = process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
+
+if (invokedDirectly) {
+  main().catch(err => {
+    console.error('\n[FATAL]', err.message);
+    process.exit(1);
+  });
+}

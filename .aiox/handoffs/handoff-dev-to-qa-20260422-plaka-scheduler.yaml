@@ -1,0 +1,120 @@
+handoff:
+  from_agent: dev
+  to_agent: qa
+  last_command: develop-story
+  timestamp: 2026-04-22
+  consumed: false
+
+  story_context:
+    story_id: plaka-scheduler-hotfix-01
+    story_path: docs/stories/plaka-scheduler-hotfix-01/README.md
+    story_status: InReview
+    branch: fix/plaka-scheduler-resilience
+    base_branch: main
+    commit: 8bb52a7
+
+  context_summary: |
+    Hotfix atômico resolvendo 2 bugs do scheduler diário do blog PLAKA
+    (blog.plakaacessorios.com), que deixou de publicar post em 2026-04-21.
+
+    Bug #2 (bloqueador de 21/04): parseRexVeredicto em daily-pipeline.mjs
+    crashava com JSON malformado (trailing comma antes de ]) retornado
+    pelo GPT-4o na iteração 2 da revalidação do Rex. Agora tolera 3 modos
+    de falha de LLM: trailing comma, bloco markdown ```json, texto ao
+    redor do JSON. Usa response_format: json_object na chamada OpenAI
+    (reforço determinístico). Função exportada para testabilidade.
+
+    Bug #1 (latente desde 20/04): workflow não tinha permissions, então
+    git-auto-commit-action falhava com 403. Adicionado permissions:
+    contents: write no job daily-content.
+
+    Backfill: entry de 2026-04-20 adicionada em posts-history.md
+    (post foi publicado no Ghost mas não commitado no repo por causa do
+    Bug #1).
+
+  decisions:
+    - "Cherry-pick de 835a6b4 (feature/scar-ai-onboarding-01) foi ABORTADO por explícito pedido do Mauro — misturava trabalho PLAKA-migration com hotfix. Commit final (8bb52a7) é original desta branch, apenas com 5 arquivos do hotfix."
+    - "Guard de execução direta adicionado (fileURLToPath(import.meta.url) === resolve(process.argv[1])) — sem isso, import nos testes disparava o pipeline inteiro e gastava tokens OpenAI."
+    - "jsonMode é opcional em callClaude (retrocompat com outras chamadas que esperam markdown/YAML de volta)."
+
+  files_changed:
+    - path: .github/workflows/plaka-daily-content.yml
+      type: modified
+      change: "+2 linhas, adiciona permissions: { contents: write } ao job"
+    - path: packages/content-engine/scripts/daily-pipeline.mjs
+      type: modified
+      change: "+44 -10 linhas: export parseRexVeredicto, stripTrailingCommas, jsonMode em callClaude, guard de execução direta"
+    - path: packages/content-engine/scripts/daily-pipeline.test.mjs
+      type: new
+      change: "70 linhas, 9 cenários — JSON válido, trailing commas, markdown, texto ao redor, reprodução do bug real, casos de erro"
+    - path: squads/aeo-squad-plaka/data/posts-history.md
+      type: modified
+      change: "+1 linha, entry 2026-04-20 'Tendências de semi joias para o inverno 2026'"
+    - path: docs/stories/plaka-scheduler-hotfix-01/README.md
+      type: new
+      change: "Story completa com 6 ACs, File List, Completion Notes e Change Log"
+
+  acceptance_criteria_status:
+    AC1_parse_defensivo: PASS (testes 1-9 cobrem todos os modos)
+    AC2_jsonMode: PASS (callClaude + validatePost usando response_format: json_object)
+    AC3_workflow_permissions: PASS (contents: write adicionado)
+    AC4_backfill_20_04: PASS (entry confirmada via Ghost API)
+    AC5_smoke_tests: PASS (9/9 node --test, duration ~130ms)
+    AC6_verificacao_em_prod: PENDING (requer push pelo @devops + workflow_dispatch force=true)
+
+  evidence:
+    local_tests: "node --test packages/content-engine/scripts/daily-pipeline.test.mjs → 9 pass, 0 fail, 0 cancelled, 123ms"
+    import_side_effect_check: "node -e \"import('./daily-pipeline.mjs').then(m => console.log(Object.keys(m)))\" → 'parseRexVeredicto' exportado, pipeline NÃO dispara"
+    bug_reproduction_test: "Teste 'reproduz o bug do run 24723933245' usa o shape literal do JSON que crashou em prod (trailing comma após 'pais.,')"
+    github_runs_referenced:
+      - https://github.com/mauromattos-lab/sparkle-os/actions/runs/24723933245
+      - https://github.com/mauromattos-lab/sparkle-os/actions/runs/24668368883
+
+  qa_checklist_priority:
+    1_code_review:
+      - "Confirmar que stripTrailingCommas só aplica regex após JSON.parse direto falhar (não corrompe strings válidas)"
+      - "Confirmar que guard de execução direta funciona em Linux (GitHub Actions) E Windows (dev local)"
+      - "Verificar que callClaude sem jsonMode continua funcionando (retrocompat com generateBriefing/writePost)"
+    2_tests:
+      - "node --test packages/content-engine/scripts/daily-pipeline.test.mjs (deve passar 9/9)"
+      - "Opcional: simular falha de OpenAI retornando JSON inválido — verificar mensagem de erro com preview"
+    3_acceptance:
+      - "Todos os 5 ACs auto-verificáveis já passam — AC6 depende de execução em prod (post-push)"
+    4_no_regression:
+      - "generateBriefing, writePost, revisionLoop, publishToGhost não foram tocados — lógica de negócio intacta"
+    5_security:
+      - "permissions: contents: write é escopo mínimo necessário — NÃO adiciona actions:write nem packages:write"
+      - "response_format: json_object não expõe dados sensíveis — só forças output format"
+
+  constraints_respeitados:
+    - "Branch limpa baseada em main — 1 commit (8bb52a7) com 5 arquivos apenas do hotfix, zero mistura com trabalho do outro agente"
+    - "Constitution Article V (Quality First): testes antes de commit, função exportada para cobertura"
+    - "Constitution Article III (Story-Driven): story file criada com ACs ANTES da implementação ficar pronta"
+
+  blockers: []
+
+  coderabbit_status: "não executado — sugestão: rodar em QA phase (~7-30min). Comando: wsl bash -c 'cd /mnt/c/Users/Mauro/Desktop/SparkleOS && ~/.local/bin/coderabbit --prompt-only -t committed'"
+
+  next_action: |
+    @qa executa qa-gate.md:
+    1. Code review (foco: stripTrailingCommas regex, guard de execução direta, retrocompat jsonMode)
+    2. Rodar smoke tests localmente: node --test packages/content-engine/scripts/daily-pipeline.test.mjs
+    3. Opcional: CodeRabbit scan committed (ver comando acima)
+    4. Veredito: PASS → handoff qa→devops para push + workflow_dispatch force=true
+              CONCERNS → documentar e aprovar (ainda é hotfix urgente)
+              FAIL → handoff qa→dev com lista de correções
+
+    Meta: resolver publicação do blog PLAKA HOJE (2026-04-22 09:00 BRT já passou —
+    próximo run agendado é 2026-04-23 09:00 BRT; pode-se adiantar via
+    workflow_dispatch imediatamente após push).
+
+  post_qa_handoff_target: devops
+  post_qa_action: |
+    @devops após PASS do @qa:
+    1. git push origin fix/plaka-scheduler-resilience
+    2. gh pr create --base main --title "fix(plaka-scheduler): endurece parse do Rex + permissions" --body "$(cat handoff-dev-to-qa-20260422-plaka-scheduler.yaml resumido)"
+    3. Aguardar CI pass
+    4. gh pr merge --squash (opcional: manter commits se quiser rastreabilidade)
+    5. gh workflow run plaka-daily-content.yml -f force=true (dispara post de hoje)
+    6. Monitorar run: gh run watch <id>
+    7. Confirmar: post no blog + posts-history.md atualizado automaticamente

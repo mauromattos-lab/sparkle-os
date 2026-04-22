@@ -1,0 +1,93 @@
+handoff:
+  from_agent: qa
+  to_agent: devops
+  last_command: review
+  timestamp: 2026-04-22
+  consumed: false
+
+  story_context:
+    story_id: plaka-scheduler-hotfix-01
+    story_path: docs/stories/plaka-scheduler-hotfix-01/README.md
+    story_status: InReview
+    branch: fix/plaka-scheduler-resilience
+    base_branch: main
+    commit: 8bb52a7
+    gate_file: docs/qa/gates/plaka-scheduler-hotfix-01.yml
+    verdict: PASS
+
+  summary: |
+    QA gate PASS para hotfix do scheduler diário do blog PLAKA. 7/7 checks
+    verde (code review, unit tests 9/9 em 137ms, ACs, regressão zero, perf,
+    security escopo mínimo, docs). Mudança cirúrgica de 5 arquivos em 1 commit
+    atômico na branch baseada em main. AC6 (verificação em prod) deferido
+    ao @devops.
+
+  decisions_from_qa:
+    - "PASS sem concerns — código limpo, testes cobrem o bug real, zero regressão"
+    - "CodeRabbit scan opcional (não bloqueia) — mudança cirúrgica e bem localizada; manual review cobriu padrões que ele flagaria"
+    - "permissions: contents: write é escopo mínimo necessário (apenas para git-auto-commit-action do posts-history.md)"
+
+  next_action: |
+    @devops sequência operacional:
+
+    1. Pre-push quality gate:
+       *pre-push (lint/typecheck/test/build — pacote content-engine/scripts
+       não tem build, então validar só `node --test` da suite plaka)
+
+    2. Push da branch (requer autorização explícita do Mauro):
+       git push origin fix/plaka-scheduler-resilience
+
+    3. Criar PR:
+       gh pr create --base main --head fix/plaka-scheduler-resilience \
+         --title "fix(plaka-scheduler): endurece parse do Rex + permissions" \
+         --body "<referenciar commit 8bb52a7, gate PASS, evidência dos runs 24723933245 e 24668368883>"
+
+    4. Aguardar CI pass (se configurado para esta branch) + revisão humana
+       opcional do Mauro.
+
+    5. Merge:
+       gh pr merge --squash  (recomendado para hotfix atômico)
+       ou
+       gh pr merge --rebase  (se quiser preservar o commit 8bb52a7)
+
+    6. Disparar post que falhou em 21/04:
+       gh workflow run plaka-daily-content.yml -f force=true
+
+    7. Monitorar o run:
+       gh run watch <id>
+
+    8. Confirmar sucesso:
+       - Post publicado no Ghost (blog.plakaacessorios.com)
+       - posts-history.md commitado automaticamente pelo bot
+       - Z-API notificação recebida pelo Mauro (se secret MAURO_PHONE ativo)
+
+    9. Atualizar story status:
+       InReview → Done (em `docs/stories/plaka-scheduler-hotfix-01/README.md`)
+
+  verification_checklist:
+    - "Post de 22/04 (não fez o 21) publicado no blog no horário do dispatch"
+    - "posts-history.md tem entry 2026-04-22 após o run — confirma que Bug #1 está resolvido"
+    - "Próximo run agendado (2026-04-23 09:00 BRT) completa sem intervenção — confirma que Bug #2 está resolvido definitivamente"
+
+  constraints:
+    - "Cliente Plaka Acessórios (Luiza) é prod — zero downtime, zero regressão"
+    - "Push é operação remota exclusiva do @devops e sensível — SEMPRE confirmar com Mauro antes de executar"
+    - "Se CI falhar no PR, NÃO merge — escalar para @dev para investigar"
+    - "NÃO fazer force push em main"
+
+  blockers: []
+
+  files_in_commit:
+    - .github/workflows/plaka-daily-content.yml
+    - docs/stories/plaka-scheduler-hotfix-01/README.md
+    - packages/content-engine/scripts/daily-pipeline.mjs
+    - packages/content-engine/scripts/daily-pipeline.test.mjs
+    - squads/aeo-squad-plaka/data/posts-history.md
+
+  references:
+    failing_runs_evidence:
+      - https://github.com/mauromattos-lab/sparkle-os/actions/runs/24723933245  # 21/04 JSON parse crash
+      - https://github.com/mauromattos-lab/sparkle-os/actions/runs/24668368883  # 20/04 git-auto-commit 403
+    story: docs/stories/plaka-scheduler-hotfix-01/README.md
+    gate: docs/qa/gates/plaka-scheduler-hotfix-01.yml
+    prior_handoff: .aiox/handoffs/handoff-dev-to-qa-20260422-plaka-scheduler.yaml
