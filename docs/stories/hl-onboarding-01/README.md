@@ -1,6 +1,6 @@
 # Story HL-01 — Onboarding do tenant HL Importados no core Zenya
 
-**Status:** Ready — cutover da janela 2026-04-20 → 2026-04-21 não executado. Código 100% pronto (prompt.md canônico + seed refatorado pro padrão ADR-001 + UltraCash integration + 11 testes passando). Aguarda Hiago liberar o WhatsApp dele pra pareamento Z-API. Enquanto isso, a HL segue atendendo via n8n (workflow `01. [HL Importados] Secretária v3` ativo).
+**Status:** Ready — cutover programado para 2026-04-22 à noite. Código 100% pronto (prompt.md canônico + seed refatorado pro padrão ADR-001 + UltraCash integration + 11 testes passando). Z-API do Hiago **já configurada no Chatwoot** (confirmado por Mauro 2026-04-22) — bloqueio anterior removido. HL segue atendendo via n8n até a janela de cutover; cliente (Hiago) ciente de que início pode precisar de ajustes.
 **Owner:** @dev (Dex) — implementação | Mauro — cutover
 
 ## Contexto
