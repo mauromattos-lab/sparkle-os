@@ -1,0 +1,632 @@
+{
+  "id": "lotiyKm62Bd3KbS0",
+  "name": "07. Confeitaria - Quebrar e enviar mensagens",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "POST",
+        "url": "={{ $('Gatilho').item.json.url_chatwoot }}/api/v1/accounts/{{ $('Gatilho').item.json.id_conta }}/conversations/{{ $('Gatilho').item.json.id_conversa }}/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "chatwootApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content",
+              "value": "={{ $('Para cada mensagem').item.json.mensagem }}"
+            }
+          ]
+        },
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3248,
+        1344
+      ],
+      "id": "85aa8475-014a-4971-b80c-1681d1335571",
+      "name": "Enviar texto",
+      "credentials": {
+        "chatwootApi": {
+          "id": "CjCfWmOaKY3OTN0w",
+          "name": "ChatWoot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "notice": "",
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n \"mensagens\": [\"mensagem_1\", \"mensagem_2\", \"mensagem_3\", \"mensagem_4\"]\n}",
+        "autoFix": false
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2048,
+        1552
+      ],
+      "id": "8a307e59-2599-4663-8704-a4c17d701547",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ Math.min(60*$('Velocidade digitação').item.json.tamanho_mensagem_palavras/$('Velocidade digitação').item.json.palavras_por_minuto, 25) }}",
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3056,
+        1344
+      ],
+      "id": "c8af6875-1a48-473d-84df-091047a6fcc9",
+      "name": "Espera",
+      "webhookId": "aa16c9f2-0ab8-4be3-951b-abb84ed8b3ed"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "POST",
+        "url": "={{ $('Gatilho').item.json.url_chatwoot }}/api/v1/accounts/{{ $('Gatilho').item.json.id_conta }}/conversations/{{ $('Gatilho').item.json.id_conversa }}/toggle_typing_status",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "chatwootApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "typing_status",
+              "value": "=on"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false,
+              "neverError": false,
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        },
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2864,
+        1344
+      ],
+      "id": "20cfa04b-7037-434c-bfdc-40783034e0c2",
+      "name": "Digitando...",
+      "credentials": {
+        "chatwootApi": {
+          "id": "CjCfWmOaKY3OTN0w",
+          "name": "ChatWoot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Enviar mensagem\n",
+        "height": 324,
+        "width": 388,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3200,
+        1216
+      ],
+      "typeVersion": 1,
+      "id": "7f9c60da-8906-4698-872f-b0133299aca2",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3424,
+        1344
+      ],
+      "id": "a24f6324-649f-4d05-8c35-0db233c0dc6b",
+      "name": "Espera enviar mensagem",
+      "webhookId": "6a9ed93d-9d71-473e-98ff-2ef48744a9dc"
+    },
+    {
+      "parameters": {
+        "content": "## Simular a digitação de cada mensagem\n\nO cálculo realizado leva em consideração um tamanho médio de palavras na língua portuguesa de ~4.5 caracteres.",
+        "height": 324,
+        "width": 560,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2624,
+        1216
+      ],
+      "typeVersion": 1,
+      "id": "b1c22239-4d37-41ab-9d76-e9aac10aada7",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Quebrar mensagens",
+        "height": 500,
+        "width": 1004,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1600,
+        1216
+      ],
+      "typeVersion": 1,
+      "id": "3b60445c-9ac0-48b3-9e38-bf13768a8b9c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "events": "worklfow_call",
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "mensagem",
+              "type": "string"
+            },
+            {
+              "name": "url_chatwoot",
+              "type": "string"
+            },
+            {
+              "name": "id_conta",
+              "type": "string"
+            },
+            {
+              "name": "id_conversa",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1664,
+        1328
+      ],
+      "id": "a5af4871-60f8-48cb-be99-47ae70bddfa0",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "splitInBatchesNotice": "",
+        "batchSize": 1,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2384,
+        1328
+      ],
+      "id": "4dd3aa72-8266-467a-8c41-da587bfc8f33",
+      "name": "Para cada mensagem"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2abf4045-85d8-4999-90e3-72126449ea83",
+              "name": "palavras_por_minuto",
+              "value": "=150",
+              "type": "string"
+            },
+            {
+              "id": "8fd6b9d8-9918-451e-9a19-a33619ff73f7",
+              "name": "tamanho_mensagem_palavras",
+              "value": "={{ $('Para cada mensagem').item.json.mensagem.length/4.5 }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2672,
+        1344
+      ],
+      "id": "e545c87f-3474-4176-9d0e-6912b040c824",
+      "name": "Velocidade digitação"
+    },
+    {
+      "parameters": {
+        "notice": "",
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        1552
+      ],
+      "id": "a91b5d43-df5d-49c3-b627-ebe7a820062d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "7T7T9EtsTHKfJBkI",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Checklist\n- [x] Abrir nodes da OpenAI e Chatwoot para selecionar credenciais\n- [x] Modificar a velocidade de digitação para deixar o envio das mensagens mais rápido ou mais devagar.",
+        "height": 128,
+        "width": 512,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        1616
+      ],
+      "id": "42faa3a5-b563-4369-b0df-2765489255a4",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## 07. Quebrar e enviar mensagens",
+        "height": 80,
+        "width": 400,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        944,
+        592
+      ],
+      "id": "8dc68fe6-ae64-4865-959c-6478addcfef1",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.mensagens",
+        "include": "noOtherFields",
+        "options": {
+          "destinationFieldName": "mensagem"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        1328
+      ],
+      "id": "b94f3adb-4305-4e6e-b782-da94206fb461",
+      "name": "Split"
+    },
+    {
+      "parameters": {
+        "notice": "",
+        "description": "Use essa ferramenta para refletir sobre algo. Ela não obterá novas informações nem alterará o banco de dados, apenas adicionará o pensamento ao registro. Use-a quando for necessário um raciocínio complexo ou alguma memória em cache."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        1552
+      ],
+      "id": "6476e794-662e-47f8-bd97-ae64dcafd9f8",
+      "name": "Refletir"
+    },
+    {
+      "parameters": {
+        "aiAgentStarterCallout": "",
+        "promptType": "define",
+        "text": "={{ $json.mensagem }}",
+        "hasOutputParser": true,
+        "notice": "",
+        "needsFallback": false,
+        "options": {
+          "systemMessage": "=## PAPEL\n\nVocê é um agente que simula o comportamento humano ao enviar mensagens em um aplicativo de mensagens como o WhatsApp ou Telegram. Seu objetivo é pegar uma mensagem longa recebida como entrada e dividi-la em múltiplas mensagens menores — sem alterar nenhuma palavra do conteúdo original — apenas separando em partes naturais, como um humano faria ao digitar e enviar aos poucos.\n\n## OBJETIVO\n\nTransformar uma única mensagem em um **json** com o campo \"mensagens\" que é um **array de strings**, simulando o envio humano em blocos de texto menores. Por exemplo:\n\n**Entrada:**\n\n> Olá! Estou te mandando essa mensagem para explicar melhor o que aconteceu ontem. Eu cheguei lá por volta das 18h, como combinado, mas não encontrei ninguém. Será que houve algum problema?\n\n**Saída:**\n\n{\n  \"mensagens\": [\n    \"Olá! Estou te mandando essa mensagem para explicar melhor o que aconteceu ontem\",\n    \"Eu cheguei lá por volta das 18h, como combinado\"\n    \"Mas não encontrei ninguém\",\n    \"Será que houve algum problema?\"\n  ]\n}\n\n## FERRAMENTA\n\n- **Refletir**\nUse essa ferramenta sempre para melhorar seu raciocínio e resposta em situações complexas.\n\n## EXEMPLOS\n\n### Exemplo 1: Mensagem simples\n\n**Entrada:**\n\nOi! Tudo bem por aí? Estava pensando em te mandar aquele documento ainda hoje, mas antes queria tirar umas dúvidas. Você pode me ligar assim que puder?\n\n**Saída esperada:**\n```json\n{\n  \"mensagens\": [\n    \"Oi! Tudo bem por aí?\",\n    \"Estava pensando em te mandar aquele documento ainda hoje, mas antes queria tirar umas dúvidas.\",\n    \"Você pode me ligar assim que puder?\"\n  ]\n}\n```\n\n### Exemplo 2: Mensagem com lista (NÃO QUEBRAR)\n\n**Entrada:**\n\nOi! Seguem os documentos que você pediu:\n1. Contrato assinado\n2. Comprovante de pagamento\n3. Nota fiscal\n4. Certificado de conclusão\nMe avisa quando receber tudo!\n\n**Saída esperada:**\n```json\n{\n  \"mensagens\": [\n    \"Oi! Seguem os documentos que você pediu:\",\n    \"1. Contrato assinado\\n2. Comprovante de pagamento\\n3. Nota fiscal\\n4. Certificado de conclusão\",\n    \"Me avisa quando receber tudo!\"\n  ]\n}\n```\n\n**❌ INCORRETO (não fazer):**\n```json\n{\n  \"mensagens\": [\n    \"Oi! Seguem os documentos que você pediu:\",\n    \"1. Contrato assinado\\n2. Comprovante de pagamento\",\n    \"3. Nota fiscal\\n4. Certificado de conclusão\",\n    \"Me avisa quando receber tudo!\"\n  ]\n}\n```\n\n## REGRAS\n\n- Não reescreva o conteúdo. Apenas separe em mensagens menores respeitando a pontuação e pausas naturais.\n- As divisões devem parecer naturais — pense como uma pessoa que está digitando e envia aos poucos.\n- Evite cortar frases no meio sem necessidade.\n- Sempre retorne como um array de strings com a mesma ordem do texto original. \n- Remova vírgulas e pontos nos finais das mensagens, quando necessário.\n- Tente manter cada mensagem entre 1 a 4 frases no máximo, se o texto permitir.\n- **NUNCA QUEBRE A MENSAGEM EM MAIS DE 5 PARTES**\n- Mantenha itens de lista na mesma mensagem. **NUNCA QUEBRE LISTAS EM MÚLTIPLAS MENSAGENS**\n\n## FORMATO DE RESPOSTA\n\nVocê deve responder apenas com um json com o campo \"mensagens\" que é um array de strings, sem introduções, explicações ou textos adicionais."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1856,
+        1328
+      ],
+      "id": "9ef20a15-2fbe-4c67-8d70-12d934b3cd1f",
+      "name": "Agente divisor de mensagens",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Secretária v3](https://i1.ytimg.com/vi_webp/U3Qx-ayR7To/maxresdefault.webp)](https://www.youtube.com/watch?v=U3Qx-ayR7To)",
+        "height": 440,
+        "width": 500,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        688
+      ],
+      "id": "e6439ac7-e561-4e7d-a795-5f9d2daef3c1",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.fazer.ai)\n[![Banner comunidade](https://framerusercontent.com/images/KIXMxk9eKCoCsNeVm1oaz5HnaQ.png)](https://lucasmoreira.fazer.ai)",
+        "height": 440,
+        "width": 1380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        688
+      ],
+      "id": "59147756-fc3a-41fd-981b-36a4020bb6f4",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "content": "## Usei Hostinger pra este workflow.\n## Replique aqui.\n\n\n\n\n\n\n\n\n\n## [Use o cupom `FAZERAI` pra ter 10% de desconto na sua primeira compra!](https://www.hostg.xyz/SHIMV)\n\n\n",
+        "height": 316,
+        "width": 552,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        944,
+        1136
+      ],
+      "id": "7792b41a-8d2d-4dfa-93de-401d205d8981",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "[![Hostinger](https://framerusercontent.com/images/ptGVDA4KqG8GLNlWRDzFxaM.png?width=600&height=119)](https://www.hostg.xyz/SHIMV)\n",
+        "height": 96,
+        "width": 324,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        1248
+      ],
+      "id": "a55fe783-ef62-4d3a-bfb6-0e45c42f6927",
+      "name": "Sticky Note29"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 440,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        944,
+        688
+      ],
+      "id": "24dfc86d-f020-4000-b30b-c64dcf387ef5",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "@[youtube](_eqvkmpHQXQ)",
+        "height": 224,
+        "width": 368,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3408,
+        688
+      ],
+      "id": "c32cd5c3-2c65-4798-aa72-557934a18a7a",
+      "name": "Sticky Note17"
+    }
+  ],
+  "connections": {
+    "Enviar texto": {
+      "main": [
+        [
+          {
+            "node": "Espera enviar mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agente divisor de mensagens",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Espera": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digitando...": {
+      "main": [
+        [
+          {
+            "node": "Espera",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Espera enviar mensagem": {
+      "main": [
+        [
+          {
+            "node": "Para cada mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Agente divisor de mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Para cada mensagem": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Velocidade digitação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Velocidade digitação": {
+      "main": [
+        [
+          {
+            "node": "Digitando...",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente divisor de mensagens",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split": {
+      "main": [
+        [
+          {
+            "node": "Para cada mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refletir": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente divisor de mensagens",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente divisor de mensagens": {
+      "main": [
+        [
+          {
+            "node": "Split",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": null,
+  "pinData": {},
+  "tags": [
+    "oTtPdrH2DR6H3Ovb"
+  ],
+  "versionId": "16b67564-2ed3-4d1f-915d-7638ed4e39e2",
+  "parentFolder": {
+    "updatedAt": "2026-03-28T03:07:13.436Z",
+    "createdAt": "2026-03-28T03:07:13.436Z",
+    "id": "tonpUaF25ZePQbQw",
+    "name": "03 - Confeitaria",
+    "parentFolderId": null
+  },
+  "_extractedAt": "2026-04-23T01:34:00.316Z",
+  "_source": "n8n.sparkleai.tech/workflow/lotiyKm62Bd3KbS0"
+}

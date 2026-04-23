@@ -1,0 +1,226 @@
+storyId: doceria-onboarding-01
+storyTitle: "Onboarding do tenant Doceria & Padaria Dona Geralda no core Zenya"
+epicRef: docs/stories/EPICS-OVERVIEW.md
+relatedEpicStory: 7.8 (cutover n8n → core)
+
+verdict: PASS
+verdictQualifier: with-concerns
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-23
+branch: feat/hl-pre-cutover-smoke
+
+summary: |
+  Gate AUTORIZADO pra handoff ao @devops. Story doceria-onboarding-01
+  aprovada pra execução de cutover **após fechamento do AC 12**
+  (alinhamento Ariane+Alex — operacional, não-técnico). Trabalho de
+  @dev passou 7 dos 7 checks formais com 3 concerns documentadas.
+
+  Diferencial desta story vs HL: onboarding trivial, zero código novo,
+  apenas seed + prompt + smoke. Contraste com HL que exigiu módulo
+  UltraCash completo com 11 testes. Doceria é tenant-gêmeo da Julia
+  (Fun) em capacidades, só muda persona/regra de negócio.
+
+  Destaque positivo: @dev identificou gap de prompt no smoke v2 (LLM
+  simulando handoff sem invocar tool — pattern cross-tenant já conhecido),
+  iterou pra v2.1 com Checklist Binário de Invocação (inspirado HL v4.3)
+  e re-validou em 2 runs. ACs críticos (DC1 Coxinha, DC3 Vitrine Hoje,
+  DC4 Cardápio Bolos) 100% nos 2 runs v2.1. Processo AIOX aplicado com
+  disciplina — nada informal.
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: |
+      Artefatos revisados:
+      - packages/zenya/scripts/seed-doceria-tenant.mjs (novo, 109 linhas) —
+        espelha seed-hl-tenant.mjs 1:1 com adaptações corretas: default
+        active_tools sem Asaas (decisão 2026-04-22), sem script de
+        credencial auxiliar (Doceria não tem ERP). Env vars documentadas
+        no header. Usa applyTenantSeed canônico (ADR-001). Idempotente.
+      - packages/zenya/scripts/smoke-doceria.mjs (novo, 357 linhas) —
+        6 cenários DC1-DC6 derivados de feedback-ariane-20260417.md.
+        Classifiers verificam invocação de escalarHumano (AC crítico
+        zero-tolerância), presença de links corretos (bolos vs Yooga),
+        concisão (≤ 600 chars). Segue padrão smoke-hl.mjs.
+      - packages/zenya/scripts/chat-doceria-local.mjs (novo, 193 linhas) —
+        REPL com hot-reload (/reset) + /info + /sair. Pattern
+        chat-hl-local.mjs sem a parte UltraCash (não aplicável).
+      - docs/zenya/tenants/doceria-dona-geralda/prompt.md — v2 → v2.1,
+        frontmatter ADR-001, iteração rastreável no changelog.
+        Mudança cirúrgica +Checklist Binário (+1.588 chars).
+      - docs/stories/doceria-onboarding-01/CUTOVER-RUNBOOK.md — espelha
+        HL-01 com adaptações Doceria (sem passo UltraCash, com passo
+        Chatwoot account_id=3). Rollback documentado <3min.
+
+  - id: unit-tests
+    result: PASS
+    notes: |
+      Vitest 102/102 pass em 13 test files (2.30s). Zero regressão.
+      Scripts .mjs são test-harness (smoke offline com LLM real), não
+      requerem unit tests próprios — cobertos por smoke E2E.
+      Nenhum teste novo foi necessário porque não há código TS core
+      modificado (Doceria = reuso 100% do core via seed).
+
+  - id: acceptance-criteria
+    result: PASS
+    concerns: [AC-12-alex-pending]
+    notes: |
+      12 de 13 ACs Done. AC 12 (alinhamento Ariane+Alex) pendente mas
+      marcado explicitamente como bloqueante apenas pro cutover real,
+      não pra gate ou handoff. @po validou essa granularidade no
+      validate-story-draft (10/10).
+
+      AC crítico validado com excelência:
+      - AC 8 caso 1 (DC1 Coxinha Vitrine): invocação de escalarHumano
+        100% em 2 runs v2.1. Gap-gatilho do incidente Ariane 2026-04-17
+        endereçado com checklist binário.
+
+  - id: no-regressions
+    result: PASS
+    notes: |
+      - Vitest completo rodou verde (102/102)
+      - Zero código TS core modificado — toda mudança em scripts .mjs
+        e prompt .md por tenant (ADR-001 isola)
+      - Multi-tenant preservado: prompt da Doceria é carregado por
+        chatwoot_account_id=3 (isolamento por tenant)
+      - Pattern hl-onboarding-01 replicado integralmente sem
+        contaminar path do HL
+
+  - id: performance
+    result: PASS
+    concerns: [rate-limit-tier-1]
+    notes: |
+      - Prompt v2.1 = 16.391 chars (trimmed). ~1.2x do baseline n8n
+        (13.528 chars). Cresceu por causa do Checklist Binário +
+        4 constraints Ariane — crescimento justificado e rastreável.
+      - Smoke runs: 2-4s por cenário (6 cenários em ~30s total)
+      - Rate limit OpenAI Tier 1 (30k TPM) bloqueou alguns cenários
+        em smoke burst — NÃO afeta produção real (único cliente não
+        gera 6 requests simultâneos). Operacional, não-crítico.
+
+  - id: security
+    result: PASS
+    notes: |
+      - Secret scan no scripts + prompt: 0 ocorrências de credenciais
+        hardcoded
+      - SUPABASE_SERVICE_KEY carregada via env (padrão), validada no
+        início do seed-doceria-tenant.mjs
+      - Sem integração com API externa custom (diferente de HL/UltraCash)
+      - URLs públicas (wa.me/p, delivery.yooga.app) — catálogo público
+        do cliente, não sensível
+      - parseJsonEnv usa JSON.parse — seguro quando usado em env vars
+        controladas pelo operador (padrão já em uso no HL/Prime)
+
+  - id: documentation
+    result: PASS
+    notes: |
+      Artefatos documentais produzidos/mantidos:
+      - docs/stories/doceria-onboarding-01/README.md (story com 13 ACs,
+        Dev Agent Record completo, File List, Change Log)
+      - docs/stories/doceria-onboarding-01/smoke-report.md (3 runs
+        documentados, reliability consolidada, decisão justificada)
+      - docs/stories/doceria-onboarding-01/CUTOVER-RUNBOOK.md (passos
+        1-8 + rollback <3min + checklist final)
+      - docs/zenya/doceria-dona-geralda/INVENTARIO.md (mapa técnico +
+        4 constraints Ariane + delta vs HL + equivalência Julia)
+      - docs/zenya/doceria-dona-geralda/feedback-ariane-20260417.md
+        (transcrições Whisper dos 3 áudios — fonte de verdade imutável
+        das regras de negócio)
+      - docs/zenya/tenants/doceria-dona-geralda/prompt.md (v2.1 com
+        frontmatter ADR-001, changelog de versões)
+      - docs/zenya/tenants/doceria-dona-geralda/prompt-v1-baseline-n8n.md
+        (baseline imutável pra rastreabilidade)
+
+concerns:
+  - id: AC-12-alex-pending
+    severity: medium
+    category: requirements
+    description: |
+      AC 12 (alinhamento Ariane + Alex sobre regras adicionais) está
+      pendente. Alex é sócia/gestora da Doceria — Mauro ainda não
+      alinhou formalmente.
+    recommendation: |
+      NÃO bloqueia gate. Bloqueia apenas cutover real. Mauro deve
+      confirmar com Ariane+Alex no pré-voo do CUTOVER-RUNBOOK (§Pré-voo
+      T-15min item "horário + alinhamento"). Se surgirem regras novas,
+      acrescentar como bloco adicional no prompt v2.2 antes do seed.
+    waiver: false
+    blocks: [cutover]
+    does_not_block: [gate, devops-push]
+
+  - id: rate-limit-tier-1
+    severity: low
+    category: performance
+    description: |
+      Conta OpenAI Tier 1 (30k TPM) não sustenta smoke burst de 6
+      cenários paralelos completos — alguns cenários em runs 2 e 3
+      falharam por "Rate limit reached", não por regressão de
+      comportamento.
+    recommendation: |
+      Se for fazer smoke cross-tenant futuro (Prime + HL + Fun +
+      Doceria simultâneo), avaliar upgrade pra Tier 2. Em produção
+      real (1 cliente Doceria, ~dezenas de msgs/hora), não aplicável.
+    waiver: true
+    blocks: []
+
+  - id: cross-tenant-llm-simulation
+    severity: medium
+    category: behavior
+    description: |
+      Gap sistêmico cross-tenant (Julia/PLAKA/Scar/HL/Doceria): LLM
+      (GPT-4.1) tende a escrever "vou verificar com a equipe" sem
+      invocar a função escalarHumano. Revelado no smoke v2 (2/2 críticos
+      falharam). Iteração do prompt v2→v2.1 com Checklist Binário de
+      Invocação (inspirado HL v4.3) resolveu 100% em 2 runs consecutivos
+      do smoke Doceria.
+    recommendation: |
+      Waiver concedido — prompt v2.1 mitiga adequadamente dentro do
+      que prompt-engineering pode entregar. Fix DEFINITIVO será via
+      story engine-hardening-01 (Epic 11.3, já em draft pós-HL):
+      guard em software no webhook.ts detecta promessa textual sem
+      invocação e força a chamada programática. Aplicável cross-tenant.
+    waiver: true
+    blocks: []
+    cross_reference: docs/stories/engine-hardening-01/README.md
+
+metrics:
+  reliability:
+    critical_acs_v21: "6/6 = 100% (DC1 Coxinha, DC3 Vitrine Hoje, DC4 Cardápio Bolos em runs 2+3)"
+    non_critical_acs_v21: "4/4 descontando rate limits (DC2, DC5, DC6 em 2 runs cada)"
+    aggregate_real: "12/12 = 100% (excluídas falhas de rate limit OpenAI)"
+    aggregate_bruta: "10/12 = 83% (acima do mínimo AC 10 = 75%)"
+  tests:
+    vitest: "102/102 passing, 13 files, 2.30s"
+    regressions: 0
+  prompt:
+    version: 2.1
+    md5: 1955c70db91d0823fc79be2bcc05f9b7
+    chars: 16391
+    lines: 289
+    growth_vs_v1: "+21% (13.528 → 16.391)"
+  scripts:
+    total_lines: 659
+    new_files: 3
+    modified_files: 3
+    deleted_files: 0
+
+decision: |
+  ✅ PASS with concerns — story doceria-onboarding-01 aprovada pra
+  handoff ao @devops. Cutover NÃO autorizado ainda — requer:
+  1. Mauro fechar AC 12 (alinhamento Ariane+Alex)
+  2. Mauro executar passo "Pré-voo T-15min" do CUTOVER-RUNBOOK
+
+  Gate QA finaliza Fase 3 (InReview). Story permanece InReview até
+  @devops executar cutover e @qa rodar gate pós-cutover (96h
+  monitoring) — quando vira Done.
+
+handoff:
+  to: '@devops (Gage)'
+  blocked_by: [AC-12-alex-pending]
+  post_cutover_followup:
+    - owner: dev
+      task: "Monitorar 96h primeiras horas pm2 logs zenya-webhook; coletar casos de flakiness residual cross-tenant pra alimentar engine-hardening-01"
+    - owner: qa
+      task: "Gate pós-cutover 96h quando story atingir Done (pós estabilidade)"
+    - owner: pm
+      task: "Validar que engine-hardening-01 (Epic 11.3) continua como follow-up adequado — verdict esperado é que sim, mesmo padrão HL"

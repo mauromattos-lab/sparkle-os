@@ -39,6 +39,7 @@ WhatsApp (cliente do tenant)
 |-------|--------|--------|------------|------------|----------|
 | 11.1 | Interpretação de imagens via WhatsApp (Vision API) | Draft | P1 | — | @dev |
 | 11.2 | Assistente pessoal do gestor — generalizar fluxo 08 para todos os tenants | Draft | P1 | — | @dev |
+| 11.3 | Guard em software — promessa de handoff sem invocação de `escalarHumano` ([story](engine-hardening-01/README.md)) | Draft | P1 | HL onboarding 96h monitoring estável | @dev |
 
 ---
 
