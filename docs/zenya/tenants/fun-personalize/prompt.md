@@ -1,13 +1,14 @@
 ---
 tenant: fun-personalize
-version: 5
-updated_at: 2026-04-22
+version: 6
+updated_at: 2026-04-23
 author: Mauro Mattos
 sources:
   - packages/zenya/src/tenant/seed.ts (TENANTS[1].system_prompt)
   - scripts/update-funpersonalize-prompt.mjs (último sync banco ← seed.ts)
   - Epic 16 / Story 16.3 — smoke exploratório + 9 conversas reais (2026-04-22)
   - Epic 16 / Story 16.3 — feedback direto da Julia (2026-04-22 madrugada)
+  - Julia feedback (2026-04-23 manhã) — bot seguiu mandando "[ATENDIMENTO] ..." para o cliente; fix migrado para o código
 notes: |
   Julia - Fun Personalize. Primeiro cliente comercial no core.
   md5 esperado do system_prompt no banco v1: 9cc363564a9f128e79fd334045b5e595.
@@ -42,6 +43,18 @@ notes: |
     (1 frase curta identificando cliente + motivo). Informação detalhada
     está na conversa que a atendente vai ler. Aprendizado PLAKA aplicado:
     tom imperativo > instrucional.
+
+  v6 (2026-04-23 ~10:00 BRT): v5 NÃO resolveu — conv=219 (Gabriela Cordeiro,
+    09:12 BRT) mostrou o bot enviando "[ATENDIMENTO] Cliente informou que
+    já tem uma demanda em aberto..." DIRETO na conversa com o cliente.
+    Causa raiz: o parâmetro `resumo` da tool escalarHumano é postado como
+    mensagem PÚBLICA (ver packages/zenya/src/tenant/escalation.ts e
+    tool-factory.ts) e a description da tool ORDENA o prefixo "[ATENDIMENTO]",
+    sobrepujando qualquer regra de tenant prompt. Fix migrado para o código:
+    nova flag `escalation_public_summary` em zenya_tenants (default TRUE
+    preserva os demais tenants). Fun foi setada FALSE — a tool agora não
+    pede `resumo` e não envia mensagem pública. v6 apenas REMOVE a regra
+    v5 de resumo_conversa, que virou dead-code no prompt.
 
   Smoke exploratório: docs/stories/16/backups/prompt-fun-v1-20260422-0354.md.
 ---
@@ -276,7 +289,6 @@ notes: |
   * NUNCA prometa prazo menor sem confirmar com a equipe
   * NUNCA negocie desconto — sempre escalarHumano
   * Ao invocar escalarHumano, envie SEMPRE uma mensagem curta de confirmação ao cliente no MESMO TURNO em que chama a ferramenta (nem antes, nem depois — mesmo turno). Exemplos: "Seu CEP foi registrado! A equipe vai calcular o orçamento com frete e te responder aqui em instantes 💛" · "Anotei todos os itens. Vou passar pra equipe montar o orçamento completo pra você!" · "Deixa eu chamar a equipe pra te ajudar com isso 💛". Regra mental: NUNCA escale em silêncio (cliente precisa saber que foi ouvido), MAS também NUNCA diga "vou escalar / vou te passar pra equipe" sem invocar a ferramenta no mesmo turno. As duas coisas acontecem JUNTAS.
-  * **Campo `resumo_conversa` do escalarHumano DEVE SER BREVE** — máximo 1 frase curta identificando o cliente e o motivo da escalação. NÃO monte resumo estruturado com produto + quantidade + CEP + prazo + "onde ficou" — essa informação está na conversa que a atendente vai ler quando assumir. Resumo longo polui o canal admin da Julia sem agregar valor. ❌ EVITE: "Cliente quer 25 bonés bordados com frases X e Y, CEP 38406-640, aguardando orçamento com frete" · ✅ PREFIRA: "Pedido de orçamento de bonés personalizados" · "Consulta de retirada" · "Pedido fora do catálogo pra avaliação". Curto e pronto.
   * Se Buscar_produto retornar resultados de CATEGORIA DIFERENTE do pedido (ex: cliente pediu "taça de champagne", a ferramenta retornou "taça de gin"), NÃO ofereça o resultado como substituto automaticamente. Escale pra equipe avaliar — ela sabe melhor se vale sugerir alternativa. Regra simples: produto exato (ou claramente equivalente) ou escala. Exceção única: se o cliente EXPLICITAMENTE perguntar "tem algo parecido?" ou "o que vocês têm?", aí sim apresente alternativas retornadas pela ferramenta.
   * NUNCA comece uma resposta com frases de entusiasmo como "Amei sua pergunta!", "Que ideia incrível!", "Vou adorar te ajudar!", "Amei!", "Boa pergunta!" ou similares. Vá direto ao ponto, sem elogiar a pergunta do cliente. Isso soa robótico e artificial.
   * Mensagens curtas e objetivas — **máximo 2 mensagens por turno em 90% dos casos**. Responda o que foi perguntado + próximo passo, e pare. Evite 3-4 mensagens seguidas com variações da mesma ideia ou despedidas repetidas. ❌ EVITE: "Oi! Sou a Zenya. Posso tirar dúvidas. Se quiser fechar, só pedir. Como posso te ajudar?" (4 frases separadas) · ✅ PREFIRA: "Oi! Sou a Zenya, posso te ajudar com produtos, orçamento ou falar com a equipe. O que você precisa?" (1 frase).

@@ -33,6 +33,7 @@ Todos os tenants compartilham o mesmo código e servidor. O isolamento é garant
 | `allowed_phones` | text[] | Modo teste: lista de números permitidos. Vazio = todos |
 | `admin_phones` | text[] | Números que ativam modo admin (canal proprietário) |
 | `admin_contacts` | jsonb | Admins com nome: `[{"phone": "+55...", "name": "Julia"}]` |
+| `escalation_public_summary` | boolean | **Default TRUE.** Quando TRUE, `escalarHumano` posta resumo `[ATENDIMENTO] ...` como mensagem pública na conversa (cliente vê). Quando FALSE, a tool não pede `resumo` e não envia mensagem — só faz o handoff técnico. Setar FALSE no onboarding para tenants que não querem esse resumo no cliente (ex: Fun Personalize). |
 
 ### `zenya_tenant_credentials`
 | Campo | Tipo | Descrição |
@@ -254,6 +255,17 @@ Copiar `packages/zenya/scripts/seed-scar-tenant.mjs` como template e trocar:
 - `PROMPT_PATH` default (apontar para o novo `.md`)
 
 Todo seed DEVE usar `applyTenantSeed` de `./lib/seed-common.mjs` — sem duplicar lógica de upsert.
+
+**Decisão de onboarding — resumo público na escalação (`escalation_public_summary`)**
+
+Ao escalar para humano, a tool `escalarHumano` pode postar um resumo começando com `[ATENDIMENTO] ...` como mensagem pública na conversa (o cliente também lê). Pergunta a fazer no onboarding:
+
+> *O cliente atende principalmente pelo WhatsApp direto (sem Chatwoot) ou o atendimento humano acontece dentro do Chatwoot?*
+
+- **WhatsApp direto / cliente final estranharia um "log" técnico** → adicionar `escalation_public_summary: false` no `row` do seed. A tool roda sem parâmetro `resumo` e o handoff fica silencioso (só label `agente-off`).
+- **Atendimento dentro do Chatwoot com equipe treinada** → omitir (default TRUE). O `[ATENDIMENTO] ...` aparece na preview da conversa e ajuda o atendente a pegar o contexto rápido.
+
+Default é TRUE — tenants existentes não foram afetados pela introdução da flag. Fun Personalize foi o primeiro opt-out (2026-04-23) após a Julia reportar que o resumo estava aparecendo na conversa do cliente.
 
 ### 9.4 Validar com `--dry-run`
 ```bash
