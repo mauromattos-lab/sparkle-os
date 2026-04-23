@@ -1,0 +1,231 @@
+storyId: ensinaja-onboarding-01
+storyTitle: "Onboarding do tenant Ensina Já Rede de Educação no core Zenya"
+epicRef: docs/stories/EPICS-OVERVIEW.md
+relatedEpicStory: 7.8 (cutover n8n → core — ÚLTIMO tenant)
+
+verdict: PASS
+verdictQualifier: with-concerns
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-23
+branch: main (pré-branch feat/ensinaja-onboarding-01 pelo @devops)
+
+summary: |
+  Gate AUTORIZADO pra handoff ao @devops. Story ensinaja-onboarding-01
+  aprovada pra push/PR/merge. Cutover real AGUARDA AC 12 (instruções
+  Douglas).
+
+  Trabalho de @dev passou 7/7 checks formais com 3 concerns documentadas.
+  Esforço real ~25min (pattern Doceria fresco facilitou sed adaptation).
+
+  Diferença-chave vs Doceria: **EN2 crítico falhou no smoke — WAIVER
+  ACEITO** pela estratégia acordada (baseline-clean). Ensinaja está em
+  modo teste com whitelist Douglas, sem impacto a cliente final — o gap
+  de escalação de lead aquecido será resolvido pelo prompt v2.1 quando
+  Douglas enviar suas instruções.
+
+  Diretriz UX de Mauro registrada pro futuro v2.1: *"não ficar enrolando
+  em um caso desse"* — bot deve detectar quando lead já entregou dados
+  completos (nome+contato+curso+intenção) e escalar sem re-perguntar.
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: |
+      Artefatos revisados (701 linhas totais, mesmo baseline Doceria 659):
+      - packages/zenya/scripts/seed-ensinaja-tenant.mjs (109 linhas) —
+        espelha seed-doceria-tenant.mjs 1:1 com prefixo env ENSINAJA_,
+        default active_tools sem Asaas. Header documentado. Usa
+        applyTenantSeed canônico (ADR-001). Idempotente por chatwoot_account_id.
+      - packages/zenya/scripts/smoke-ensinaja.mjs (367 linhas) —
+        6 cenários EN1-EN6 adaptados pra taxonomia pré-venda. Classifiers
+        invertem lógica Doceria: EN2 crítico é "escalar lead aquecido",
+        não "evitar escalação". Mocks limpos.
+      - packages/zenya/scripts/chat-ensinaja-local.mjs (225 linhas) —
+        REPL com trail observability (pattern Doceria v2 pós-Mauro-feedback).
+        Hot-reload via /reset funciona.
+      - docs/zenya/tenants/ensinaja/prompt.md — v2 baseline-clean,
+        frontmatter ADR-001 correto, notes explica decisão estratégica.
+        md5 idêntico ao v1 (cópia literal com frontmatter).
+      - docs/stories/ensinaja-onboarding-01/CUTOVER-RUNBOOK.md — pattern
+        Doceria com alerta especial pra desativar n8n ANTES do webhook
+        (Ensinaja está ativo em whitelist, diferente de Doceria que
+        estava pausada).
+
+  - id: unit-tests
+    result: PASS
+    notes: |
+      Vitest 102/102 pass em 13 test files (1.71s). Zero regressão.
+      Scripts .mjs são test-harness (smoke offline com LLM real),
+      cobertos por smoke E2E. Zero código TS core modificado
+      (ADR-001 isola prompt por tenant).
+
+  - id: acceptance-criteria
+    result: PASS
+    concerns: [EN2-expected-baseline-waiver, AC-12-douglas-pending]
+    notes: |
+      12 de 13 ACs Done. AC 12 (Douglas) pendente — bloqueia cutover
+      real, não gate. EN2 dentro do AC 8 (smoke caso 2) falhou por
+      decisão arquitetural: prompt v2 = baseline-clean sem instruções
+      explícitas de escalação.
+
+      **Importante:** esse não é um fail de qualidade — é confirmação
+      de que o baseline n8n precisa das instruções Douglas pra fechar
+      o gap. Pattern idêntico ao que vimos no smoke v2 da Doceria
+      (LLM simulando handoff sem invocar tool) — mas lá Ariane já
+      tinha dado as regras e iteramos pra v2.1; aqui v2.1 aguarda.
+
+  - id: no-regressions
+    result: PASS
+    notes: |
+      - Vitest 102/102 passing
+      - Zero código TS core modificado
+      - ADR-001 isola prompt por tenant (chatwoot_account_id=4)
+      - Multi-tenant: Prime/HL/Doceria continuam funcionando
+      - Pattern hl-onboarding-01 + doceria-onboarding-01 replicado
+        sem tocar paths dos outros tenants
+
+  - id: performance
+    result: PASS
+    concerns: [rate-limit-tier-1]
+    notes: |
+      - Prompt v2 = 10.073 chars (menor que Doceria 13.5k, HL ~10k).
+        Modelo baseline sem churn.
+      - Smoke runs: 2-4s por cenário. Total ~17s pros 6 cenários.
+      - Rate limit OpenAI Tier 1 (30k TPM) permanece concern herdado
+        de HL/Doceria — operacional, não afeta produção real (cliente
+        único não gera 6 requests simultâneos).
+
+  - id: security
+    result: PASS
+    notes: |
+      - Secret scan no scripts + prompt: 0 ocorrências de credenciais
+        hardcoded (SUPABASE_SERVICE_KEY carregada via env no runtime)
+      - Zero integração com API externa custom (mesma classe Doceria)
+      - URLs externas: apenas referências informativas no prompt
+        (endereços e contatos Ensina Já), nenhuma API call do core
+      - parseJsonEnv usa JSON.parse — padrão já auditado em HL/Doceria,
+        seguro quando env vars são controladas pelo operador
+
+  - id: documentation
+    result: PASS
+    notes: |
+      Artefatos documentais completos e alinhados:
+      - docs/stories/ensinaja-onboarding-01/README.md (story 13 ACs,
+        Dev Agent Record completo, File List, Change Log granular)
+      - docs/stories/ensinaja-onboarding-01/smoke-report.md (1 run +
+        análise detalhada de EN2 + diretriz Mauro registrada)
+      - docs/stories/ensinaja-onboarding-01/CUTOVER-RUNBOOK.md (passos
+        1-8 + rollback + alerta especial double-processing)
+      - docs/zenya/ensinaja/INVENTARIO.md (mapa técnico + taxonomia
+        pré-venda + delta HL/Doceria)
+      - docs/zenya/tenants/ensinaja/prompt.md (v2 baseline-clean,
+        frontmatter ADR-001 com notes explicando estratégia)
+      - docs/zenya/tenants/ensinaja/prompt-v1-baseline-n8n.md (imutável)
+      - docs/zenya/ensinaja/raw/*.json (4 workflows imutáveis)
+
+concerns:
+  - id: EN2-expected-baseline-waiver
+    severity: medium
+    category: behavior
+    description: |
+      EN2 crítico (smoke caso 2 — escalação de lead aquecido) falhou
+      no run único do smoke. Bot recebeu input completo (nome Roberto,
+      contato, curso específico, urgência) e **continuou qualificando**
+      em vez de escalar.
+    diagnosis: |
+      Prompt v2 = cópia literal do v1 n8n (estratégia "baseline-clean"
+      acordada com Mauro). V1 instrui "qualificar, aquecer, entregar
+      pra equipe" mas NÃO define critério binário explícito de
+      escalação — bot interpreta que sempre precisa qualificar mais.
+    recommendation: |
+      Aceito WAIVER pela estratégia acordada. Fix conhecido = prompt
+      v2.1 pós-Douglas com critério binário de escalação. Diretriz de
+      UX do Mauro (2026-04-23) pra incorporar no v2.1:
+        "não ficar enrolando em um caso desse" — quando lead já
+        entregou dados completos (nome+contato+curso+intenção),
+        bot deve escalar SEM re-perguntar.
+    waiver: true
+    blocks: [cutover-real]
+    does_not_block: [gate, devops-push, devops-pr, devops-merge]
+
+  - id: AC-12-douglas-pending
+    severity: medium
+    category: requirements
+    description: |
+      AC 12 (instruções Douglas sobre condução do atendimento) pendente.
+      Douglas é stakeholder operacional do tenant Ensinaja.
+    recommendation: |
+      NÃO bloqueia gate nem merge. Bloqueia apenas o cutover real.
+      Quando Douglas enviar:
+        1. @pm/@dev editam prompt.md → v2.1 (incorpora regras + critério
+           binário de escalação conforme diretriz Mauro)
+        2. Re-rodar smoke — espera 6/6 (incluindo EN2)
+        3. Seed real na VPS + troca webhook Chatwoot account=4
+        4. Monitoring 96h
+    waiver: false
+    blocks: [cutover-real]
+    does_not_block: [gate, devops-push, devops-pr, devops-merge]
+
+  - id: rate-limit-tier-1
+    severity: low
+    category: performance
+    description: |
+      Conta OpenAI Tier 1 (30k TPM) pode não sustentar smoke burst.
+      Concern herdado de Doceria/HL.
+    recommendation: |
+      Operacional — em produção real não aplicável (cliente único não
+      gera 6 requests simultâneos). Se fizer smoke cross-tenant
+      (Prime+HL+Fun+Doceria+Ensinaja paralelo), avaliar upgrade Tier 2.
+    waiver: true
+    blocks: []
+
+metrics:
+  reliability:
+    critical_acs: "0/1 = 0% (EN2 expected-fail por baseline-clean)"
+    non_critical_acs: "5/5 = 100% (EN1, EN3, EN4, EN5, EN6)"
+    aggregate_bruta: "5/6 = 83% (acima do mínimo AC 10 = 75%)"
+    aggregate_descontando_expected: "5/5 = 100%"
+  tests:
+    vitest: "102/102 passing, 13 files, 1.71s"
+    regressions: 0
+  prompt:
+    version: 2 (baseline-clean)
+    md5: b9433ca5e2f4983ea6e8bd3bcc26e933
+    chars: 10073
+    lines: 247
+    delta_vs_v1: "zero conteúdo — apenas frontmatter ADR-001 adicionado"
+  scripts:
+    total_lines: 701
+    new_files: 3
+    modified_files: 2 (story + INVENTARIO)
+    deleted_files: 0
+  effort:
+    estimated: 45-60min
+    actual: ~25min (pattern Doceria fresco reduziu tempo)
+
+decision: |
+  ✅ PASS with concerns — story ensinaja-onboarding-01 aprovada pra
+  handoff ao @devops. Cutover NÃO autorizado ainda — requer:
+  1. Douglas enviar instruções de condução do atendimento
+  2. @pm/@dev editam prompt.md → v2.1 com critério binário de escalação
+     (incorporando diretriz Mauro "não enrolar")
+  3. Re-rodar smoke — EN2 deve passar 100%
+  4. Mauro executar CUTOVER-RUNBOOK com atenção ao passo 6 (desativar
+     n8n ANTES do webhook)
+
+  Gate QA finaliza Fase 3 (InReview). Story permanece InReview até
+  cutover real acontecer. Gate pós-cutover (96h monitoring) é que
+  move pra Done.
+
+handoff:
+  to: '@devops (Gage)'
+  blocked_by: [AC-12-douglas-pending, EN2-expected-baseline-waiver-resolvido-no-v2.1]
+  devops_can_execute_now: [push, pr, merge, delete-branch]
+  devops_wait_for_mauro: [cutover-real-via-runbook]
+  post_cutover_followup:
+    - owner: dev
+      task: "Monitorar 96h pm2 logs zenya-webhook após cutover; coletar flakiness (apesar de ser improvável — whitelist só Douglas no início)"
+    - owner: qa
+      task: "Gate pós-cutover 96h quando story atingir estabilidade + EN2 revalidado em prod com v2.1"
+    - owner: pm
+      task: "Quando Epic 7.8 fechar (Ensinaja Done), destravar Epic 11 cross-tenant via memory project_cross_tenant_consolidation"
