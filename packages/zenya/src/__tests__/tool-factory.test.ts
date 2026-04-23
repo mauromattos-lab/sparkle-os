@@ -46,6 +46,11 @@ const CONFIG: TenantConfig = {
   admin_phones: [],
   admin_contacts: [],
 };
+
+const CONFIG_SILENT: TenantConfig = {
+  ...CONFIG,
+  escalation_public_summary: false,
+};
 const CTX = { accountId: '1', conversationId: '99', phone: '+5531999998888' };
 
 // Consistent with google-calendar.test.ts pattern — AI SDK returns PromiseLike, not Promise
@@ -129,6 +134,38 @@ describe('escalarHumano — resumo como mensagem pública na conversa', () => {
     expect(result).toMatchObject({ escalado: true });
     // Critical path (agente-off) must still execute when handoff message fails
     expect(addLabel).toHaveBeenCalledWith(expect.anything(), 'agente-off');
+  });
+});
+
+describe('escalarHumano — modo silencioso (escalation_public_summary=false)', () => {
+  it('NÃO posta mensagem pública e não expõe parâmetro `resumo`', async () => {
+    vi.mocked(getCredentialJson).mockRejectedValue(new Error('no creds'));
+
+    const tools = createTenantTools(TENANT_ID, CONFIG_SILENT, CTX);
+
+    // Schema do tool não pede mais `resumo` — execute roda sem args
+    const result = await (tools['escalarHumano'] as ToolWithExecute).execute({});
+
+    expect(result).toMatchObject({ escalado: true });
+    // Nenhuma mensagem pública foi enviada — esse é o ponto principal da flag off
+    expect(sendMessage).not.toHaveBeenCalled();
+    // O handoff técnico continua acontecendo (label agente-off silencia o bot)
+    expect(addLabel).toHaveBeenCalledWith(expect.anything(), 'agente-off');
+  });
+
+  it('mantém handoff Z-API mesmo no modo silencioso', async () => {
+    vi.mocked(getCredentialJson).mockResolvedValue({
+      instanceId: 'I',
+      token: 'T',
+      clientToken: 'C',
+      labels: { humano: '10' },
+    });
+
+    const tools = createTenantTools(TENANT_ID, CONFIG_SILENT, CTX);
+    await (tools['escalarHumano'] as ToolWithExecute).execute({});
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(zapiAddLabel).toHaveBeenCalledOnce();
   });
 });
 

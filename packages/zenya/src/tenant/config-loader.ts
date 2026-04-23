@@ -16,6 +16,14 @@ export interface TenantConfig {
   admin_phones: string[];
   /** Admin contacts with names: [{phone, name}] — used for personalized admin greetings. */
   admin_contacts: Array<{ phone: string; name: string }>;
+  /**
+   * When true (default), the `escalarHumano` tool posts the LLM-generated
+   * `[ATENDIMENTO] ...` summary as a public message on the conversation
+   * (customer sees it). When false, the tool omits the `resumo` parameter
+   * entirely and the escalation runs silent (labels only). Optional — absent
+   * value resolves to true, matching the DB default.
+   */
+  escalation_public_summary?: boolean;
 }
 
 const TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -53,6 +61,7 @@ function rowToConfig(row: Record<string, unknown>): TenantConfig {
     allowed_phones: Array.isArray(row['allowed_phones']) ? (row['allowed_phones'] as string[]) : [],
     admin_phones: Array.isArray(row['admin_phones']) ? (row['admin_phones'] as string[]) : [],
     admin_contacts: Array.isArray(row['admin_contacts']) ? (row['admin_contacts'] as Array<{ phone: string; name: string }>) : [],
+    escalation_public_summary: row['escalation_public_summary'] !== false,
   };
 }
 
@@ -67,7 +76,7 @@ export async function loadTenantConfig(tenantId: string): Promise<TenantConfig> 
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary')
     .eq('id', tenantId)
     .single();
 
@@ -92,7 +101,7 @@ export async function loadTenantByAccountId(accountId: string): Promise<TenantCo
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary')
     .eq('chatwoot_account_id', accountId)
     .single();
 

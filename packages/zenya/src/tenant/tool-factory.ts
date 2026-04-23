@@ -44,41 +44,70 @@ export function createTenantTools(
     /**
      * Escalates the conversation to a human agent.
      * Adds 'agente-off' label to Chatwoot — disabling the bot for this session.
+     *
+     * The tool's shape depends on `config.escalation_public_summary`:
+     *   - true  (default): exposes `resumo` param. The LLM writes a `[ATENDIMENTO] ...`
+     *                      summary that gets posted as a PUBLIC message (customer sees it).
+     *                      Useful for tenants whose team only sees the WhatsApp channel.
+     *   - false: no `resumo` param. Escalation runs silent (labels only). Used when the
+     *            public summary is considered noisy or awkward for the end customer.
      */
-    escalarHumano: tool({
-      description:
-        'Escala o atendimento para um humano. ANTES de chamar: (1) envie uma mensagem ao cliente avisando o handoff. (2) Se a pergunta é sobre pedido específico e o cliente ainda não informou número de pedido nem CPF, peça essa informação antes. ' +
-        'O parâmetro `resumo` é postado como MENSAGEM PÚBLICA na conversa (o cliente vê), então escreva em formato humano e começando com "[ATENDIMENTO]" para o atendente humano identificar na preview.',
-      parameters: z.object({
-        resumo: z
-          .string()
-          .describe(
-            'Resumo da conversa em formato livre começando com "[ATENDIMENTO]". ' +
-              'Inclua: quem é o cliente (se souber), o que ele quer, o que você já fez/informou, ' +
-              'dados do pedido se já consultou (número, status, rastreio), e a última pergunta pendente. ' +
-              'Exemplo: "[ATENDIMENTO] Cliente Manuela relatou oxidação no pedido 58177 dentro da garantia de 6 meses. ' +
-              'Já expliquei a política e ela quer falar com a equipe. Pedido confirmado enviado em 20/04/2026."',
-          ),
-      }),
-      execute: async ({ resumo }) => {
-        await escalateToHuman({
-          tenantId,
-          chatwoot: chatwootParams(),
-          phone: ctx.phone,
-          source: 'tool',
-          summary: resumo,
-        });
-        console.log(
-          `[zenya] escalarHumano tool — tenant=${tenantId} conv=${ctx.conversationId}` +
-            ` resumo=${resumo.slice(0, 120)}`,
-        );
-        return {
-          escalado: true,
-          mensagem:
-            'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
-        };
-      },
-    }),
+    escalarHumano: config.escalation_public_summary !== false
+      ? tool({
+          description:
+            'Escala o atendimento para um humano. ANTES de chamar: (1) envie uma mensagem ao cliente avisando o handoff. (2) Se a pergunta é sobre pedido específico e o cliente ainda não informou número de pedido nem CPF, peça essa informação antes. ' +
+            'O parâmetro `resumo` é postado como MENSAGEM PÚBLICA na conversa (o cliente vê), então escreva em formato humano e começando com "[ATENDIMENTO]" para o atendente humano identificar na preview.',
+          parameters: z.object({
+            resumo: z
+              .string()
+              .describe(
+                'Resumo da conversa em formato livre começando com "[ATENDIMENTO]". ' +
+                  'Inclua: quem é o cliente (se souber), o que ele quer, o que você já fez/informou, ' +
+                  'dados do pedido se já consultou (número, status, rastreio), e a última pergunta pendente. ' +
+                  'Exemplo: "[ATENDIMENTO] Cliente Manuela relatou oxidação no pedido 58177 dentro da garantia de 6 meses. ' +
+                  'Já expliquei a política e ela quer falar com a equipe. Pedido confirmado enviado em 20/04/2026."',
+              ),
+          }),
+          execute: async ({ resumo }) => {
+            await escalateToHuman({
+              tenantId,
+              chatwoot: chatwootParams(),
+              phone: ctx.phone,
+              source: 'tool',
+              summary: resumo,
+            });
+            console.log(
+              `[zenya] escalarHumano tool — tenant=${tenantId} conv=${ctx.conversationId}` +
+                ` resumo=${resumo.slice(0, 120)}`,
+            );
+            return {
+              escalado: true,
+              mensagem:
+                'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
+            };
+          },
+        })
+      : tool({
+          description:
+            'Escala o atendimento para um humano. ANTES de chamar, envie uma mensagem curta e natural ao cliente avisando que a equipe vai continuar o atendimento. NÃO envie texto com formato de log/ticket (nada de "[ATENDIMENTO] ..." ou resumo estruturado) — o cliente não precisa ver relatório interno. A ferramenta apenas registra o handoff tecnicamente; a mensagem ao cliente é a sua última fala antes da chamada.',
+          parameters: z.object({}),
+          execute: async () => {
+            await escalateToHuman({
+              tenantId,
+              chatwoot: chatwootParams(),
+              phone: ctx.phone,
+              source: 'tool',
+            });
+            console.log(
+              `[zenya] escalarHumano tool (silent) — tenant=${tenantId} conv=${ctx.conversationId}`,
+            );
+            return {
+              escalado: true,
+              mensagem:
+                'Atendimento escalado para um humano. O bot está desativado para esta conversa.',
+            };
+          },
+        }),
 
     /**
      * Sends an additional text chunk to the conversation.
