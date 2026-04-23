@@ -1,0 +1,448 @@
+{
+  "id": "1sokEtHFxVp0RXS3",
+  "name": "[Douglas - Ensinaja] Escalar Humano",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "GET",
+        "url": "={{ $('Gatilho').item.json.url_chatwoot }}/api/v1/accounts/{{ $('Gatilho').item.json.id_conta }}/conversations/{{ $('Gatilho').item.json.id_conversa }}/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "chatwootApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": false,
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1792,
+        1280
+      ],
+      "id": "4d741ac4-1fe7-4d36-af6c-737890972989",
+      "name": "Listar etiquetas da conversa",
+      "credentials": {
+        "chatwootApi": {
+          "id": "CjCfWmOaKY3OTN0w",
+          "name": "ChatWoot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "events": "worklfow_call",
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefone",
+              "type": "string"
+            },
+            {
+              "name": "nome",
+              "type": "string"
+            },
+            {
+              "name": "ultima_mensagem",
+              "type": "string"
+            },
+            {
+              "name": "resumo_conversa",
+              "type": "string"
+            },
+            {
+              "name": "id_conta",
+              "type": "string"
+            },
+            {
+              "name": "id_conversa",
+              "type": "string"
+            },
+            {
+              "name": "url_chatwoot",
+              "type": "string"
+            },
+            {
+              "name": "id_conversa_alerta",
+              "type": "string"
+            },
+            {
+              "name": "bant_score",
+              "type": "string"
+            },
+            {
+              "name": "bant_summary_necessity",
+              "type": "string"
+            },
+            {
+              "name": "bant_summary_timing",
+              "type": "string"
+            },
+            {
+              "name": "bant_summary_authority",
+              "type": "string"
+            },
+            {
+              "name": "business_type",
+              "type": "string"
+            },
+            {
+              "name": "business_name",
+              "type": "string"
+            },
+            {
+              "name": "trigger_type",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1616,
+        1280
+      ],
+      "id": "cafd7d6b-eb70-4048-9cfa-981a848a8341",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "POST",
+        "url": "https://api.z-api.io/instances/3F0B3059B80821F7B9149E8469198590/token/4E6E52756615F430E31B7DE7/send-text",
+        "authentication": "none",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Client-Token",
+              "value": "F6d439904f1f74237922ead732dacfabfS"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const g = $('Gatilho').item.json;\n  const nome = g.nome && g.nome !== 'null' ? g.nome : null;\n  const phone = g.telefone || '(não informado)';\n  const score = g.bant_score && g.bant_score !== 'null' ? g.bant_score : null;\n  const btype = g.business_type && g.business_type !== 'null' ? g.business_type : null;\n  const bname = g.business_name && g.business_name !== 'null' ? g.business_name : null;\n  const necessity = g.bant_summary_necessity && g.bant_summary_necessity !== 'null' ? g.bant_summary_necessity : null;\n  const timing = g.bant_summary_timing && g.bant_summary_timing !== 'null' ? g.bant_summary_timing : null;\n  const authority = g.bant_summary_authority && g.bant_summary_authority !== 'null' ? g.bant_summary_authority : null;\n  const urlConversa = g.url_chatwoot || null;\n  const triggerType = g.trigger_type || 'human_request';\n\n  let lines = [];\n  if (triggerType === 'alto_score') {\n    lines.push('🎯 *Lead qualificado — score ALTO*');\n  } else {\n    lines.push('🔥 *Lead quer falar com você!*');\n  }\n  lines.push('');\n  lines.push('*Nome:* ' + (nome || 'Lead sem nome'));\n  if (score) lines.push('📊 *Score:* ' + score);\n  if (btype || bname) {\n    const negocio = [btype, bname].filter(Boolean).join(' — ');\n    lines.push('🏪 *Negócio:* ' + negocio);\n  }\n  lines.push('📱 *WhatsApp:* ' + phone);\n\n  const bantLines = [];\n  if (necessity) bantLines.push('• Dor: ' + necessity);\n  if (timing) bantLines.push('• Urgência: ' + timing);\n  if (authority) bantLines.push('• Decisor: ' + authority);\n  if (bantLines.length > 0) {\n    lines.push('');\n    lines.push('💬 *Resumo BANT:*');\n    bantLines.forEach(bl => lines.push(bl));\n  }\n\n  if (urlConversa) {\n    lines.push('');\n    lines.push('🔗 Conversa: ' + urlConversa);\n  }\n\n  lines.push('');\n  lines.push('_Zenya está no chat — use /abertura-handoff para entrar_');\n\n  const message = lines.join('\\n');\n  return JSON.stringify({ phone: '5512981303249', message });\n})() }}",
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2368,
+        1280
+      ],
+      "id": "93aa249b-f1db-468b-b990-b2da11c7fcd6",
+      "name": "Enviar alerta"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3b51e260-d4ab-4748-82b0-f8012c3f3c70",
+              "leftValue": "={{ $('Gatilho').item.json.telefone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2144,
+        1280
+      ],
+      "id": "8e06e98d-0bd2-4bd6-a47c-371c191ab41a",
+      "name": "Conversa de alerta configurada?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        1440
+      ],
+      "id": "a5a37b93-8d94-498f-9a9c-ee94a26822a1",
+      "name": "Alerta não configurado"
+    },
+    {
+      "parameters": {
+        "content": "# Checklist\n- [ ] Abrir nodes do Chatwoot para selecionar credencial",
+        "height": 128,
+        "width": 400,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1728,
+        1504
+      ],
+      "id": "caf73a0b-5827-4e5e-ae10-e55cd4e424e9",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## 05. Escalar humano",
+        "height": 80,
+        "width": 400,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        560
+      ],
+      "id": "ba81bd2a-78ae-4b2c-aeed-8e8d408ad9fb",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "method": "POST",
+        "url": "={{ $('Gatilho').item.json.url_chatwoot }}/api/v1/accounts/{{ $('Gatilho').item.json.id_conta }}/conversations/{{ $('Gatilho').item.json.id_conversa }}/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "chatwootApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "labels",
+              "value": "={{ $json.payload.append('agente-off').unique() }}"
+            }
+          ]
+        },
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1968,
+        1280
+      ],
+      "id": "b84ccda7-da9d-4c0a-85e5-6ffc9400acc1",
+      "name": "Colocar etiqueta agente-off",
+      "credentials": {
+        "chatwootApi": {
+          "id": "CjCfWmOaKY3OTN0w",
+          "name": "ChatWoot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Colocar etiqueta e enviar alerta",
+        "height": 416,
+        "width": 1024,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1552,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "7b6ff06a-1682-4490-9212-892116b20dfb",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Secretária v3](https://i1.ytimg.com/vi_webp/U3Qx-ayR7To/maxresdefault.webp)](https://www.youtube.com/watch?v=U3Qx-ayR7To)",
+        "height": 440,
+        "width": 500,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        656
+      ],
+      "id": "f00e9226-68a7-4d0f-b328-4f5e674a09ef",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.fazer.ai)\n[![Banner comunidade](https://framerusercontent.com/images/KIXMxk9eKCoCsNeVm1oaz5HnaQ.png)](https://lucasmoreira.fazer.ai)",
+        "height": 440,
+        "width": 1380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        656
+      ],
+      "id": "a991445f-3b12-466e-b3a5-61fa5bc3a139",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "content": "## Usei Hostinger pra este workflow.\n## Replique aqui.\n\n\n\n\n\n\n\n\n\n## [Use o cupom `FAZERAI` pra ter 10% de desconto na sua primeira compra!](https://www.hostg.xyz/SHIMV)\n\n\n",
+        "height": 316,
+        "width": 552,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        1104
+      ],
+      "id": "d1032998-5c38-4602-a3b5-793866699922",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "[![Hostinger](https://framerusercontent.com/images/ptGVDA4KqG8GLNlWRDzFxaM.png?width=600&height=119)](https://www.hostg.xyz/SHIMV)\n",
+        "height": 96,
+        "width": 324,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        896,
+        1200
+      ],
+      "id": "8e631c52-703e-4be2-af51-1c5828f46854",
+      "name": "Sticky Note29"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 440,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        656
+      ],
+      "id": "9dac5035-9e76-488e-928a-a937c5643e3a",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "@[youtube](Vv_uQGehgIc)",
+        "height": 224,
+        "width": 368,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2592,
+        1184
+      ],
+      "id": "da899ae3-b6e7-4dda-a21c-e7724c44080f",
+      "name": "Sticky Note17"
+    }
+  ],
+  "connections": {
+    "Listar etiquetas da conversa": {
+      "main": [
+        [
+          {
+            "node": "Colocar etiqueta agente-off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Listar etiquetas da conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversa de alerta configurada?": {
+      "main": [
+        [
+          {
+            "node": "Enviar alerta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerta não configurado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Colocar etiqueta agente-off": {
+      "main": [
+        [
+          {
+            "node": "Conversa de alerta configurada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": null,
+  "pinData": {},
+  "tags": [],
+  "versionId": "07aa35f7-8652-4496-8997-1ae1c7142047",
+  "parentFolder": {
+    "updatedAt": "2026-03-28T03:07:47.284Z",
+    "createdAt": "2026-03-28T03:07:47.284Z",
+    "id": "nJw2KGNFRoHzKVGy",
+    "name": "04 - Escola Ensinajá",
+    "parentFolderId": null
+  },
+  "_extractedAt": "2026-04-23T06:39:58.853Z",
+  "_source": "n8n.sparkleai.tech/workflow/1sokEtHFxVp0RXS3"
+}
