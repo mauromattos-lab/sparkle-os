@@ -1,0 +1,260 @@
+storyId: 17.2
+storyTitle: "Refino brownfield Scar AI — prompt v3 (fix venda consultiva + uso de histórico)"
+storyPath: docs/stories/17.2.story.md
+epicRef: docs/stories/EPIC-17-INDEX.md
+
+verdict: PASS
+verdictQualifier: with-observations
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-25
+reviewedFiles:
+  - docs/zenya/tenants/scar-ai/prompt.md  # v2 → v3 (md5 file: dd68c5ba579ebafa4404dc72d025fc2a)
+  - packages/zenya/scripts/smoke-scar.mjs  # +D5b +D9 +fix latente D7
+  - docs/stories/17.2.story.md  # Status Draft → Ready for Review + Dev Agent Record
+branch: main  # @devops cria feat/scar-prompt-v3 no push
+
+summary: |
+  Story 17.2 entrega prompt v3 cirúrgico para o Scar AI, resolvendo os 2 issues
+  reportados pelo Gustavo no teste real (2026-04-24): (1) portfólio apresentado
+  cedo demais + 5 mensagens por turno; (2) repetição de pergunta cuja info já
+  estava no histórico. Implementação respeita o padrão PLAKA (tom imperativo +
+  exemplos concretos ❌/✅) e preserva intactas as seções v2 que funcionavam
+  (consistência PT/EN, catálogo, pagamento, regras §§1-5). Smoke estendido com
+  2 cenários derivados do feedback real (D5b agregação infos, D9 densidade) +
+  bug latente em D7 fixado. Build PASS + 104/104 testes pass (zero regressão).
+
+  Verdict PASS with observations porque o smoke local não foi executado (dívida
+  D2: .env local aponta pro Supabase legado bloqueado). Não é falha do trabalho
+  — é gap conhecido catalogado no briefing brownfield para Aria. Smoke real roda
+  na VPS pós-deploy pelo @devops.
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: |
+      Prompt v3 — mudanças cirúrgicas:
+      - Front-matter (version 3, sources +1, notes com changelog v3): ✅ correto
+      - Substituição "## Roteiro" (6 passos lineares) → "## Qualificação em
+        camadas — venda consultiva" (4 camadas: dor → contexto → estilo → oferta):
+        ✅ semanticamente coerente. Linha 60 deixa explícito: "Nunca apresente
+        portfólio ou pacote antes das camadas 1-3 estarem ao menos iniciadas".
+      - Regras Críticas §6, §7, §8 adicionadas após §5 com tom imperativo: ✅
+        seguindo padrão PLAKA (`feedback_prompt_iteration_reveals.md` —
+        descritivo→imperativo). Cada regra tem cicatriz histórica explícita ou
+        exemplo concreto.
+      - Preservou intactos: Idioma PT/EN (já passou no v2), catálogo pacotes
+        e avulsas, formas de pagamento, objeções padrão §§1-4, regras críticas
+        §§1-5, postura: ✅ verificado por diff completo.
+
+      Smoke v3 — extensão:
+      - D5b (agregação de infos): ✅ pass_if usa regex específicas que cobrem
+        as variações da pergunta repetida, e retorna objeto rico
+        (repeatedPlatform, repeatedLiveStatus, engagedWithNiche). Diagnóstico
+        de hook é informativo, não bloqueante — escolha pragmática alinhada
+        com escopo MVP (não força hook, só impede regressão de repetir).
+      - D9 (densidade): ✅ medição programática contando enviarTextoSeparado
+        tool calls + 1 (mensagem final). Mais preciso que split por \\n\\n.
+      - Bug latente em D7 fixado: ✅ `c.toolName` → `c.name ?? c.toolName ?? ''`.
+        capturedCalls (linha 145 original) armazena com chave `name`, então o
+        classificador anterior nunca detectava escalação corretamente.
+        Excelente fix — exatamente o tipo de "error escondendo bug" alertado
+        em `feedback_errors_can_hide_bugs.md`.
+
+  - id: unit-tests
+    result: PASS
+    notes: |
+      `npm test` — 104/104 testes passando em 13 test files (2.71s). Zero
+      regressão introduzida. Nenhum teste novo foi necessário pois mudanças
+      são em arquivo de prompt (markdown) e cenários de smoke (script .mjs)
+      — fora do escopo de testes unitários TS.
+
+      Arquivos de teste relevantes que continuam pass: tool-factory (8),
+      webhook (16), elevenlabs (5), google-calendar (6), crypto (6), e demais.
+
+  - id: acceptance-criteria
+    result: PASS
+    notes: |
+      AC1 (front-matter v3 + changelog): ✅ confirmado linhas 1-29 do prompt.md
+      AC2 (Issue #1 — 4 camadas + portfólio só após camadas 1-3): ✅ seção
+          "Qualificação em camadas" linhas 60-104 com proibição explícita
+      AC3 (Issue #2 — regra "releia histórico" + exemplo concreto): ✅
+          Regra §6 linhas 207-222 com exemplo literal ❌/✅
+      AC4 (densidade ≤3 mensagens): ✅ Regra §7 linhas 224-225
+      AC5 (hook por nicho explícito): ✅ Regra §8 linhas 227-235 com 5 nichos
+          pré-mapeados (GTA RP, Valorant, Minecraft, IRL, React)
+      AC6 (smoke +D5b +D9): ✅ cenários adicionados, pass_if cobre o critério
+      AC7 (zero regressão D1, D2, D7): ⚠️ build+tests PASS, smoke produção
+          pendente — ver observation 17.2-01
+      AC8 (deploy seed VPS): ⏳ post-gate, escopo do @devops
+      AC9 (re-teste Gustavo): ⏳ post-deploy, escopo do Mauro
+
+  - id: no-regressions
+    result: PASS
+    notes: |
+      Verificação dupla:
+      1. Diff completo do prompt.md confirma que TODAS as seções v2 que NÃO
+         deviam ser tocadas (Idioma, Catálogo, Pagamento, Objeções, Regras
+         §§1-5, Postura) ficaram literalmente intactas.
+      2. 104 testes vitest passando — engine Zenya não foi alterada.
+
+      Smoke produção (D1, D2, D5, D6, D7 originais) NÃO foi executado por
+      causa da dívida D2 (Supabase legado no .env local). Esperado: rodar
+      na VPS pelo @devops (Step 6 do execution plan original do PM). Se
+      falhar, rollback é trivial (git revert + re-seed do prompt v2,
+      idempotente). Documentado como observation 17.2-01.
+
+  - id: performance
+    result: PASS
+    notes: |
+      Prompt v3 cresceu ~76 linhas (de ~163 → ~239 linhas, ~+47%). Em
+      tokens reais isso significa um system_prompt mais pesado por chamada
+      (estimativa: +30% tokens vs v2). Custo marginal aceitável dado o
+      ganho de qualidade. Sem outras mudanças que afetem performance (zero
+      mudança de código, zero query nova, zero round-trip novo).
+
+  - id: security
+    result: PASS
+    notes: |
+      Sem mudança de superfície de segurança:
+      - tenant_id continua não exposto ao LLM (closure no tool-factory)
+      - Regras de não vazar Pix preservadas (linha §1 das Regras Críticas)
+      - Regras de escalação preservadas (linha §5 + tool escalarHumano)
+      - Sem credencial nova exposta no prompt
+      - Sem PII adicionada ao system_prompt
+
+      Bug latente fixado em D7 (`c.toolName` → fallback) é melhoria
+      defensiva: agora o smoke detecta corretamente se a tool de escalação
+      foi invocada. Antes, qualquer falha em escalar passava silenciosamente
+      pelo classificador. **Isso é fortalecimento de gate de segurança**
+      (cliente não fechar = ok; cliente fechar mas tool não escalar = vazamento
+      potencial de Pix se o LLM compensar com texto).
+
+  - id: documentation
+    result: PASS
+    notes: |
+      - Story 17.2 com Dev Agent Record completo (Tasks/Subtasks executados,
+        Debug Log References, File List, Completion Notes, Change Log).
+      - Front-matter v3 do prompt documenta o changelog explicitamente
+        (linhas 21-29).
+      - Comentários inline no smoke explicam cada cenário novo (D5b linha 91
+        comenta "feedback Gustavo Issue #2"; D9 linha 144 comenta "feedback
+        Gustavo Issue #1").
+      - feedback-gustavo-20260424.md preservado como input rastreável.
+      - Cicatrizes históricas referenciadas nas Regras Críticas: §6 cita o
+        caso real do GTA RP, §8 expande pra outros nichos.
+
+observations:
+  - id: 17.2-01
+    severity: low
+    category: testing
+    description: |
+      Smoke local não foi executado pelo @dev. Causa: erro `fetch failed` ao
+      buscar tenant em `zenya_tenants`. Diagnóstico: `.env` local aponta pra
+      Supabase legado bloqueado (`gqhdspayjtiijcqklbys`) em vez do ativo
+      (`uqpwmygaktkgbknhmknx`). Já catalogado como dívida D2 no briefing
+      brownfield Aria (`docs/zenya/_brownfield/aria-discovery-input-20260425.md`
+      §11).
+
+      Não é violação do gate — é registro de gap sistêmico. Smoke real será
+      executado pelo @devops na VPS após deploy (Step 6 do execution plan PM
+      original), onde `.env` aponta corretamente pro Supabase ativo.
+    rationale: |
+      Não-bloqueante porque:
+      1. Mudanças do prompt v3 são cirúrgicas — não tocam em comportamentos
+         testados pelos cenários originais (D1, D2, D5, D6, D7).
+      2. Smoke nunca pegaria regressão de prompt sem ser executado contra o
+         tenant. Local OU produção, precisa rodar contra um tenant real —
+         e o tenant Scar (account_id=7) está só na produção VPS.
+      3. Rollback é trivial: `git revert` do commit v3 + re-seed (idempotente
+         por upsert em chatwoot_account_id) reverte o md5 no banco para o
+         valor v2 conhecido (55ef54540dc464b7ba9a49453f5abc84).
+    action: |
+      Pré-deploy:
+      - @devops pull do main na VPS, build, --dry-run do seed-scar-tenant.mjs
+        para confirmar md5 v3 diferente do banco antes de aplicar.
+
+      Pós-deploy (obrigatório):
+      - @devops roda `node --env-file=.env scripts/smoke-scar.mjs` na VPS.
+        Esperado: 7/7 cenários PASS (D1, D2, D5, D5b, D6, D7, D9). Aceita
+        falha REPL em D7 SE for apenas addLabel 404 (tool foi invocada
+        corretamente, só o side-effect Chatwoot falhou — comportamento aceitável
+        em smoke pois conversationId é fake).
+      - Se smoke falhar em qualquer cenário não-D7-REPL, rollback automático
+        e abrir story 17.2-bis.
+
+      Resolução estrutural:
+      - Dívida D2 (fix do MCP/.env local) fica para o brownfield Zenya com
+        Aria (Fase 3 — Tooling & Operations). Não bloqueia esta story.
+
+  - id: 17.2-02
+    severity: low
+    category: testing
+    description: |
+      Smoke D5b verifica apenas que a Scar NÃO repete pergunta sobre plataforma
+      ou live status (regressão), mas NÃO força que a Scar engaje com o nicho
+      "GTA RP" como hook (positivo). O campo `engagedWithNiche` é diagnóstico,
+      não pass criterion.
+    rationale: |
+      Decisão pragmática alinhada com escopo MVP:
+      - Falsos negativos em "engaged" seriam alta — LLM pode parafrasear
+        "GTA RP" de N maneiras válidas. Regex restritiva geraria ruído.
+      - O critério crítico é não-regressão (não repetir). Hook é desejável
+        mas avaliado melhor pelo Gustavo no re-teste (AC9).
+    action: |
+      Nenhuma ação imediata. Se v3 for re-validado e Gustavo achar que ainda
+      falta engajamento com nichos, evolui em v4 com regex mais ampla ou
+      avaliação por LLM-judge (padrão Epic 15 v2).
+
+  - id: 17.2-03
+    severity: low
+    category: testing
+    description: |
+      Smoke D9 mede densidade em UM turno (input "Oi, tudo bem?"). Não captura
+      densidade média ao longo de múltiplos turnos.
+    rationale: |
+      O 1º turno foi exatamente o caso reportado pelo Gustavo (5 mensagens em
+      60s). Capturar isso já cobre o feedback original. Multi-turno seria
+      desejável mas exige refactor do smoke (atualmente single-turn por
+      cenário).
+    action: |
+      Quando smoke for migrado para o template canônico do brownfield (Capítulo
+      5 do canon Aria), avaliar se vale adicionar suporte multi-turno.
+      Backlog item para Epic 15 v2.
+
+handoff:
+  to: '@devops (Gage)'
+  command: 'push + deploy + seed VPS + smoke produção'
+  condition: PASS with observations
+  next_handoff_file: '.aiox/handoffs/handoff-qa-to-devops-20260425-scar-prompt-v3.yaml'
+  scope: |
+    1. Criar branch feat/scar-prompt-v3 a partir de main
+    2. Add: docs/zenya/tenants/scar-ai/prompt.md, packages/zenya/scripts/smoke-scar.mjs, docs/stories/17.2.story.md, docs/qa/gates/17.2-scar-prompt-v3.yml, .aiox/handoffs/handoff-pm-to-dev-20260424-scar-prompt-v3.yaml (consumed=true), .aiox/handoffs/handoff-dev-to-qa-20260425-scar-prompt-v3.yaml (consumed=true), .aiox/handoffs/handoff-qa-to-devops-20260425-scar-prompt-v3.yaml (novo)
+    3. Commit com mensagem do execution plan PM (incluir ref a 17.2 + feedback-gustavo + gate file)
+    4. Push + PR + merge no main
+    5. SSH VPS → git pull → npm install → npm run build → seed --dry-run (confirmar md5 novo) → seed real → pm2 reload zenya-webhook
+    6. Rodar smoke na VPS → 7/7 PASS esperado (D1, D2, D5, D5b, D6, D7, D9)
+    7. Confirmar md5 no banco bate com md5 do gray-matter parsed do .md
+    8. Devolver pro Mauro coordenar re-teste do Gustavo (AC9)
+    9. Após Gustavo confirmar OK: Mauro avisa @pm/@po pra fechar story 17.2 (Done) + scar-ai-onboarding-01 (Done) + Epic 17 progresso
+
+metadata:
+  retroactive: false
+  coderabbit:
+    ran: false
+    reason: |
+      Mudanças desta story são em arquivo .md de prompt (não-código) e
+      script .mjs de smoke (sem alteração estrutural relevante além do fix
+      latente D7 + 2 cenários novos). CodeRabbit é mais valioso em mudanças
+      de código TS/produção. Story operacional/refino não justifica overhead
+      do scan. Decisão alinhada com qa-gate-tmpl convenção.
+  smoke_local_skipped:
+    reason: 'Dívida D2 — Supabase legado no .env local'
+    documented_in: 'docs/zenya/_brownfield/aria-discovery-input-20260425.md §11 (D2)'
+    blocking: false
+  related_stories:
+    - 'scar-ai-onboarding-01 (parent — fica em Done quando 17.2 fecha completo)'
+    - '15.1 tenant-refinement-playbook (método aplicado nesta story)'
+    - '15.2 smoke-template (smoke-scar.mjs deriva deste template)'
+  related_handoffs:
+    - '.aiox/handoffs/handoff-pm-to-dev-20260424-scar-prompt-v3.yaml (consumed)'
+    - '.aiox/handoffs/handoff-dev-to-qa-20260425-scar-prompt-v3.yaml (consumed by this gate)'
