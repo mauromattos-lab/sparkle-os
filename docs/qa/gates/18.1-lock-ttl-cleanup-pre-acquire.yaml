@@ -1,0 +1,349 @@
+storyId: 18.1
+storyTitle: "Story 18.1 — Lock TTL com cleanup pre-acquire"
+epic: 18
+wave: 1
+td: TD-06
+verdict: PASS
+verdict_revision_note: |
+  Primeira passada (1ª revisão deste gate) cobriu 7 quality checks básicos.
+  Mauro corrigiu — pediu caminho certo, não rápido (memória feedback_process_integrity).
+  Segunda passada executou 5 checks formais adicionais: NFR assessment, Risk profile,
+  Test design verification, Trace Given/When/Then, Security 8-point.
+  CodeRabbit não disponível no WSL deste ambiente — observação não-bloqueante (review manual rigoroso substitui pra story S).
+
+reviewer: "@qa Quinn"
+reviewed_at: "2026-04-26 (segunda passada)"
+commit_reviewed: d7b037b
+files_reviewed:
+  - packages/zenya/src/worker/lock.ts
+  - packages/zenya/src/__tests__/lock.test.ts
+  - packages/zenya/scripts/cleanup-stale-locks.mjs
+  - docs/zenya/_canonical/04-access-credentials.md (env doc)
+  - docs/stories/epic-18-brownfield-remediation/18.1.story.md (status + AC tracking)
+
+quality_checks:
+  1_code_review:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - "Lógica do DELETE pre-acquire correta — só atua em locks órfãos (locked_at < NOW - TTL)"
+      - "Comments atualizados referenciando Story 18.1 / TD-06"
+      - "Env-driven via ZENYA_LOCK_TTL_MS com default 300000ms (5min)"
+      - "Atomicidade preservada — DELETE em Postgres com WHERE indexada"
+      - "Idempotente: cleanup pode rodar 100x sem efeito colateral"
+
+  2_test_coverage:
+    verdict: PASS
+    score: 9/10
+    findings:
+      - "7 tests cobrindo: cleanup pre-acquire, conflict 23505, DB error, threshold derivation, return values"
+      - "Mock pattern coerente com Supabase JS API (chain de método)"
+      - "Edge cases corretos: 23505 → false, 50000 → throw, success → true"
+    gaps_minor:
+      - "releaseLock e withSessionLock só smoke check (typeof X === 'function'); funções não modificadas — gap não-bloqueante"
+
+  3_ac_traceability:
+    verdict: PASS
+    score: 9/10
+    coverage:
+      AC1_delete_pre_acquire: "✅ lock.ts:18-29 + test 1"
+      AC2_cleanup_2_orfaos_existentes: "⏳ Aguarda execução script (autorização Mauro)"
+      AC3_ttl_configuravel: "✅ lock.ts:14 + test 5 (threshold derivation)"
+      AC4_smoke_crash_reacquire: "✅ tests 1+2 cobrem"
+      AC5_lock_count_estavel_24h: "⏳ Aguarda monitor pós-deploy"
+      AC6_sem_regressao_lock_vivo: "✅ test 3 (return false on 23505) + suite 111/111"
+    notes:
+      - "4 ACs cobertos por código+tests; 2 ACs ⏳ (operacional pós-merge — expected)"
+
+  4_regression_check:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - "Suite completa: 111/111 passa (era 104; +7 da Story 18.1)"
+      - "Zero regressão em outros workers (webhook 16/16, queue, agent, etc.)"
+      - "Typecheck (tsc --noEmit) passou"
+
+  5_performance:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - "+1 query SQL por acquireLock — overhead trivial (<5ms típico)"
+      - "DELETE usa WHERE com PK indexada (tenant_id, phone_number) — index hit"
+      - "Acquire é caminho raro (1ª msg de sessão sem lock vivo)"
+      - "Sem impacto perceptível em throughput de webhook"
+
+  6_security:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - "Idempotência: DELETE seguro pra rodar múltiplas vezes (zero linhas afetadas se nada órfão)"
+      - "Race condition cleanup vs acquire: DELETE atômico + INSERT ON CONFLICT garante mutex final"
+      - "Zero risco SQL injection — Supabase JS params parametrizados"
+      - "Cleanup script: Management API com PAT (não service key); preview antes do delete; --dry-run support"
+
+  7_documentation:
+    verdict: PASS
+    score: 10/10
+    findings:
+      - "Cap. 4 §1 atualizado com ZENYA_LOCK_TTL_MS (Tier 1 env vars)"
+      - "Comentários inline no código (Story 18.1 / TD-06 referenciados)"
+      - "Commit message conventional + co-authors corretos"
+      - "Story file: AC self-validation + File List + QA Results section"
+      - "Cleanup script: documentação inline completa (uso, env vars, risks)"
+
+scoring_summary:
+  total_score: 68/70
+  pass_threshold: 49/70 (7 critérios × 7 pontos mín)
+  passed: true
+  with_concerns: false
+
+severity_counts:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1  # gap menor: releaseLock/withSessionLock smoke-check superficial
+
+issues: []  # zero issues bloqueantes
+
+# ============================================================================
+# CHECKS FORMAIS ADICIONAIS — Segunda passada (caminho certo, não rápido)
+# ============================================================================
+
+extended_checks:
+
+  nfr_assessment:
+    verdict: PASS
+    security:
+      authentication_authorization: "Backend usa service key (intencional bypass RLS); WHERE filtra por (tenant_id + phone_number) — sem cross-tenant leak"
+      data_integrity: "DELETE atômico em Postgres; INSERT ON CONFLICT garante mutex final"
+      sensitive_data_exposure: "Nenhuma — tenant_id/phone_number são keys operacionais, não secrets"
+      input_validation: "tenantId e phone vêm de webhook validado em validatePayload (webhook.ts:64)"
+    performance:
+      latency_added: "+1 query SQL por acquire — Supabase REST + index hit (PK) ~3-8ms típico"
+      throughput_impact: "Trivial — acquire é caminho RARO (1ª msg de sessão sem lock vivo); maioria dos webhooks não passa pelo acquire"
+      scalability: "DELETE escala O(1) via PK index (tenant_id, phone_number); cleanup em sessão fria não impede sessão quente"
+    reliability:
+      crash_recovery: "Resolve EXATAMENTE o problema do crash entre acquire e release no finally. Pre-acquire cleanup garante recuperação automática"
+      idempotency: "DELETE seguro pra rodar múltiplas vezes (zero linhas se nada órfão)"
+      race_conditions: "DELETE...WHERE atômico em Postgres; INSERT ON CONFLICT cobre concurrent acquires (1 ganha, outros recebem 23505 — comportamento esperado)"
+
+  risk_profile:
+    verdict: PASS
+    matrix:
+      - risk: "Cleanup deleta lock vivo por engano"
+        probability: "Baixa (5%)"
+        impact: "Alto"
+        mitigation: "DELETE só atua em locks com locked_at < NOW - TTL; locks vivos são atomicamente preservados"
+      - risk: "Race condition entre 2 acquires concorrentes"
+        probability: "Média (15%)"
+        impact: "Médio"
+        mitigation: "INSERT ON CONFLICT — 1 sucede, outros recebem false (comportamento esperado, NÃO bug)"
+      - risk: "TTL muito baixo causa cleanup prematuro"
+        probability: "Média (10%)"
+        impact: "Médio"
+        mitigation: "TTL 5min default — webhook agent tipicamente termina em <30s; envelope generoso"
+      - risk: "TTL muito alto causa órfão persistir"
+        probability: "Baixa (5%)"
+        impact: "Baixo"
+        mitigation: "Pior caso = 5min de espera; próximo acquire faz cleanup automaticamente"
+      - risk: "Crash durante DELETE deixa órfão"
+        probability: "Muito baixa (<1%)"
+        impact: "Médio"
+        mitigation: "Auto-recovery: próximo acquire roda cleanup novamente"
+      - risk: "Postgres index não hit no DELETE"
+        probability: "Muito baixa"
+        impact: "Médio"
+        mitigation: "PK (tenant_id, phone_number) garante index hit; verificado em pg_indexes"
+    residual_risk: "Baixo — ganho operacional > risco residual"
+
+  test_design_verification:
+    verdict: PASS
+    covered_by_tests:
+      - "Acquire fresh (primeira sessão do phone) — test 1+2"
+      - "Acquire sobre lock vivo (23505 → false) — test 3"
+      - "Acquire sobre lock órfão (cleanup atua → INSERT sucede) — test 1 (mockLt resolve null = simula cleanup ok)"
+      - "DB error não-conflict throws — test 4"
+      - "TTL derivation correta — test 5"
+    not_covered_by_test_but_acceptable:
+      - "Race entre 2 acquires concorrentes — Vitest single-threaded; precisaria integration test (gap aceito pra story S)"
+      - "DELETE falha mas INSERT sucede — caso edge sem validação explícita; comportamento de fallback é seguro (lock vivo continua bloqueando)"
+      - "Performance benchmarking — não medido formalmente (overhead trivial inferido de PK index hit)"
+    veredito: "Test design adequado pra story S; gaps são edge cases de baixa probabilidade aceitos"
+
+  trace_given_when_then:
+    verdict: PASS
+    AC1:
+      given: "Lock órfão existe em zenya_session_lock há > STALE_LOCK_AGE_MS"
+      when: "acquireLock(tenantId, phone) chamado"
+      then: "DELETE pre-acquire remove órfão; INSERT sucede; retorna true"
+    AC2:
+      given: "2 locks órfãos atuais (Julia 5d + 8d) detectados em Brownfield Fase 2"
+      when: "Script cleanup-stale-locks.mjs executado em prod"
+      then: "2 locks removidos; SELECT COUNT(*) = 0"
+    AC3:
+      given: "ZENYA_LOCK_TTL_MS=600000 (10min) no env"
+      when: "acquireLock chamado"
+      then: "DELETE WHERE usa threshold = NOW - 10min (não 5min default)"
+    AC4:
+      given: "Processo crashou mid-execução, lock órfão persistiu"
+      when: "Próximo webhook chama acquireLock"
+      then: "Cleanup auto + INSERT sucede; sessão recuperada sem intervenção manual"
+    AC5:
+      given: "Story 18.1 deployada há 24h"
+      when: "Query SELECT COUNT(*) FROM zenya_session_lock WHERE locked_at < NOW - 5min"
+      then: "Resultado = 0 estável (ou crescimento não-monotônico)"
+    AC6:
+      given: "Lock vivo (<5min) existe pra sessão X"
+      when: "acquireLock chamado por sessão concorrente em X"
+      then: "DELETE pre-acquire NÃO afeta lock vivo; INSERT falha 23505; retorna false (sessão concorrente bloqueada corretamente)"
+
+  security_8_point_scan:
+    verdict: PASS
+    score: 8/8
+    points:
+      - point: "1. SQL injection"
+        result: PASS
+        evidence: "Supabase JS params parametrizados; zero string concat em queries"
+      - point: "2. RLS bypass"
+        result: PASS
+        evidence: "Backend usa service key (intencional). RLS dormant é backstop; closure tenantId em runtime é o gate ativo"
+      - point: "3. SECURITY DEFINER functions"
+        result: PASS
+        evidence: "Não usado nesta story. N/A"
+      - point: "4. Sensitive data exposure"
+        result: PASS
+        evidence: "tenant_id + phone_number são identificadores operacionais, não secrets. Nenhum log expõe credentials"
+      - point: "5. Auth bypass"
+        result: PASS
+        evidence: "Operação backend-only; sem auth context exposed ao código client-side"
+      - point: "6. Input validation"
+        result: PASS
+        evidence: "tenantId/phone validados upstream em webhook.ts:64 (validatePayload)"
+      - point: "7. Error handling"
+        result: PASS
+        evidence: "Erros DB throw com mensagem clara; nada vazado pro cliente final via Chatwoot"
+      - point: "8. Hardcoded secrets"
+        result: PASS
+        evidence: "Zero. ZENYA_LOCK_TTL_MS é env operacional, não secret"
+
+  coderabbit_pre_review:
+    verdict: NOT_AVAILABLE_THIS_ENV
+    reason: "CodeRabbit CLI não instalado no WSL deste ambiente Windows (verificado: which coderabbit retorna 'não instalado')"
+    mitigation: "Review manual rigoroso completo (NFR + Risk + Trace + Security 8-point) substitui pra story S de baixa complexidade. Para stories M+ futuras, instalar CodeRabbit no WSL é recomendado"
+    blocker: false
+
+extended_score_summary:
+  base_checks: "68/70 (segunda passada manteve)"
+  formal_checks_added: 5  # NFR + Risk + Test Design + Trace + Security 8-point
+  observations_added: 1  # CodeRabbit não disponível neste env
+  overall_verdict: PASS
+
+next_steps_post_gate_caminho_certo:
+  # Princípio: feedback_process_integrity (Mauro 2026-04-26) — sem atalhos.
+
+  step_1_devops_pr:
+    owner: "@devops Gage (Article II EXCLUSIVO)"
+    procedure:
+      - "1.1 — Invocar /AIOX:agents:devops"
+      - "1.2 — Validar git status (zero arquivos não-commitados além dos esperados)"
+      - "1.3 — Criar branch feature: git checkout -b feat/18.1-lock-ttl-cleanup"
+      - "1.4 — Push da branch: git push -u origin feat/18.1-lock-ttl-cleanup"
+      - "1.5 — Criar PR via gh pr create com:"
+      - "       - Title: 'feat(zenya): Story 18.1 — Lock TTL com cleanup pre-acquire (TD-06)'"
+      - "       - Body: link pra story file + link pra gate file + summary das mudanças + test plan"
+      - "       - Labels apropriadas (feat, zenya-core, brownfield-remediation)"
+      - "1.6 — CI passar (se configurado)"
+      - "1.7 — Self-review do diff no GitHub UI (mesmo solo, deixa anotação)"
+      - "1.8 — Merge via squash-merge (mantém histórico limpo na main)"
+      - "1.9 — Delete da branch após merge"
+    nao_fazer:
+      - "❌ Push direto na main (mesmo que seja Mauro como dono)"
+      - "❌ Force-push em qualquer branch shared"
+      - "❌ Pular criação de PR (mesmo pra commit pequeno)"
+
+  step_2_deploy_vps:
+    owner: "@devops Gage"
+    procedure:
+      - "2.1 — Pré-deploy snapshot SQL: salvar query `SELECT * FROM zenya_session_lock` em arquivo timestampado"
+      - "2.2 — SSH na VPS: ssh sparkle-vps"
+      - "2.3 — git pull origin main (após merge)"
+      - "2.4 — cd packages/zenya && npm install (caso package.json mudou — não mudou nesta story, mas valida)"
+      - "2.5 — npm run build (valida typecheck production)"
+      - "2.6 — npm test (valida 111/111 no env de produção)"
+      - "2.7 — pm2 reload zenya-webhook (graceful, sem downtime)"
+      - "2.8 — pm2 logs zenya-webhook --lines 30 (validar startup limpo)"
+      - "2.9 — curl http://localhost:3004/zenya/health (smoke imediato)"
+
+  step_3_cleanup_script_prod:
+    owner: "@data-engineer Dara OU @devops Gage com autorização Mauro"
+    procedure:
+      - "3.1 — DRY-RUN primeiro (obrigatório, NÃO pular):"
+      - "       node scripts/cleanup-stale-locks.mjs --dry-run"
+      - "3.2 — Validar output: deve listar EXATAMENTE 2 locks (Julia +5511999546669 8d + +5521999911664 5d)"
+      - "       Se mostrar mais que 2 ou outros: PARAR e investigar — pode ter lock recente que NÃO deve ser deletado"
+      - "3.3 — Pedir GO EXPLÍCITO Mauro pra rodar real (não autoassumir)"
+      - "3.4 — Executar real: node scripts/cleanup-stale-locks.mjs"
+      - "3.5 — Validar pós: SELECT COUNT(*) FROM zenya_session_lock WHERE locked_at < NOW() - INTERVAL '5 minutes' = 0"
+      - "3.6 — Validar pós: SELECT COUNT(*) FROM zenya_session_lock = 0 OR small (locks vivos legítimos)"
+
+  step_4_smoke_post_deploy:
+    owner: "@dev Dex + Mauro"
+    procedure:
+      - "4.1 — Cenário definido: mensagem real do número Mauro pra Zenya Prime"
+      - "4.2 — Pré-smoke checklist:"
+      - "       - pm2 list mostra zenya-webhook online"
+      - "       - logs sem erros vermelhos nos últimos 5min"
+      - "       - lock count baseline registrado"
+      - "4.3 — Mauro envia mensagem real do +5512981303249 pro WhatsApp Zenya Prime"
+      - "4.4 — Validar:"
+      - "       - Bot responde dentro de 5-15s (timing esperado)"
+      - "       - pm2 logs mostra acquire→runZenyaAgent→markAllDone→release"
+      - "       - SELECT * FROM zenya_session_lock = 0 após 30s (lock liberado no finally)"
+
+  step_5_monitor_48h:
+    owner: "Mauro + Dex (verifica)"
+    duration: "48h (não 24h — caminho certo é 2x recomendado pra story de produção)"
+    metrics:
+      - "Lock count >5min idade: deve permanecer 0 ou baixo (<5)"
+      - "Queue stats: pending count NÃO deve crescer monotonicamente"
+      - "Error logs: sem novos erros 'Lock acquisition failed'"
+      - "User-impact: zero reclamações de 'bot não respondeu'"
+    alarme_acionar_rollback_se:
+      - "Lock count >10 (sintoma de cleanup não funcionando)"
+      - "Queue pending crescendo >20/dia (sintoma de regressão)"
+      - "Erros 'Lock acquisition failed' aparecerem (DB connection issue)"
+    rollback_procedure:
+      - "git revert d7b037b"
+      - "git push origin main"
+      - "Deploy VPS via 2.x"
+      - "Investigar root cause antes de retentar"
+
+  step_6_marcar_done:
+    owner: "@dev Dex (com sign-off Mauro)"
+    pre_requisitos:
+      - "✅ PR merged"
+      - "✅ Cleanup script executado em prod (2 órfãos zerados)"
+      - "✅ Smoke pós-deploy OK"
+      - "✅ 48h monitor sem regressão"
+      - "✅ Mauro deu sign-off explícito"
+    procedure:
+      - "6.1 — Edit story file: Status: 'Ready for Review' → 'Done'"
+      - "6.2 — Add changelog na story: 'Done em YYYY-MM-DD após N horas em produção sem regressão'"
+      - "6.3 — Atualizar Tech Debt Draft TD-06 → status 'Resolved'"
+      - "6.4 — Atualizar Cap. 4 marcando ZENYA_LOCK_TTL_MS como 'em produção'"
+      - "6.5 — Notificar canal admin (Mauro) com resumo Done"
+
+# Princípio cross-story (vai pra Story 18.2-18.5 também):
+# Cada story do Epic 18 segue este caminho certo.
+# Sem atalhos: PR formal, dry-run obrigatório em ops destrutivos, monitor 48h, sign-off.
+
+aiox_compliance:
+  article_iv_no_invention: PASS
+  article_v_quality_first: PASS
+  story_lifecycle: "Ready for Review → APPROVED via gate; aguarda push @devops + cleanup execution"
+
+constitutional_notes:
+  - "Story 18.1 é a primeira do Epic 18 (Brownfield Remediation Zenya)"
+  - "Mini-gate Fase 8 do Brownfield Discovery foi APPROVED 57/60 (canon-level)"
+  - "Esta gate (story-level) é a primeira ratificação operacional pós-brownfield"
+  - "Wave 1 do Epic 18 desbloqueada: 18.2-18.5 podem prosseguir após 18.1 fechar"

@@ -90,6 +90,41 @@ export async function addLabel(params: ChatwootParams, label: string): Promise<v
 }
 
 /**
+ * Removes a label from the conversation. Idempotent: if label is absent,
+ * returns { removed: false, reason: 'not_present' } without calling POST.
+ *
+ * Used by `/reset` in test mode (Story 18.2) to let test users unblock
+ * conversations silenced by `agente-off` without admin Chatwoot access.
+ */
+export async function removeConversationLabel(
+  params: ChatwootParams,
+  label: string,
+): Promise<{ removed: boolean; reason?: string }> {
+  const getRes = await fetch(apiUrl(params, '/labels'), {
+    headers: headers(params.token),
+  });
+  if (!getRes.ok) {
+    return { removed: false, reason: `fetch_failed_${getRes.status}` };
+  }
+
+  const body = (await getRes.json()) as { payload?: string[] };
+  const existingLabels = body.payload ?? [];
+
+  if (!existingLabels.includes(label)) {
+    return { removed: false, reason: 'not_present' };
+  }
+
+  const filtered = existingLabels.filter((l) => l !== label);
+  const res = await fetch(apiUrl(params, '/labels'), {
+    method: 'POST',
+    headers: headers(params.token),
+    body: JSON.stringify({ labels: filtered }),
+  });
+  await assertOk(res, 'removeConversationLabel');
+  return { removed: true };
+}
+
+/**
  * Sets typing status for the bot in the conversation.
  * Uses /toggle_typing_status (fazer.ai Chatwoot fork endpoint).
  * mode: 'typing' = text indicator, 'recording' = audio indicator, 'off' = clear both

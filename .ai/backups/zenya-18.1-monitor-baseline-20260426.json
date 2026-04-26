@@ -1,0 +1,50 @@
+{
+  "story": "18.1",
+  "step": "5-monitor-48h-baseline",
+  "started_at_utc": "2026-04-26T10:43:00Z",
+  "ends_at_utc": "2026-04-28T10:43:00Z",
+  "duration_h": 48,
+  "started_by": "@data-engineer Dara",
+  "smoke_step_4_evidence": {
+    "phone": "+5512981303249",
+    "tenant": "Zenya Prime (SparkleOS)",
+    "received_at_utc": "2026-04-26T10:42:08Z",
+    "first_response_at_utc": "2026-04-26T10:42:14Z",
+    "second_response_at_utc": "2026-04-26T10:42:17Z",
+    "latency_first_s": 6,
+    "latency_second_s": 9,
+    "ux_confirmed": "Mauro recebeu no WhatsApp: 'Oi, Mauro! Estou aqui.' + 'O que você precisa?'",
+    "lock_count_post": 0,
+    "stale_locks_post": 0
+  },
+  "baseline_metrics": {
+    "total_locks": 0,
+    "stale_locks": 0,
+    "pm2_status": "online",
+    "pm2_restarts": 47,
+    "pm2_uptime_min": 17,
+    "pm2_memory_mb": 154
+  },
+  "rollback_triggers_48h": {
+    "lock_count_stale_above": 10,
+    "queue_pending_growth_per_day_above": 20,
+    "new_error_pattern": "Lock acquisition failed",
+    "user_impact_complaints": "any"
+  },
+  "rollback_procedure_if_triggered": {
+    "1": "git revert d7b037b (commit Story 18.1)",
+    "2": "@devops Gage: git push origin main (Article II exclusive)",
+    "3": "Deploy VPS conforme Step 2 do pattern canônico",
+    "4": "Investigar root cause antes de retentar"
+  },
+  "checkin_schedule_recommended": [
+    "T+12h (2026-04-26 22:43Z) — leve",
+    "T+24h (2026-04-27 10:43Z) — médio",
+    "T+48h (2026-04-28 10:43Z) — fechamento + sign-off Mauro"
+  ],
+  "metrics_query_template": "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE locked_at < NOW() - INTERVAL '5 minutes') AS stale FROM zenya_session_lock; SELECT COUNT(*) FROM zenya_queue WHERE status='pending';",
+  "preexisting_observations_not_regression": [
+    "TD-04: 'No tenant for Chatwoot account_id: 4' — account órfão em Chatwoot sem tenant cadastrado",
+    "TD-13/zapi: 'No credential found for tenant=... service=zapi' — vários tenants sem credenciais zapi (HL, ensinaja, doceria pré-cutover, scar pré-onboarding)"
+  ]
+}

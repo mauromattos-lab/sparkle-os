@@ -1,0 +1,179 @@
+storyId: zenya-brownfield-discovery-20260425
+type: brownfield-discovery-gate
+scope: cross-doc-canonical
+gate_phase: "Fase 7 — QA Gate"
+
+verdict: CONCERNS
+verdict_summary: |
+  4 critérios PASS + 2 CONCERNS (não-bloqueantes). Direção do canon 100% correta;
+  dois capítulos críticos (Cap. 3 Operational Manual e Cap. 6 Owner Playbook)
+  ainda em estado de input/planejamento, dependentes da Fase 8 (Aria consolida).
+  Aprovado com gate de re-validação: ao publicar Cap. 3-6, rodar mini-gate dos
+  critérios 1 e 2 antes de fechar Fase 8.
+
+reviewer: "@qa Quinn"
+reviewed_at: "2026-04-25"
+
+inputs_reviewed:
+  - docs/zenya/_canonical/ZENYA-CANONICAL.md (raiz)
+  - docs/zenya/_canonical/01-system-architecture.md (v0.2)
+  - docs/zenya/_canonical/02-schema-data.md
+  - docs/zenya/_canonical/_drafts/runtime-drift-audit.md
+  - docs/zenya/_canonical/_drafts/frontend-spec.md
+  - docs/zenya/_canonical/_drafts/technical-debt-DRAFT.md
+  - docs/zenya/_canonical/_drafts/db-specialist-review.md
+  - docs/zenya/_canonical/_drafts/ux-specialist-review.md
+  - 6 handoffs em .aiox/handoffs/
+  - packages/zenya/migrations/008_zenya_admin_contacts_and_client_users.sql (aplicada)
+  - 2 memórias persistentes novas (princípios cross-núcleo)
+
+criteria_evaluation:
+  criterion_1_new_agent_test:
+    description: "Agente @dev novo lê canon e em 15-30min sabe operar (rodar local, criar tenant, atualizar prompt, debugar)"
+    verdict: CONCERNS
+    score: 6/10
+    findings:
+      - positive: "Cap. 1 v0.2 dá visão arquitetural ponta-a-ponta clara"
+      - positive: "Cap. 2 detalha schema real validado"
+      - positive: "Frontend Spec captura UX conversacional cross-tenant"
+      - gap: "Cap. 3 (Operational Manual — 'como faço X?') não publicado — promovido em Cap. 1 §13 mas conteúdo está em RUNBOOK.md / TENANT-PLAYBOOK.md ainda separados"
+      - gap: "Cap. 4 (Access & Credentials Map) não publicado — informação tribal hoje"
+      - gap: "Cap. 5 (Test Strategy & Variants) não publicado — TENANT-REFINEMENT-PLAYBOOK.md ainda em local original"
+      - risk: "Agente novo encontra tanto canon novo quanto docs antigos coexistindo — pode confundir até consolidação Fase 8"
+    blocker: false
+    blocker_reason: "Capítulos 3-5 dependem da Fase 8 (Aria consolida). Direção definida; falta materialização."
+
+  criterion_2_owner_test:
+    description: "Mauro chega com caso real (cliente reporta bug X, quero implementar Y) e em 5-10min identifica fluxo + ação concreta + agente a invocar"
+    verdict: CONCERNS
+    score: 5/10
+    findings:
+      - positive: "Frontend Spec §9 mapeia os 9 OPs do briefing pras decisões UX que vão pro Owner Playbook"
+      - positive: "UX Specialist Review §2.7 (D-R) propôs roadmap em 3 fases pra ações operacionais"
+      - gap: "**Cap. 6 Owner Playbook NÃO publicado** — sem doc canônico onde Mauro vai com caso real"
+      - gap: "Os 9 fluxos OP-1 a OP-9 do briefing §12 ainda não foram materializados como entries do Owner Playbook (gatilho · decisões · ação · agente · critério · anti-pattern · tempo esperado)"
+      - risk: "Hoje Mauro depende de memória/contexto sessão — sem canon-canônico de auto-atendimento"
+    blocker: false
+    blocker_reason: "Cap. 6 é entregável central da Fase 8. Inputs todos disponíveis (Frontend Spec §9 + UX Specialist Review §2 + Tech Debt Draft §4)."
+
+  criterion_3_data_test:
+    description: "Todos os números, tabelas, contratos internos batem com produção. Zero defasagem ativa."
+    verdict: PASS
+    score: 10/10
+    findings:
+      - validated: "Schema completo validado via Management API contra projeto ativo uqpwmygaktkgbknhmknx — Cap. 2 §1 + §2 reflete realidade"
+      - validated: "Migrations 001-008 documentadas; 008 aplicada formalizando admin_contacts + zenya_client_users"
+      - validated: "7 tabelas zenya_* mapeadas com DDL canônica + RLS status + indexes + FKs"
+      - validated: "Estados intencionais clarificados via respostas Mauro (HL pausado, PLAKA aguarda, Ensinaja não-prioritário)"
+      - validated: "Polissemia tenant_id catalogada (TD-03) com plano zero-downtime na DB Specialist Review"
+      - validated: "Queue leak quantificado (875 pending, 4 causas distintas) — DB Specialist Review §3"
+      - validated: "Locks órfãos detectados (2 ativos: 5d e 8d Julia) com cleanup proposto"
+      - validated: "Volume real de produção mapeado (Julia 738 msgs/7d; Doceria 68; Prime 58; Scar 18; PLAKA/HL/Ensinaja zero conforme esperado)"
+      - validated: "Cap. 1 v0.2 corrigiu retroativamente afirmação errada sobre organs/zenya (não é dead code — é zenya-api PM2 + Cockpit Cliente Zenya parcial)"
+    blocker: false
+
+  criterion_4_redundancy_test:
+    description: "Docs antigos foram promovidos / apêndice histórico / deprecated com justificativa"
+    verdict: PASS
+    score: 9/10
+    findings:
+      - validated: "Cap. 1 §10 catálogo completo: 17 docs em docs/zenya/ classificados (promovidos, reescritos, apêndice histórico, deprecated)"
+      - validated: "Justificativas explícitas pra cada classificação (cicatriz, drift, ou status atual)"
+      - validated: "ZENYA-CONTEXT, NUCLEUS-CONTRACT, ISOLATION-SPEC reclassificados com nuance pós-Fase 2"
+      - gap_minor: "Movimentação física dos arquivos (mover pra _appendix/, _deprecated/) ainda não executada — Fase 8 finaliza"
+    blocker: false
+
+  criterion_5_template_test:
+    description: "Convenções de método extraíveis explicitamente (não inferidas) — nomenclatura, pastas, padrões de seed/teste/prompt/feedback-fix"
+    verdict: PASS
+    score: 9/10
+    findings:
+      - validated: "ZENYA-CANONICAL.md §convenções globais lista slug naming, branch, commits, env vars, webhook, cache, history window, debounce"
+      - validated: "Cap. 2 §5 detalha padrão de seed de credencial (AES-256-GCM)"
+      - validated: "Cap. 1 §5 contratos internos (factory tools, closure tenantId)"
+      - validated: "Frontend Spec §6 atomic conversacional (atoms/molecules/organisms/templates/pages)"
+      - validated: "UX Specialist Review §4 propôs template canônico v1 — defaults inviolavéis (P1-P9), defaults configuráveis SOP, defaults configuráveis DB column, pattern DB-vs-SOP"
+      - gap_minor: "Template canônico v1 ainda em estado de proposta na review — formalização final no Cap. 8a (Fase 8)"
+    blocker: false
+
+  criterion_6_gap_test:
+    description: "Dívidas catalogadas em P0/P1/P2 com proposta de remediation em waves"
+    verdict: PASS
+    score: 10/10
+    findings:
+      - validated: "Tech Debt Draft consolidou ~30 dívidas → 28 catalogadas em waves: 5 P0, 11 P1, 9 P2, 3 P3, 4 Resolvidas, 3 Estados intencionais"
+      - validated: "Cada dívida tem cicatriz factual ou evidência de produção"
+      - validated: "DB Specialist Review refinou TD-02 (4 causas), aprovou Opção A (rename) pra TD-03 com plano zero-downtime, propôs 6 migrations 009-014 com SQL exato"
+      - validated: "UX Specialist Review validou 7 TDs UX, recomendou descarte D-Q (cicatriz fraca), catalogou 5 achados novos UX-1 a UX-5"
+      - validated: "Waves 1-4 com critérios de saída + sequência recomendada + esforço estimado"
+      - validated: "5 decisões pendentes pra PM Morgan (Fase 10) explícitas"
+    blocker: false
+
+issues:
+  - severity: medium
+    category: docs
+    id: "Q-01"
+    description: "Cap. 3 (Operational Manual) não publicado — afeta critério 1 (agente novo)"
+    recommendation: "Aria materializa na Fase 8 promovendo + reescrevendo TENANT-PLAYBOOK §9-10 + RUNBOOK §1-7 + adicionando: (a) setup local primeira vez, (b) operações cross-tenant não-cobertas pelos atuais"
+    blocks_phase_8_gate: true
+
+  - severity: medium
+    category: docs
+    id: "Q-02"
+    description: "Cap. 6 (Owner Playbook) não publicado — afeta critério 2 (dono)"
+    recommendation: "Aria materializa na Fase 8 com os 9 fluxos OP-1 a OP-9 do briefing §12 estruturados como entries com gatilho·decisões·ação·agente·critério·anti-pattern·tempo. Inputs disponíveis: Frontend Spec §9, UX Specialist Review §2, Tech Debt Draft §4"
+    blocks_phase_8_gate: true
+
+  - severity: low
+    category: docs
+    id: "Q-03"
+    description: "Cap. 4 (Access & Credentials) e Cap. 5 (Test Strategy) também faltam"
+    recommendation: "Cap. 4 deriva de Cap. 2 §5 + .env.example (a atualizar TD-27) + memórias reference_*. Cap. 5 promove TENANT-REFINEMENT-PLAYBOOK + cenários cross-tenant C1-C7 do Frontend Spec §8"
+    blocks_phase_8_gate: false  # Importantes mas menos críticos pra critérios 1+2 do gate
+
+  - severity: low
+    category: housekeeping
+    id: "Q-04"
+    description: "Movimentação física de docs antigos pra _appendix/_deprecated não executada"
+    recommendation: "Aria faz na Fase 8 junto com publicação dos Cap. 3-6"
+    blocks_phase_8_gate: false
+
+  - severity: low
+    category: process
+    id: "Q-05"
+    description: "Mini-gate de Fase 8 sugerido — re-validar critérios 1 e 2 ao publicar Cap. 3-6"
+    recommendation: "Quando Aria fechar Fase 8, rodar release teste 'agente novo' e 'dono' com simulação concreta. Se passar, gate final APPROVED. Se não, ciclo de fix."
+    blocks_phase_8_gate: false  # É instrução pra Fase 8, não bloqueio
+
+phase_8_pre_requisites:
+  - "Aria materializa Cap. 3 (Operational Manual) consumindo TENANT-PLAYBOOK + RUNBOOK + Cap. 2 §11"
+  - "Aria materializa Cap. 6 (Owner Playbook) com os 9 OPs do briefing §12 estruturados"
+  - "Aria materializa Cap. 4 (Access & Credentials) consolidando .env vars + crypto pattern + memórias reference_*"
+  - "Aria materializa Cap. 5 (Test Strategy) promovendo TENANT-REFINEMENT-PLAYBOOK + cenários C1-C7"
+  - "Aria publica Cap. 8a (template canônico do método SparkleOS) com input UX Specialist Review §4"
+  - "Aria executa movimentação física de docs antigos (mover/deprecate/promover)"
+  - "Mini-gate ao final: rodar critérios 1 e 2 com simulação concreta"
+
+next_steps:
+  immediate:
+    - "Aria recebe este verdict CONCERNS via handoff e prossegue Fase 8 com 5 entregáveis (Cap. 3, 4, 5, 6, 8a) + housekeeping físico"
+  conditional:
+    - "Se Aria conseguir entregar Cap. 3 e Cap. 6 com qualidade no gate Fase 8 → APPROVED final"
+    - "Se Cap. 3 ou Cap. 6 ficar incompleto/superficial → mini-gate Fase 8 falha; ciclo de fix volta pra Aria"
+
+scoring_summary:
+  total_score: 49/60
+  pass_threshold: 36/60 (6 critérios × 6 pontos mín)
+  passed: true
+  with_concerns: true
+
+severity_counts:
+  critical: 0
+  high: 0
+  medium: 2
+  low: 3
+
+aiox_compliance:
+  article_iv_no_invention: PASS
+  article_v_quality_first: PASS
+  story_lifecycle: "in-progress, fase 7 done, fase 8 desbloqueada com pré-requisitos"

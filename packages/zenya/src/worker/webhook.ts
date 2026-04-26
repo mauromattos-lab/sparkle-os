@@ -9,7 +9,8 @@ import { runZenyaAgent } from '../agent/index.js';
 import { runAdminAgent } from '../agent/admin-agent.js';
 import { transcribeAudioUrl } from '../integrations/whisper.js';
 import { clearHistory } from '../agent/memory.js';
-import { sendMessage, getChatwootParams } from '../integrations/chatwoot.js';
+import { sendMessage, getChatwootParams, removeConversationLabel } from '../integrations/chatwoot.js';
+import type { TenantConfig } from '../tenant/config-loader.js';
 import { escalateToHuman } from '../tenant/escalation.js';
 
 // Debounce window: wait this long after the first message before processing.
@@ -43,6 +44,48 @@ interface ChatwootWebhookPayload {
   content_attributes?: { sent_by_zenya?: boolean } & Record<string, unknown>;
   attachments?: unknown[];
   created_at?: number;
+}
+
+/**
+ * Handles `/reset` command in test mode (Story 18.2).
+ * Clears conversation history AND removes `agente-off` label so test users
+ * can unblock the bot via WhatsApp without admin Chatwoot access.
+ *
+ * Idempotent: if label is absent or Chatwoot fails, still clears history
+ * and replies with a fallback message — never leaves the conversation stuck.
+ */
+export async function handleResetCommand(args: {
+  config: TenantConfig;
+  phone: string;
+  accountId: string;
+  conversationId: string;
+  pendingIds: string[];
+}): Promise<void> {
+  const { config, phone, accountId, conversationId, pendingIds } = args;
+
+  await clearHistory(config.id, phone);
+  const params = getChatwootParams(accountId, conversationId);
+
+  let result: { removed: boolean; reason?: string } = { removed: false, reason: 'not_attempted' };
+  try {
+    result = await removeConversationLabel(params, 'agente-off');
+  } catch (err) {
+    console.warn(`[zenya] /reset — removeLabel falhou (non-critical) tenant=${config.id}:`, err);
+    result = { removed: false, reason: 'throw' };
+  }
+
+  const message = result.removed
+    ? '🔄 Memória zerada + bot reativado. Nova conversa!'
+    : result.reason === 'not_present'
+      ? '🔄 Memória zerada. Nova conversa!'
+      : '🔄 Memória zerada. Se o bot não responder, peça pro admin remover "agente-off".';
+
+  await sendMessage(params, message);
+  await markAllDone(pendingIds);
+  console.log(
+    `[zenya] /reset — tenant=${config.id} phone=${phone} ` +
+    `cleared_history=true removed_label=${result.removed} reason=${result.reason ?? 'removed'}`,
+  );
 }
 
 // Activity/template messages are internal Chatwoot events — always ignored.
@@ -238,12 +281,9 @@ export function createWebhookRouter(): Hono {
           return;
         }
 
-        // /reset command — test mode only: clears conversation history for this session
+        // /reset command — test mode only: clears history + removes agente-off label (Story 18.2)
         if (config.allowed_phones.length > 0 && mergedMessage.trim() === '/reset') {
-          await clearHistory(config.id, phone);
-          await sendMessage(getChatwootParams(accountId, conversationId), '🔄 Memória zerada. Nova conversa!');
-          await markAllDone(pendingIds);
-          console.log(`[zenya] /reset — tenant=${config.id} phone=${phone}`);
+          await handleResetCommand({ config, phone, accountId, conversationId, pendingIds });
           return;
         }
 
