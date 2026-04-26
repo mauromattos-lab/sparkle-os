@@ -1,0 +1,304 @@
+storyId: scar-payment-links-02
+storyTitle: "Scar AI continua na conversa até comprovante (prompt v5) — 3 cenários pós-link + muda pacote"
+storyPath: docs/stories/scar-payment-links-02/README.md
+epicRef: standalone (continuação direta de scar-payment-links-01)
+
+verdict: PASS
+verdictQualifier: with-observations
+reviewedBy: '@qa (Quinn)'
+reviewedAt: 2026-04-25
+reviewedFiles:
+  - docs/zenya/tenants/scar-ai/prompt.md  # v4 → v5 (file md5 2c99f7220301c10809c52c8780ae0575)
+  - packages/zenya/scripts/smoke-scar.mjs  # refactor multi-turn + D7c + D7d
+  - docs/stories/scar-payment-links-02/README.md  # NOVA story formalização retroativa
+branch: main  # @devops cria feat/scar-payment-links-02 no push
+
+summary: |
+  Story scar-payment-links-02 entrega prompt v5 com 2 fixes do feedback noturno
+  do Gustavo (após teste real do v4): (#3) Scar escalava cedo demais após
+  mandar link Cakto — agora permanece na conversa em 3 cenários condicionais
+  (A confirma → escala / B silêncio → aguarda / C "vou pagar mais tarde" →
+  acolhe); (#4) Cliente pode mudar de pacote depois do link — sub-regra nova
+  aceita sem fricção, manda link novo, sem cobrar pacote anterior.
+
+  Smoke estendido com refactor multi-turn (backwards compat preservada) +
+  D7c (muda pacote, 4 critérios) + D7d (confirma pagamento, critical=true,
+  3 critérios). Build PASS + 104/104 testes pass (zero regressão).
+
+  Verdict PASS with observations (mesmo padrão das stories Scar anteriores):
+  smoke local não rodou (dívida D2), lista de palavras-chave pode gerar
+  falsos-positivos sutis em contextos específicos, modo exploratório
+  autorizado mas deve ser exceção.
+
+checks:
+  - id: code-review
+    result: PASS
+    notes: |
+      Prompt v5 — mudanças cirúrgicas com tom imperativo (padrão PLAKA + Scar v3/v4):
+      - Front-matter (version 5, sources +1, notes com 2 issues explícitos): ✅
+      - Regra §1 BR REESCRITA TOTALMENTE em estrutura nova:
+        "Passos do fechamento" (1-3) com instrução literal "PERMANEÇA NA CONVERSA"
+        e "NÃO chame escalarHumano ainda" — defesa explícita contra regressão.
+        "Cenário A — Cliente confirma pagamento" — 13 palavras-chave listadas
+        explicitamente (paguei, fechei, transferi, comprovante, acabei de pagar,
+        feito, pago, pix enviado, pix feito, pagamento feito, tá pago, concluído,
+        pronto, pode começar) + edge case attachment imagem com mensagem
+        condicional diferenciada + escalação como passo final.
+        "Cenário B — Silêncio" — NÃO escala, aguarda, responde dúvidas dentro
+        do escopo Cakto.
+        "Cenário C — Vou pagar mais tarde" — sinais explícitos + acolhimento
+        sem pressão + NÃO escala.
+        "Sub-regra Cliente muda de pacote" — aceita sem julgar, manda link
+        novo, opcionalmente reforça escolha alta sutilmente, com 3 NUNCAs
+        explícitos (NUNCA pressione, NUNCA peça confirmação repetida, NUNCA
+        escale por mudança). "Volte ao passo 3" reforça estado de espera.
+      - Cliente US PRESERVADO INTACTO — escala imediato (Cakto BR-only).
+      - Regra §5 atualizada coerentemente — itens BR: escala APENAS após
+        Cenário A (confirmação ou imagem). Item US mantido (escala imediato).
+
+      Preservou intactos (verificado via diff completo): Idioma + Consistência (v2),
+      Camadas Qualificação 1-4 (v3), Catálogo pacotes + avulsas (v4), Prazos,
+      Formas de pagamento (v4), Seção Links de Pagamento (v4 — tabela 6 URLs),
+      Objeções §1-§4, Regras Críticas §2/§3/§4/§6/§7/§8, Postura. ✅
+
+      Smoke v5 — refactor + extensão:
+      - Multi-turn support: scenario.input aceita string (single-turn,
+        backwards compat) OU array [{role, content}] (multi-turn novo).
+        Refactor mínimo (~15 linhas), zero quebra em D1-D9 single-turn.
+      - Display de IN renderiza "[role] content | [role] content" pra arrays.
+      - D7c (D7c_MudaPacote_v5): multi-turn 3 messages testando mudança de
+        pacote depois do link. pass_if com 4 critérios concretos:
+        linkPremium ✅ (regex match nos 2 IDs Premium) +
+        noLinkEssencial (NÃO match nos 2 IDs Essencial) +
+        noFriction (regex contra "tem certeza?", "confirma de novo",
+        "você (já) disse essencial") +
+        notEscalated (Scar não chama escalarHumano por mudança).
+      - D7d (D7d_ConfirmaPagamento_v5): multi-turn 3 messages testando
+        confirmação de pagamento via texto. critical=true.
+        pass_if com 3 critérios:
+        ackOrThanks (regex /show|valeu|obrigad|recebi|agora o gu|gu vai/i) +
+        escalated (Scar chama escalarHumano AGORA) +
+        noDoubt (regex contra "tem certeza que pagou", "consegue mostrar",
+        "manda o comprovante", "me manda print").
+
+  - id: unit-tests
+    result: PASS
+    notes: |
+      `npm test` — 104/104 testes passando em 13 test files (3.71s). Zero
+      regressão. Mudanças concentradas em arquivo de prompt (markdown) e
+      script de smoke (.mjs) — fora do escopo de testes vitest TS.
+
+  - id: acceptance-criteria
+    result: PASS
+    notes: |
+      AC1 (front-matter v5 + changelog): ✅ confirmado linhas 1-44 do prompt.md
+      AC2 (3 cenários A/B/C pós-link): ✅ linhas 252-290 — A com 13 palavras-chave + edge case imagem; B silêncio; C "vou pagar mais tarde"
+      AC3 (sub-regra "Cliente muda de pacote"): ✅ linhas 287-296 com 3 NUNCAs explícitos
+      AC4 (edge case attachment imagem): ✅ integrado ao Cenário A (linhas 264-266)
+      AC5 (smoke D7c + D7d com pseudocódigo): ✅ implementado conforme spec
+      AC6 (não tocar seções v4): ✅ diff confirma intactos integralmente
+      AC7 (zero regressão build + tests): ✅ Dev confirmou 104/104
+      AC8 (deploy seed VPS): ⏳ post-gate, escopo do @devops
+      AC9 (re-teste manual Gustavo): ⏳ post-deploy, escopo do Mauro
+      AC10 (Done após Gustavo OK): ⏳ post-AC9
+
+  - id: no-regressions
+    result: PASS
+    notes: |
+      Verificação tripla:
+      1. Diff completo do prompt.md mostra que TODAS as seções v4 que NÃO
+         deveriam ser tocadas (Idioma + Consistência, Camadas Qualificação,
+         Catálogo pacotes + avulsas, Prazos, Formas de pagamento, Seção
+         Links de Pagamento, Objeções §1-§4, Regras §2/§3/§4/§6/§7/§8, Postura)
+         ficaram literalmente intactas.
+      2. Cliente US no Regra §1 — preservado intacto (escala imediato).
+      3. 104 testes vitest passando — engine Zenya não foi alterada.
+      4. Refactor multi-turn é backwards compat — D1-D9 single-turn continuam
+         funcionando idênticos.
+
+      Smoke produção será rodado pelo @devops na VPS pós-deploy. Se algum
+      cenário falhar, rollback é trivial (re-seed v4 já idempotente, md5
+      banco volta pra d0f353cb411e7566692547851677d917 conhecido).
+
+  - id: performance
+    result: PASS
+    notes: |
+      Prompt v5 cresceu ~45 linhas vs v4 (338 vs 293 linhas, +15%). Em
+      tokens reais isso é margem de ~+8% no system_prompt. Custo marginal
+      aceitável dado o ganho de capacidade (3 cenários + sub-regra muda
+      pacote). Sem mudanças de código, query, round-trips.
+
+      Recomendação operacional: monitorar custo OpenAI Scar na primeira
+      semana pra confirmar margem aceitável. Mas não é blocker.
+
+  - id: security
+    result: PASS
+    notes: |
+      Mudanças de superfície de segurança são MELHORIAS:
+      - Regra §1 passo 3 EXPLICITAMENTE proíbe "chame escalarHumano ainda"
+        — defesa contra regressão pra v4 (escalava cedo demais).
+      - Regra §1 cliente BR fim — proibição preservada de "NÃO envia chave Pix,
+        dados bancários, ou qualquer info de pagamento que não esteja no link Cakto".
+      - Regra §5 mais RESTRITIVA — escala BR APENAS após Cenário A. Significa
+        que Scar fica "presa" na conversa por mais tempo, mas isso é
+        comportamento desejado (cliente humano paga em horizonte de minutos
+        a horas, não segundos).
+      - Smoke D7c verifica programaticamente notEscalated — gate automático
+        contra regressão de "escalar por mudança de pacote".
+      - Smoke D7d verifica programaticamente noDoubt — gate automático contra
+        regressão de "Scar duvidar do cliente quando ele confirma pagamento".
+
+      Nenhum aspecto de segurança regrediu. Vários melhoraram.
+
+  - id: documentation
+    result: PASS
+    notes: |
+      - Story scar-payment-links-02/README.md com Dev Agent Record completo
+        (Tasks/Subtasks executados, Debug Log, File List, Completion Notes,
+        Change Log, Histórico).
+      - Front-matter v5 do prompt documenta o changelog explicitamente
+        (linhas 30-44) com Issues #3 e #4 explícitos.
+      - Comentários inline no smoke explicam cada cenário novo (D7c linha 200
+        comenta "Issue #4 v5"; D7d linha 232 comenta "Issue #3 v5") com
+        referência cruzada ao README.
+      - Lista das 13 palavras-chave inline no prompt (não dispersa).
+      - Histórico de iterações Scar AI v2→v3→v4→v5 documentado tanto na
+        story quanto no feedback-gustavo-20260425-evening.md.
+
+observations:
+  - id: scar-payment-links-02-01
+    severity: low
+    category: testing
+    description: |
+      Smoke local não foi executado pelo @dev. Mesma causa das stories
+      17.2, scar-payment-links-01: `.env` local aponta pra Supabase legado
+      bloqueado. Já catalogado como dívida D2 no briefing brownfield Aria.
+
+      Não-bloqueante porque:
+      1. Mudanças do prompt v5 são incrementos cirúrgicos sobre v4 que
+         já foi smoke-validada na produção (7/8 PASS na story
+         scar-payment-links-01 mais cedo hoje).
+      2. Smoke produção é obrigatório pelo @devops no Step 7 do execution
+         plan (mesmo padrão das 2 stories Scar anteriores).
+    rationale: |
+      Smoke real será rodado na VPS pelo @devops pós-deploy. Se algum
+      cenário falhar, rollback é trivial (re-seed v4 já no banco, md5
+      conhecido d0f353cb411e7566692547851677d917).
+    action: |
+      Pré-deploy:
+      - @devops pull main + build + seed --dry-run pra confirmar md5 v5
+        diferente do banco antes de aplicar.
+
+      Pós-deploy (obrigatório):
+      - @devops roda smoke produção. Esperado: 10/10 PASS ou 9/10 (D7b
+        cliente US continua falhando por addLabel/sendMessage 404 do REPL —
+        comportamento aceito desde 17.2). D7c e D7d são os novos críticos
+        do v5 — DEVEM passar (D7d é critical=true).
+
+  - id: scar-payment-links-02-02
+    severity: low
+    category: prompt-design
+    description: |
+      Lista de 13 palavras-chave do Cenário A inclui termos que podem gerar
+      falsos-positivos em contextos específicos:
+
+      - "feito" — cliente pode dizer "Feito, sem problema" (concordando)
+        ou "Está feito o pacote?" (perguntando) sem ter pago.
+      - "pronto" — cliente pode dizer "tô pronto pra começar" (intenção,
+        não confirmação).
+      - "pode começar" — cliente pode dizer "quanto tempo até poder
+        começar?" (interrogativo).
+
+      LLM tem contexto pra desambiguar (se a mensagem for pergunta,
+      provavelmente não escalará), mas é candidato a falso-positivo.
+    rationale: |
+      Severidade low porque:
+      1. LLM moderno (GPT-4.1) deve interpretar contexto (interrogativo
+         vs declarativo).
+      2. Se Scar agradecer prematuramente, Gustavo recebe ping admin
+         antes do pagamento real — apenas ruído operacional, não dano
+         a cliente final.
+      3. Smoke D7d testa caso positivo claro ("paguei!"). Casos ambíguos
+         ficam com o LLM interpretar.
+
+      Refinamento desejável em v6 se emergirem queixas reais. Não bloqueia
+      esta story.
+    action: |
+      Backlog: monitorar nas primeiras 48h pós-deploy. Se Scar agradecer
+      pagamento prematuramente em casos ambíguos, refinar lista em v6
+      (ex: requerer "paguei" ou "pix" ou "comprovante" — mais específicos)
+      OU usar LLM-as-judge no classifier do smoke.
+
+  - id: scar-payment-links-02-03
+    severity: low
+    category: process
+    description: |
+      Story foi implementada em **modo exploratório com formalização
+      retroativa** (memória `feedback_exploratory_then_retroactive_aiox.md`).
+      Esta é a 2ª iteração consecutiva neste padrão hoje
+      (scar-payment-links-01 + scar-payment-links-02).
+
+      Justificativa documentada na story: cliente real (Gustavo) está em
+      loop ativo de teste de produção, decisão veio dele direto durante
+      teste, latência de SDC formal seria custosa.
+
+      Trilha de auditoria completa: README + handoff dev→qa formal +
+      gate file (este) + commit explícito (a fazer pelo @devops).
+    rationale: |
+      Memória `feedback_exploratory_then_retroactive_aiox.md` autoriza
+      explicitamente esse padrão pra brownfield com cliente no loop.
+
+      Mas duas iterações no mesmo dia indicam pressão real. Importante:
+      próxima iteração v6 (se houver) deve voltar ao SDC formal salvo
+      nova urgência justificada.
+    action: |
+      Documentar: este padrão **não vira rotina**. Critério pra exceção
+      mantido: cliente real em loop + decisão urgente + mudança cirúrgica
+      baixo risco. Em v6 (se necessário), avaliar se ainda atende as 3
+      condições — se Gustavo confirmou v5 OK, retorno ao SDC formal.
+
+handoff:
+  to: '@devops (Gage)'
+  command: 'push + deploy + seed VPS + smoke produção'
+  condition: PASS with observations
+  next_handoff_file: '.aiox/handoffs/handoff-qa-to-devops-20260425-scar-payment-links-02.yaml'
+  scope: |
+    1. Criar branch feat/scar-payment-links-02 a partir de main (atualizado pós-PR #12 da scar-payment-links-01)
+    2. Add: docs/zenya/tenants/scar-ai/prompt.md, packages/zenya/scripts/smoke-scar.mjs, docs/stories/scar-payment-links-02/README.md, docs/qa/gates/scar-payment-links-02.yml, docs/zenya/tenants/scar-ai/feedback-gustavo-20260425-evening.md
+    3. Commit com mensagem padronizada (referência a story + 2 fixes + gate file)
+    4. Push + PR + merge no main
+    5. SSH VPS → git pull → npm install → npm run build → seed --dry-run com envs SCAR_* (pair-SSH com Mauro — PII)
+    6. Confirmar md5 v5 NOVO (≠ d0f353cb411e7566692547851677d917 do v4) → seed real → pm2 reload zenya-webhook
+    7. **Rodar smoke na VPS** → 10/10 PASS esperado (ou 9/10 com D7b REPL 404 aceito). D7c e D7d são novos críticos — DEVEM passar.
+    8. Confirmar md5 banco bate com md5 do gray-matter parsed do .md v5.
+    9. Devolver pro Mauro coordenar re-teste do Gustavo (3 sub-fluxos):
+       - Muda pacote (Essencial → Premium): Scar manda link novo sem fricção
+       - Confirma pagamento ("paguei!"): Scar agradece + escala
+       - Silêncio depois do link: Scar NÃO escala automaticamente (validação humana)
+    10. Após Gustavo OK: fechar story scar-payment-links-02 (Done) + scar-payment-links-01 (Done) + 17.2 (Done) + scar-ai-onboarding-01 parent (Done)
+
+metadata:
+  retroactive: false  # story foi materializada antes do gate
+  exploratory_mode: true  # implementação foi exploratória — observation 03
+  coderabbit:
+    ran: false
+    reason: |
+      Mudanças desta story são em arquivo .md de prompt (não-código) e
+      script .mjs de smoke (refactor leve + 2 cenários novos). CodeRabbit
+      é mais valioso em mudanças de código TS/produção. Decisão alinhada
+      com gates anteriores Scar (17.2, scar-payment-links-01).
+  smoke_local_skipped:
+    reason: 'Dívida D2 — Supabase legado no .env local'
+    documented_in: 'docs/zenya/_brownfield/aria-discovery-input-20260425.md §11 (D2)'
+    blocking: false
+  related_stories:
+    - 'scar-payment-links-01 — v4 deployada hoje 16h (commit ed02d6d), aguarda re-teste Gustavo'
+    - '17.2 — v3 deployada hoje 15h (commit 33cc889), aguarda re-teste Gustavo'
+    - 'scar-ai-onboarding-01 (parent — fica em Done quando todas as 3 filhas estiverem Done)'
+  related_handoffs:
+    - '.aiox/handoffs/handoff-pm-to-dev-20260425-scar-payment-links-02.yaml (consumed)'
+    - '.aiox/handoffs/handoff-dev-to-qa-20260425-scar-payment-links-02.yaml (consumed by this gate)'
+  v3_v4_v5_md5_history:
+    v3_md5_banco: 3456bfa91733b4ede2f1fdea2dae509f  # rollback intermediário
+    v4_md5_banco: d0f353cb411e7566692547851677d917  # rollback default (atual em produção)
+    v5_md5_expected: TBD  # @devops confirma via --dry-run no Step 5

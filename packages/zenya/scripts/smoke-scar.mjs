@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Smoke test automatico Scar AI — roda cenarios D1-D9 da story
+// Smoke test automatico Scar AI — roda cenarios D1-D9 + D7c + D7d da story
 // scar-ai-onboarding-01 + 17.2 (prompt v3) + scar-payment-links-01 (prompt v4)
-// via AI SDK (pula Z-API/Chatwoot).
+// + scar-payment-links-02 (prompt v5) via AI SDK (pula Z-API/Chatwoot).
 //
 // Cenarios derivados do prompt + portfolios + regras criticas + feedback Gustavo:
 //   D1.  PT detection — "Oi, tudo bem?"
@@ -9,9 +9,15 @@
 //   D5.  Objecao preco — "ta caro isso"
 //   D5b. Cliente agrega 3 infos num turno — Scar NAO repete pergunta (Issue #2 v3)
 //   D6.  Pedido desconto — sem 5% off, oferta avulsas OU escala (v4 Cakto)
-//   D7.  Fechamento BR (critico) — pergunta opcao OU manda link Cakto + escala (v4)
+//   D7.  Fechamento BR (critico) — pergunta opcao OU manda link Cakto (v4)
 //   D7b. Fechamento US (critico) — escala pro Gustavo SEM mandar link (v4)
+//   D7c. Cliente muda pacote pos-link (multi-turn) — Scar manda link novo sem fricao (Issue #4 v5)
+//   D7d. Cliente confirma pagamento por texto (multi-turn) — Scar agradece + escala (Issue #3 v5)
 //   D9.  Densidade <=3 mensagens por turno (Issue #1 v3)
+//
+// scenario.input pode ser:
+//   - string (single-turn): wrappada em [{ role: 'user', content: input }]
+//   - array de [{ role, content }] (multi-turn): usado literal como messages
 //
 // Uso:
 //   cd packages/zenya
@@ -193,6 +199,65 @@ const scenarios = [
     },
   },
   {
+    // D7c — NOVO v5 (2026-04-25 noite): cliente muda de pacote depois do link
+    // Multi-turn: cliente pediu Essencial (1ª msg) + Scar respondeu com link Essencial
+    // (assistant 2ª msg fake pra o smoke) + cliente muda pra Premium (3ª msg).
+    // Esperado: Scar manda link Premium SEM fricção, NÃO escala, NÃO pede confirmação repetida.
+    id: 'D7c_MudaPacote_v5',
+    input: [
+      { role: 'user', content: 'Quero o Essencial, valor completo. Pode mandar o link.' },
+      { role: 'assistant', content: 'Show! Aqui o link do Pack Essencial: https://pay.cakto.com.br/xx2ep54 — qualquer dúvida me chama.' },
+      { role: 'user', content: 'pensei melhor, quero o Premium' },
+    ],
+    expect: {
+      language: 'pt',
+      pass_if: (text, toolCalls) => {
+        const linkPremium = /pay\.cakto\.com\.br\/(3duoqqe|3eamnbx)/i.test(text);
+        const noLinkEssencial = !/pay\.cakto\.com\.br\/(xx2ep54|faan5fw)/i.test(text);
+        const noFriction = !/tem certeza\?|confirma de novo|você (já )?disse essencial/i.test(text);
+        const notEscalated = !toolCalls.some((c) =>
+          /escalar|escala|handoff|humano/i.test(c.name ?? c.toolName ?? '')
+        );
+        return {
+          pass: linkPremium && noLinkEssencial && noFriction && notEscalated,
+          linkPremium,
+          noLinkEssencial,
+          noFriction,
+          notEscalated,
+        };
+      },
+    },
+  },
+  {
+    // D7d — NOVO v5 (2026-04-25 noite): cliente confirma pagamento via texto
+    // Multi-turn: cliente fechou Premium completo (1ª msg) + Scar mandou link (2ª msg) +
+    // cliente confirma "paguei!" (3ª msg).
+    // Esperado: Scar agradece + menciona Gustavo/grupo + escala (Cenário A da Regra §1).
+    id: 'D7d_ConfirmaPagamento_v5',
+    input: [
+      { role: 'user', content: 'Fechado, quero o Premium, valor completo' },
+      { role: 'assistant', content: 'Show! Aqui o link: https://pay.cakto.com.br/3duoqqe — qualquer dúvida me chama.' },
+      { role: 'user', content: 'paguei!' },
+    ],
+    expect: {
+      language: 'pt',
+      pass_if: (text, toolCalls) => {
+        const ackOrThanks = /show|valeu|obrigad|recebi|agora o gu|gu vai/i.test(text);
+        const escalated = toolCalls.some((c) =>
+          /escalar|escala|handoff|humano/i.test(c.name ?? c.toolName ?? '')
+        );
+        const noDoubt = !/tem certeza que pagou|consegue mostrar|manda o comprovante|me manda print/i.test(text);
+        return {
+          pass: escalated && noDoubt && ackOrThanks,
+          ackOrThanks,
+          escalated,
+          noDoubt,
+        };
+      },
+      critical: true,
+    },
+  },
+  {
     // D9 — feedback Gustavo Issue #1 (v3 2026-04-25)
     // Densidade de mensagens por turno NAO pode passar de 3.
     // No teste real, Scar mandou 5 mensagens em 60s no 1o turno (parede de texto).
@@ -244,7 +309,10 @@ for (const scenario of scenarios) {
       model: openai('gpt-4.1'),
       maxSteps: 8,
       system: systemPrompt,
-      messages: [{ role: 'user', content: scenario.input }],
+      // Multi-turn support (v5): scenario.input pode ser string (single-turn) ou array de messages
+      messages: Array.isArray(scenario.input)
+        ? scenario.input
+        : [{ role: 'user', content: scenario.input }],
       tools,
       onStepFinish: ({ toolCalls }) => {
         for (const call of toolCalls ?? []) {
@@ -282,8 +350,12 @@ for (const scenario of scenarios) {
   results.push(record);
 
   const icon = passResult.pass ? '✅' : (scenario.critical ? '🔴' : '⚠️');
+  // Render input — string (single-turn) ou array de messages (multi-turn v5)
+  const inputDisplay = Array.isArray(scenario.input)
+    ? scenario.input.map((m) => `[${m.role}] ${m.content}`).join(' | ')
+    : scenario.input;
   console.log(`${icon} ${scenario.id} (${elapsed}s)`);
-  console.log(`   IN:  ${scenario.input}`);
+  console.log(`   IN:  ${inputDisplay}`);
   console.log(`   OUT: ${responseText.slice(0, 200)}${responseText.length > 200 ? '...' : ''}`);
   if (capturedCalls.length) {
     console.log(`   TOOLS: ${capturedCalls.map((c) => c.name).join(', ')}`);
