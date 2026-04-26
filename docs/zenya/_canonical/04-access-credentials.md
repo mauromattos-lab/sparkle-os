@@ -31,6 +31,7 @@ Vivem em `.env` da VPS (`/root/SparkleOS/packages/zenya/.env`) **e** `.env` raiz
 | `ZENYA_PORT` | porta do core webhook | `.env` (default 3004) | Estática | Nenhum |
 | `ZENYA_DEBOUNCE_MS` | debounce em ms | `.env` (default 2500) | Estática (configurável) | Nenhum |
 | `ZENYA_LOCK_TTL_MS` | TTL pra detectar lock órfão (Story 18.1 / TD-06) | `.env` (default 300000 = 5min) | Estática (configurável) | Nenhum |
+| (constante interna) `BOOT_GRACE_PERIOD_MS` | Janela pós-boot do admin agent pra filtrar burst Z-API (Story 18.3 / TD-08) | hardcoded 60000 ms em `admin-agent.ts` (futura env-driven se cicatriz aparecer) | Estática | Nenhum |
 
 ### Tier 2 — Por tenant (criptografadas)
 

@@ -6,7 +6,7 @@ import { enqueue, fetchPending, markAllDone, markAllFailed } from './queue.js';
 import { withSessionLock } from './lock.js';
 import { loadTenantByAccountId } from '../tenant/config-loader.js';
 import { runZenyaAgent } from '../agent/index.js';
-import { runAdminAgent } from '../agent/admin-agent.js';
+import { runAdminAgent, isBurstMessage } from '../agent/admin-agent.js';
 import { transcribeAudioUrl } from '../integrations/whisper.js';
 import { clearHistory } from '../agent/memory.js';
 import { sendMessage, getChatwootParams, removeConversationLabel } from '../integrations/chatwoot.js';
@@ -256,6 +256,21 @@ export function createWebhookRouter(): Hono {
         if (config.admin_phones.length > 0 && config.admin_phones.includes(phone)) {
           const adminContact = config.admin_contacts.find((c) => c.phone === phone);
           const adminName = adminContact?.name ?? null;
+
+          // Story 18.3: Burst filter — drop Z-API sync history during boot grace.
+          // Uses created_at from the original webhook payload (closure). In burst scenarios
+          // Z-API floods sync messages with old timestamps; checking the trigger payload's
+          // timestamp is sufficient because Z-API doesn't interleave fresh messages mid-sync.
+          const triggerCreatedAtSec = Number(payload.created_at ?? 0);
+          if (triggerCreatedAtSec > 0 && isBurstMessage(triggerCreatedAtSec * 1000)) {
+            console.log(
+              `[admin] FILTERED burst — created_at=${triggerCreatedAtSec} ` +
+              `age_ms=${Date.now() - triggerCreatedAtSec * 1000} tenant=${config.name}`,
+            );
+            await markAllDone(pendingIds);
+            return;
+          }
+
           console.log(`[zenya] Admin mode — phone=${phone} name=${adminName ?? 'unknown'} tenant=${config.name}`);
           try {
             await runAdminAgent({

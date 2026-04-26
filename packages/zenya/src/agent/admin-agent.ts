@@ -21,6 +21,33 @@ import type { TenantConfig } from '../tenant/config-loader.js';
 const BASE_URL = process.env['CHATWOOT_BASE_URL']!;
 const TOKEN = process.env['CHATWOOT_API_TOKEN']!;
 
+// Story 18.3: Burst admin filter — Z-API sincroniza histórico ao parear,
+// gerando rajada de webhooks com mensagens antigas (created_at no passado).
+// Filtra mensagens "do passado" (>60s) durante os primeiros 60s pós-boot.
+// Mensagens do PRESENTE jamais filtradas, mesmo nos primeiros 60s.
+const PROCESS_BOOT_TIME_MS = Date.now();
+const BOOT_GRACE_PERIOD_MS = 60_000;
+const PAST_THRESHOLD_MS = 60_000;
+
+/**
+ * Returns true if the message should be filtered as a Z-API sync burst:
+ * message is from the past (>60s old) AND we're still in boot grace (<60s after process start).
+ *
+ * @param messageCreatedAtMs — message creation timestamp in epoch ms (Chatwoot sends epoch seconds; multiply by 1000)
+ * @param now — current time in ms (override for tests)
+ * @param bootTime — process boot timestamp in ms (override for tests)
+ */
+export function isBurstMessage(
+  messageCreatedAtMs: number,
+  now: number = Date.now(),
+  bootTime: number = PROCESS_BOOT_TIME_MS,
+): boolean {
+  const ageMs = now - messageCreatedAtMs;
+  const isFromPast = ageMs > PAST_THRESHOLD_MS;
+  const isInBootGrace = now < bootTime + BOOT_GRACE_PERIOD_MS;
+  return isFromPast && isInBootGrace;
+}
+
 function chatwootHeaders(): Record<string, string> {
   return { 'api_access_token': TOKEN, 'Content-Type': 'application/json' };
 }
