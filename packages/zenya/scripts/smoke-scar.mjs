@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // Smoke test automatico Scar AI — roda cenarios D1-D9 da story
-// scar-ai-onboarding-01 + 17.2 (refino prompt v3) via AI SDK (pula Z-API/Chatwoot).
+// scar-ai-onboarding-01 + 17.2 (prompt v3) + scar-payment-links-01 (prompt v4)
+// via AI SDK (pula Z-API/Chatwoot).
 //
 // Cenarios derivados do prompt + portfolios + regras criticas + feedback Gustavo:
 //   D1.  PT detection — "Oi, tudo bem?"
 //   D2.  EN detection — "Hi there, are you open for new clients?"
 //   D5.  Objecao preco — "ta caro isso"
 //   D5b. Cliente agrega 3 infos num turno — Scar NAO repete pergunta (Issue #2 v3)
-//   D6.  Pedido desconto — "faz mais barato?"
-//   D7.  Fechamento (critico — deve escalar via tool, nao falar) — "Fechado, quero o Premium"
+//   D6.  Pedido desconto — sem 5% off, oferta avulsas OU escala (v4 Cakto)
+//   D7.  Fechamento BR (critico) — pergunta opcao OU manda link Cakto + escala (v4)
+//   D7b. Fechamento US (critico) — escala pro Gustavo SEM mandar link (v4)
 //   D9.  Densidade <=3 mensagens por turno (Issue #1 v3)
 //
 // Uso:
@@ -114,26 +116,78 @@ const scenarios = [
     },
   },
   {
+    // D6 — atualizado v4 (2026-04-25): sem desconto 5% — Scar deve oferecer
+    // avulsas OU escalar pro Gustavo decidir caso a caso. NUNCA mais "5% off".
     id: 'D6_PedidoDesconto',
     input: 'Dá pra fazer mais barato? Tô meio apertado esse mês',
     expect: {
       language: 'pt',
-      pass_if: (text) => /5%/.test(text) || /cinco por cento/i.test(text),
+      pass_if: (text, toolCalls) => {
+        const noFivePercent = !/5\s*%|cinco por cento/i.test(text);
+        const noSevenPercent = !/7\s*%|sete por cento/i.test(text);
+        const offeredAvulsas = /avulsa|R\$\s*\d/i.test(text);
+        const escalated = toolCalls.some((c) =>
+          /escalar|escala|handoff|humano/i.test(c.name ?? c.toolName ?? '')
+        );
+        return {
+          pass: noFivePercent && noSevenPercent && (offeredAvulsas || escalated),
+          noFivePercent,
+          noSevenPercent,
+          offeredAvulsas,
+          escalated,
+        };
+      },
     },
   },
   {
-    id: 'D7_Fechamento_CRITICO',
+    // D7 — atualizado v4 (2026-04-25): fechamento BR
+    // Cenário válido 1: Scar pergunta opção (completo vs 50/50) — próximo turno mandaria link
+    // Cenário válido 2: Scar manda link Cakto direto + escala
+    // Em ambos: NÃO vaza Pix manual, NÃO vaza chave/dados bancários.
+    id: 'D7_Fechamento_BR_CRITICO',
     input: 'Fechado, quero o Premium. Como faço pra pagar?',
     expect: {
       language: 'pt',
-      // CRITICO: deve INVOCAR tool de escalacao (nao apenas falar que vai)
-      // E NAO deve vazar chave Pix / instrucoes de pagamento direto
+      pass_if: (text, toolCalls) => {
+        const linkSent = /pay\.cakto\.com\.br\/(xx2ep54|faan5fw|3duoqqe|3eamnbx|ptxci2h|ed2ej7n)/i.test(text);
+        const askedOption = /completo.*50|50.*completo|valor completo|50%.+entrega|prefere pagar|opção de pagamento/i.test(text);
+        const leakedPix = /\b(chave pix|minha pix|pix[:：]|envia pix pra|pagar pix pra)/i.test(text);
+        const escalated = toolCalls.some((c) =>
+          /escalar|escala|handoff|humano/i.test(c.name ?? c.toolName ?? '')
+        );
+        return {
+          pass: !leakedPix && (askedOption || (linkSent && escalated)),
+          linkSent,
+          askedOption,
+          escalated,
+          leakedPix,
+        };
+      },
+      critical: true,
+    },
+  },
+  {
+    // D7b — NOVO v4 (2026-04-25): fechamento US
+    // Cliente em inglês aceita pacote → Scar deve escalar pro Gustavo
+    // SEM mandar link Cakto (Cakto é BR-only). Mensagem 100% inglês.
+    id: 'D7b_Fechamento_US_CRITICO',
+    input: "Awesome, I'd like to go with the Premium pack. How do I pay?",
+    expect: {
+      language: 'en',
       pass_if: (text, toolCalls) => {
         const escalated = toolCalls.some((c) =>
           /escalar|escala|handoff|humano/i.test(c.name ?? c.toolName ?? '')
         );
-        const leakedPix = /\b(chave pix|minha pix|pix[:：]|pagar aqui|envia pra)/i.test(text);
-        return { escalated, leakedPix, pass: escalated && !leakedPix };
+        const linkLeaked = /pay\.cakto\.com\.br\//i.test(text);
+        const mentionedGustavo = /gustavo|connect you|i'll pass|will send/i.test(text);
+        const noPortuguese = !/\b(fala mano|tudo bem|massa|topa|legal demais|tô|tá|você|valeu)\b/i.test(text);
+        return {
+          pass: !linkLeaked && escalated && noPortuguese,
+          escalated,
+          linkLeaked,
+          mentionedGustavo,
+          noPortuguese,
+        };
       },
       critical: true,
     },
