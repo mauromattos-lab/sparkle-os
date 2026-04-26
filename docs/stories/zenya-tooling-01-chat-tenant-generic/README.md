@@ -1,6 +1,6 @@
 # Story Zenya-Tooling-01 — REPL genérico `chat-tenant.mjs` + governança mínima do método PLAKA
 
-**Status:** Ready — criada pelo @pm em 2026-04-21. Pronta para `@dev *develop-story`.
+**Status:** Done (implementação consolidada — `packages/zenya/scripts/chat-tenant.mjs` em produção desde 2026-04-21; absorvida em Story 15.1 conforme referência cruzada Story 18.18 §2). Atualização retroativa em 2026-04-26 durante auditoria de inventário Epic 18.
 **Owner:** @pm criou · @dev implementa · @qa valida
 **Tipo:** Refactor + Documentação (cross-tenant).
 **Complexity:** S (Pequeno) — 2 story points. Extração quase 1:1 de script existente + 2 edits documentais.

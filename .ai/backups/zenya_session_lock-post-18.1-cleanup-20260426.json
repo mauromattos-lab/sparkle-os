@@ -1,0 +1,31 @@
+{
+  "story": "18.1",
+  "step": "3.2-real-cleanup-executed",
+  "timestamp_iso": "2026-04-26T07:42:00Z",
+  "executor": "@data-engineer Dara",
+  "operation": "cleanup-stale-locks.mjs (real, post dry-run validation)",
+  "threshold_min": 5,
+  "removed_count": 2,
+  "removed_locks": [
+    {
+      "tenant_id": "5",
+      "phone_number": "+5511999546669",
+      "locked_at_pre": "2026-04-16T19:15:27.125409Z",
+      "age_at_removal": "9 days 15:23:34"
+    },
+    {
+      "tenant_id": "5",
+      "phone_number": "+5521999911664",
+      "locked_at_pre": "2026-04-20T12:11:09.241582Z",
+      "age_at_removal": "5 days 22:27:52"
+    }
+  ],
+  "post_cleanup_validation": {
+    "total_locks_in_table": 0,
+    "stale_locks_remaining": 0,
+    "julia_phones_remaining": 0
+  },
+  "snapshot_pre_deploy_match": ".ai/backups/zenya_session_lock-pre-18.1-20260426-072252.json (2 locks idênticos)",
+  "rollback_plan": "Não aplicável — locks órfãos sem sessão ativa, sem reverter (qualquer mensagem nova reabre via acquireLock normal).",
+  "next_step": "Step 4 — Smoke estruturado pós-deploy (Mauro envia mensagem real do +5512981303249 → Zenya Prime)"
+}

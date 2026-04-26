@@ -11,10 +11,19 @@ vi.mock('../worker/lock.js', () => ({
   withSessionLock: vi.fn().mockResolvedValue({ locked: true }),
 }));
 
-// We mock enqueue at the module level so we can assert on it
+// We mock enqueue + markAllDone at the module level so we can assert on them
 const mockEnqueue = vi.fn().mockResolvedValue(undefined);
+const mockMarkAllDone = vi.fn().mockResolvedValue(undefined);
 vi.mock('../worker/queue.js', () => ({
   enqueue: (...args: unknown[]) => mockEnqueue(...args),
+  markAllDone: (...args: unknown[]) => mockMarkAllDone(...args),
+  fetchPending: vi.fn().mockResolvedValue([]),
+  markAllFailed: vi.fn().mockResolvedValue(undefined),
+}));
+
+const mockClearHistory = vi.fn().mockResolvedValue(undefined);
+vi.mock('../agent/memory.js', () => ({
+  clearHistory: (...args: unknown[]) => mockClearHistory(...args),
 }));
 
 const mockEscalateToHuman = vi.fn().mockResolvedValue(undefined);
@@ -36,6 +45,8 @@ vi.mock('../tenant/config-loader.js', () => ({
   loadTenantByAccountId: (...args: unknown[]) => mockLoadTenantByAccountId(...args),
 }));
 
+const mockSendMessage = vi.fn().mockResolvedValue(undefined);
+const mockRemoveConversationLabel = vi.fn();
 vi.mock('../integrations/chatwoot.js', () => ({
   getChatwootParams: (accountId: string, conversationId: string) => ({
     url: 'https://chatwoot.test',
@@ -43,11 +54,13 @@ vi.mock('../integrations/chatwoot.js', () => ({
     accountId,
     conversationId,
   }),
-  sendMessage: vi.fn(),
+  sendMessage: (...args: unknown[]) => mockSendMessage(...args),
+  removeConversationLabel: (...args: unknown[]) => mockRemoveConversationLabel(...args),
 }));
 
 // Import after mocks
-import { createWebhookRouter } from '../worker/webhook.js';
+import { createWebhookRouter, handleResetCommand } from '../worker/webhook.js';
+import type { TenantConfig } from '../tenant/config-loader.js';
 
 // --- Helpers ---
 
@@ -250,5 +263,86 @@ describe('POST /webhook/chatwoot', () => {
       const res = await postWebhook(app, makePayload());
       expect(res.status).toBe(200);
     });
+  });
+});
+
+// Story 18.2 — /reset clears history + removes agente-off label in test mode
+describe('handleResetCommand (Story 18.2)', () => {
+  const baseConfig: TenantConfig = {
+    id: 'tenant-uuid-abc',
+    name: 'Test Tenant',
+    chatwoot_account_id: 'tenant-123',
+    system_prompt: '',
+    active_tools: [],
+    allowed_phones: ['+5511999990000'],
+    admin_phones: [],
+    admin_contacts: [],
+  } as unknown as TenantConfig;
+
+  const baseArgs = {
+    config: baseConfig,
+    phone: '+5511999990000',
+    accountId: 'tenant-123',
+    conversationId: 'conv-555',
+    pendingIds: ['msg-1', 'msg-2'],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('removes label when present + sends "bot reativado" message', async () => {
+    mockRemoveConversationLabel.mockResolvedValueOnce({ removed: true });
+
+    await handleResetCommand(baseArgs);
+
+    expect(mockClearHistory).toHaveBeenCalledWith('tenant-uuid-abc', '+5511999990000');
+    expect(mockRemoveConversationLabel).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'tenant-123', conversationId: 'conv-555' }),
+      'agente-off',
+    );
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      '🔄 Memória zerada + bot reativado. Nova conversa!',
+    );
+    expect(mockMarkAllDone).toHaveBeenCalledWith(['msg-1', 'msg-2']);
+  });
+
+  it('sends "memória zerada" message when label is not present (idempotent no-op)', async () => {
+    mockRemoveConversationLabel.mockResolvedValueOnce({ removed: false, reason: 'not_present' });
+
+    await handleResetCommand(baseArgs);
+
+    expect(mockClearHistory).toHaveBeenCalledOnce();
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      '🔄 Memória zerada. Nova conversa!',
+    );
+    expect(mockMarkAllDone).toHaveBeenCalledOnce();
+  });
+
+  it('falls back gracefully when removeConversationLabel throws (Chatwoot 5xx)', async () => {
+    mockRemoveConversationLabel.mockRejectedValueOnce(new Error('Chatwoot 500'));
+
+    await handleResetCommand(baseArgs);
+
+    expect(mockClearHistory).toHaveBeenCalledOnce();
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      '🔄 Memória zerada. Se o bot não responder, peça pro admin remover "agente-off".',
+    );
+    expect(mockMarkAllDone).toHaveBeenCalledOnce();
+  });
+
+  it('falls back gracefully when removeConversationLabel returns fetch_failed (Chatwoot GET non-2xx)', async () => {
+    mockRemoveConversationLabel.mockResolvedValueOnce({ removed: false, reason: 'fetch_failed_403' });
+
+    await handleResetCommand(baseArgs);
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      '🔄 Memória zerada. Se o bot não responder, peça pro admin remover "agente-off".',
+    );
+    expect(mockMarkAllDone).toHaveBeenCalledOnce();
   });
 });
