@@ -41,7 +41,7 @@ Materializar o saneamento técnico catalogado pelo Brownfield Discovery em **sto
 
 ## Inventário de stories
 
-### Wave 1 — Pre-launch (6 stories, 5-7 dias úteis com paralelismo)
+### Wave 1 — Pre-launch (7 stories, 5-7 dias úteis com paralelismo)
 
 | Story | Título | TD | Esforço | Owner principal |
 |-------|--------|-----|---------|-----------------|
@@ -51,6 +51,7 @@ Materializar o saneamento técnico catalogado pelo Brownfield Discovery em **sto
 | [18.4](./epic-18-brownfield-remediation/18.4.story.md) | KB sync ativo (worker PM2 dedicado) | TD-01 | M (1d) | `@dev` Dex + `@data-engineer` Dara |
 | [18.5](./epic-18-brownfield-remediation/18.5.story.md) | Queue leak fix consolidado (4 causas) | TD-02 | M-L (2-3d) | `@dev` Dex |
 | [18.20](./epic-18-brownfield-remediation/18.20.story.md) | Guard handoff_promise enforcement (cross-tenant) | concern HL-01 waiver | M (1-1.5d) | `@dev` Dex + `@architect` Aria |
+| [18.23](./epic-18-brownfield-remediation/18.23.story.md) | Anti-eco não aplica agente-off em outgoing antes do primeiro incoming (cross-tenant blocker Click-to-WA ads) | reporte Gustavo 2026-04-26 | S (3-5h) | `@dev` Dex + `@architect` Aria |
 
 ### Wave 2 — Robustez (10 stories, 10-15 dias úteis)
 
@@ -83,7 +84,7 @@ Materializar o saneamento técnico catalogado pelo Brownfield Discovery em **sto
 |-------|--------|------|---------|-------|
 | [18.19](./epic-18-brownfield-remediation/18.19.story.md) | Cosmetic cleanup + n8n shutdown | TD-23, TD-24, TD-25, TD-26, TD-27, TD-28 | M (3-5d agrupados) | `@dev` Dex + `@devops` Gage |
 
-**Total:** 22 sub-stories (19 originais + 3 absorvidas em 2026-04-26: 18.20 engine-hardening, 18.21 quoted-message-context, 18.22 onboarding-pipeline — drafts pré-brownfield órfãos do Epic 11 desmembrado).
+**Total:** 23 sub-stories (19 originais + 3 absorvidas em 2026-04-26: 18.20 engine-hardening, 18.21 quoted-message-context, 18.22 onboarding-pipeline — drafts pré-brownfield órfãos do Epic 11 desmembrado + 1 nova 2026-04-27: 18.23 anti-eco saudação automática WA Business — reporte Gustavo cross-tenant blocker).
 
 ---
 
@@ -269,6 +270,7 @@ Este Epic 18 publicado **encerra oficialmente o Brownfield Discovery 2026-04-25*
 |--------|------|-------|---------|
 | 1.0 | 2026-04-26 | `@pm` Morgan | Criação do Epic 18. Materializa saneamento do Brownfield Discovery 2026-04-25. |
 | 1.1 | 2026-04-26 | `@pm` Morgan | Auditoria de inventário pós-Story 18.1: 4 gaps encontrados (Story 18.2 missing file + 3 drafts órfãos do Epic 11 desmembrado). Promovidas: 18.2 (consolidação), 18.20 (engine-hardening, Wave 1), 18.21 (quoted-message-context, Wave 3), 18.22 (onboarding-pipeline, Wave 2). Total 19 → 22 stories. |
+| 1.2 | 2026-04-27 | `@sm` River | Adicionada Story 18.23 (Wave 1) — Anti-eco não aplica agente-off em outgoing antes do primeiro incoming. Causa-raiz identificada por `@pm` Morgan em `webhook.ts:184-211` após reporte do Gustavo (Scar AI) de 2 leads de Click-to-WhatsApp ad ficarem sem resposta da Scar (saudação automática WA Business confunde anti-eco). Cross-tenant blocker. Total 22 → 23 stories. |
 
 ---
 

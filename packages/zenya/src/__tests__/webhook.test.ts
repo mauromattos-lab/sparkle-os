@@ -251,6 +251,88 @@ describe('POST /webhook/chatwoot', () => {
       expect(res.status).toBe(200);
       expect(mockEscalateToHuman).toHaveBeenCalledOnce();
     });
+
+    // Story 18.23 — anti-eco não aplica agente-off em outgoing antes do
+    // primeiro incoming (bug fix Click-to-WhatsApp ad com saudação automática
+    // do WhatsApp Business app).
+    describe('outgoing before first incoming (Story 18.23)', () => {
+      it('Cenário 1 — saudação automática outgoing antes do incoming → NÃO aplica agente-off', async () => {
+        const payload = makePayload({
+          message_type: 'outgoing',
+          source_id: 'wamid.greeting-001',
+          content: 'Oi! Como podemos ajudar?',
+          conversation: { id: 'conv-999', messages_count: 1 },
+        });
+        const res = await postWebhook(app, payload);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { ok: boolean; skipped: boolean; reason: string };
+        expect(body.ok).toBe(true);
+        expect(body.skipped).toBe(true);
+        expect(body.reason).toBe('outgoing_before_first_incoming');
+        expect(mockEscalateToHuman).not.toHaveBeenCalled();
+      });
+
+      it('Cenário 2 — humano responde no painel após incoming (messages_count=3) → aplica agente-off', async () => {
+        const payload = makePayload({
+          message_type: 'outgoing',
+          source_id: null,
+          sender: { type: 'User', name: 'Julia' },
+          conversation: { id: 'conv-999', messages_count: 3 },
+        });
+        const res = await postWebhook(app, payload);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean };
+        expect(body.human_reply).toBe(true);
+        expect(mockEscalateToHuman).toHaveBeenCalledOnce();
+        expect(mockEscalateToHuman).toHaveBeenCalledWith(
+          expect.objectContaining({ source: 'human-reply' }),
+        );
+      });
+
+      it('Cenário 3 — bot reply outgoing (sent_by_zenya=true) com messages_count=1 → ignora silent, NÃO dispara guard', async () => {
+        const payload = makePayload({
+          message_type: 'outgoing',
+          content_attributes: { sent_by_zenya: true },
+          conversation: { id: 'conv-999', messages_count: 1 },
+        });
+        const res = await postWebhook(app, payload);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { ok: boolean; skipped: boolean; human_reply: boolean; reason?: string };
+        expect(body.skipped).toBe(true);
+        expect(body.human_reply).toBe(false);
+        // Bot reply path retorna sem 'reason' — guard só atua em isHumanReply=true
+        expect(body.reason).toBeUndefined();
+        expect(mockEscalateToHuman).not.toHaveBeenCalled();
+      });
+
+      it('Cenário 4 — incoming após saudação automática prévia → bot processa normalmente (não silenciado)', async () => {
+        const payload = makePayload({
+          message_type: 'incoming',
+          conversation: { id: 'conv-999', messages_count: 2 }, // saudação foi a 1ª, agora chega o incoming do cliente
+          content: 'Tenho interesse em deixar minha live mais profissional (VOL01)',
+        });
+        const res = await postWebhook(app, payload);
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { ok: boolean; message_id: string };
+        expect(body.ok).toBe(true);
+        // Bot processa: enqueue chamado, escalateToHuman não.
+        expect(mockEnqueue).toHaveBeenCalledOnce();
+        expect(mockEscalateToHuman).not.toHaveBeenCalled();
+      });
+
+      it('edge case — messages_count undefined (Chatwoot legado) → fallback regra antiga (aplica agente-off)', async () => {
+        // Defensiva: se Chatwoot não envia messages_count, comportamento antigo é preservado
+        // (aplica agente-off em outgoing não-bot). Documenta limitação da Opção A pura.
+        const payload = makePayload({
+          message_type: 'outgoing',
+          source_id: 'wamid.legacy',
+          conversation: { id: 'conv-999' }, // sem messages_count
+        });
+        const res = await postWebhook(app, payload);
+        expect(res.status).toBe(200);
+        expect(mockEscalateToHuman).toHaveBeenCalledOnce();
+      });
+    });
   });
 
   // AC4: queue insertion

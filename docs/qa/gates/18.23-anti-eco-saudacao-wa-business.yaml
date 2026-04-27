@@ -1,0 +1,211 @@
+storyId: "18.23"
+storyPath: docs/stories/epic-18-brownfield-remediation/18.23.story.md
+gateDate: 2026-04-27
+qaAgent: "@qa Quinn"
+verdict: PASS
+score: "7/7"  # 7 quality checks técnicos todos PASS. Smoke produção (Step 4 do pattern Epic 18) é gate de @devops, não conta aqui.
+
+automated_validations:
+  typescript:
+    command: "tsc --noEmit (packages/zenya)"
+    result: PASS
+    notes: "Exit code 0, zero erros — tipo ChatwootWebhookPayload.conversation.messages_count?: number tipado corretamente com JSDoc."
+  unit_tests:
+    command: "npm test webhook.test.ts (packages/zenya)"
+    result: PASS
+    notes: "30/30 tests verde no arquivo webhook.test.ts (25 legados + 5 novos Story 18.23). Suíte total Zenya: 132/132 verde, zero regressão. Duration ~1s."
+
+checks:
+  - name: code_review
+    severity: low
+    verdict: PASS
+    notes: |
+      Padrão idiomático e consistente com o resto do webhook handler:
+      - Guard inline antes do escalateToHuman (early return). Coerente com pattern
+        existente "outgoing skip silent" (bot reply) e "incoming agente-off skip"
+        já presentes no mesmo arquivo.
+      - Variáveis bem nomeadas: messagesCount (snake → camel coerção do payload),
+        isOutgoingBeforeFirstIncoming (boolean explícito, autodocumentado).
+      - Comentário 10 linhas (linhas 203-212) explica o WHY: saudação automática
+        WA Business + Click-to-WhatsApp ad. Cita o workflow n8n legado
+        (docs/zenya/raw/wf_4BadjudZ6rww1AGk.json) como evidência da decisão A pura.
+        Rastreabilidade futura excelente.
+      - Tipo ChatwootWebhookPayload.conversation extendido com JSDoc citando
+        "Story 18.23" — facilita arqueologia.
+      - Log estruturado: `[zenya] outgoing_before_first_incoming — conv=... account=... messages_count=...`
+        Inclui IDs já sanitizados (String() upstream) e o sinal usado.
+      - Decisão deliberada de NÃO extrair helper função: 8 linhas de lógica linear
+        sem ganho de legibilidade com indireção. Documentado no Dev Agent Record.
+      - Comportamento da regra antiga preservado linha-a-linha — bloco original
+        `if (isHumanReply && !labels.includes('agente-off')) { escalate }` intacto,
+        guarda nova é insertion antes, não modificação.
+      Sem code smells. Sem dead code. Sem complexidade ciclomática elevada.
+
+  - name: unit_tests
+    severity: low
+    verdict: PASS
+    notes: |
+      5 testes novos no sub-describe "outgoing before first incoming (Story 18.23)":
+      - Cenário 1 (NOVO/bug fix): saudação automática outgoing + messages_count=1
+        → assert response { reason: 'outgoing_before_first_incoming' }, escalateToHuman
+        NÃO chamado.
+      - Cenário 2 (regra preservada): outgoing humano-painel + messages_count=3
+        → human_reply=true, escalateToHuman chamado com source='human-reply'.
+      - Cenário 3 (regra preservada): bot reply (sent_by_zenya=true) + messages_count=1
+        → ignora silent, NÃO dispara guard nem escalate. Confirma que guarda só
+        atua em isHumanReply=true.
+      - Cenário 4 (NOVO/confirma fix): incoming após saudação prévia (messages_count=2)
+        → enqueue chamado, escalateToHuman não. Bot processa lead normalmente.
+      - Edge case: messages_count undefined (Chatwoot legado hipotético) → fallback
+        regra antiga (aplica agente-off). Documenta a limitação consciente
+        da Opção A pura.
+
+      Mocks reusam o pattern existente do arquivo (mockEnqueue, mockEscalateToHuman).
+      Asserções específicas (toHaveBeenCalledWith expect.objectContaining) verificam
+      shape exato dos calls, não só count.
+
+  - name: acceptance_criteria
+    severity: low
+    verdict: PASS
+    notes: |
+      8/8 ACs atendidos:
+      - AC 1 (guarda antes de escalateToHuman em conversa sem incoming prévio): ✅
+        webhook.ts:212-227, guarda inline na entrada do bloco isHumanReply.
+      - AC 2 (skip + reason no response): ✅ retorna
+        { ok: true, skipped: true, reason: 'outgoing_before_first_incoming' }.
+      - AC 3 (sinal usado): ✅ Opção A pura, decisão registrada em Dev Notes.
+        Evidência: workflow n8n legado linha 23 do JSON usa
+        `body.conversation?.messages_count === 1` em produção.
+      - AC 4 (regra original preservada — outgoing com incoming prévio): ✅
+        Cenário 2 do teste valida.
+      - AC 5 (bot reply ignora — sent_by_zenya=true): ✅ Cenário 3 valida.
+      - AC 6 (log claro): ✅ formato `[zenya] outgoing_before_first_incoming — conv=… account=… messages_count=…`
+      - AC 7 (4 cenários smoke): ✅ todos cobertos por testes unit.
+      - AC 8 (sem regressão): ✅ 132/132 verde.
+
+  - name: regression
+    severity: low
+    verdict: PASS
+    notes: |
+      Suíte total Zenya: 132/132 verde (15 test files). Zero falhas.
+      webhook.test.ts especificamente: 30/30 (25 legados de Stories 18.1-18.5
+      + 5 novos da 18.23). Comportamento dos 4 testes legados de outgoing
+      (bot reply, store phone, Chatwoot panel, agente-off label, escalateToHuman
+      throw) preservado integralmente — eles não setam messages_count, então
+      caem no fallback (Opção A pura, regra antiga).
+
+  - name: performance
+    severity: low
+    verdict: PASS
+    notes: |
+      Guard adiciona O(1): uma comparação numérica e um log síncrono. Sem query
+      DB, sem await no novo path, sem rede. Quando dispara (saudação automática
+      WA Business antes do incoming), o early return ECONOMIZA chamadas downstream:
+      - Evita loadTenantByAccountId (1 query Supabase)
+      - Evita escalateToHuman (1 chamada Chatwoot API + 1 INSERT escalation_events)
+      Improvement net positivo no path do bug fix. Outros paths inalterados.
+
+  - name: security
+    severity: low
+    verdict: PASS
+    notes: |
+      OWASP basics check (8-point):
+      - Injection: ✅ payload.conversation.messages_count entra apenas em comparação
+        numérica (`<= 1`) e em template literal de log. Nunca em SQL/eval/shell.
+      - Broken auth: ✅ não muda autenticação. Webhook continua usando o mesmo
+        validatePayload + tenant lookup downstream.
+      - Sensitive data exposure: ✅ log line inclui apenas conversationId, accountId
+        e messages_count (number). NÃO inclui phone, content, sender data — alinha
+        com pattern de logs estruturados anti-PII do resto do arquivo.
+      - XML/XSS/CSRF: N/A — webhook handler, sem render HTML.
+      - Broken access control: ✅ não bypassa nenhuma checagem; ao contrário, evita
+        que um sinal externo (saudação automática do app do dono) ative
+        agente-off indevidamente.
+      - Security misconfiguration: ✅ não muda config.
+      - Vulnerable deps: ✅ não introduz dep nova.
+      - Insufficient logging: ✅ log estruturado com IDs + sinal capturado.
+
+  - name: documentation
+    severity: low
+    verdict: PASS
+    notes: |
+      Documentação completa em 4 camadas:
+      1. JSDoc no tipo (webhook.ts linha 36-46) explica messages_count + cita Story 18.23.
+      2. Comentário inline (linhas 203-212) explica o WHY do guard + cita workflow
+         n8n legado como evidência.
+      3. Canon docs/zenya/_canonical/03-operational-manual.md §8.1 acrescentou
+         subseção "Guarda Story 18.23" com:
+         - Sinal usado (messages_count <= 1)
+         - Motivo (Click-to-WA ad + saudação automática WA Business)
+         - Edge case Chatwoot legado documentado
+      4. Story file Dev Agent Record com Completion Notes + Change Log v1.2.
+
+waivers:
+  - check: smoke_real_pos_deploy
+    reason: |
+      Step 4 do pattern operacional canônico do Epic 18 (6 steps) — smoke
+      produção real só pode rodar após @devops Gage fazer push + deploy VPS.
+      Cobertura unit dos 4 cenários AC 7 + edge case messages_count undefined
+      é suficiente para gate técnico. Smoke real validará comportamento
+      end-to-end pós-merge.
+    severity: medium
+    follow_up: |
+      @devops Gage:
+      1. Push da branch feat/18.23-anti-eco-saudacao-wa-business
+      2. PR + squash-merge em main
+      3. SSH VPS → git pull → npm install → npm run build → pm2 reload zenya-webhook
+      4. Smoke: simular fluxo (mensagem dummy via Chatwoot UI da Scar pra inbox vazia
+         sem incoming) e verificar `pm2 logs zenya-webhook | grep outgoing_before_first_incoming`
+         que skip dispara
+      5. Aguardar próximo lead REAL de Click-to-WA ad (Scar OU qualquer tenant)
+         e confirmar bot responde
+      6. Monitor 48h sem regressão antes do sign-off Mauro
+
+  - check: monitor_48h_sem_regressao
+    reason: |
+      Step 5 do pattern Epic 18 — gate temporal pós-cleanup/deploy.
+      Não pode ser exercitado pré-merge. Métricas a observar:
+      - Logs zenya-webhook: contagem de skips outgoing_before_first_incoming
+        (esperado 1+ por novo lead Click-to-WA, 0 antes do fix)
+      - Conversas Chatwoot novas com label agente-off aplicada antes do
+        primeiro incoming → deve ZERAR pra novos leads
+      - Bot responde ≤15s pra primeiro incoming após saudação automática
+    severity: low
+    follow_up: |
+      @devops monitora 48h e reporta. Se métricas estiverem fora do envelope,
+      retorna pra @dev Dex investigar.
+
+issues: []  # Zero issues técnicos identificados.
+
+recommendations:
+  - severity: low
+    category: documentation
+    title: "Quando @devops fizer smoke produção, considerar capturar amostra real do payload Chatwoot v3"
+    detail: |
+      A Opção A pura assume que Chatwoot v3 envia messages_count em 100% dos
+      eventos outgoing. Evidência: workflow n8n legado usa há ~1 ano. Mas seria
+      defensiva inteligente capturar 1 amostra real durante o smoke pós-deploy
+      (gravar `console.log(JSON.stringify(payload))` por 5min num evento outgoing
+      e revisar) e arquivar em docs/zenya/raw/chatwoot-v3-outgoing-sample.json
+      pra futura referência. Não bloqueia merge.
+
+  - severity: low
+    category: future_iteration
+    title: "Se algum tenant futuro reportar fallback acionando indevidamente, considerar Opção C (combinada)"
+    detail: |
+      Edge case test cobre messages_count undefined → aplica agente-off. Hoje
+      isso é defensivo certo (Chatwoot legado fictício). Se algum tenant rodar
+      em Chatwoot self-hosted antigo (pré-v3) e a regra antiga começar a apagar
+      leads, adicionar query DB Chatwoot como fallback (Opção C) vira priority.
+      Tracker: criar story nova quando observado, não pré-criar.
+
+next_steps: |
+  1. ✅ @qa Quinn gate PASS
+  2. ⏭️ @devops Gage *push:
+     - Push branch feat/18.23-anti-eco-saudacao-wa-business
+     - Abrir PR com title `feat(zenya): Story 18.23 — anti-eco saudação WA Business [Wave 1]`
+     - PR body referencia gate file (este) + story file
+     - Squash-merge na main
+     - Deploy VPS (snapshot SQL prévio + pm2 reload + smoke real)
+     - Monitor 48h
+  3. Após 48h sem regressão + sign-off Mauro: status story → Done.
