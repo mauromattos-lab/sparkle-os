@@ -1,0 +1,149 @@
+storyId: "18.4"
+storyTitle: "KB sync ativo (worker PM2 dedicado)"
+epic: "18 — Brownfield Remediation Zenya"
+wave: "1 (Pre-launch)"
+td: "TD-01 (P0)"
+
+reviewer: "@qa Quinn"
+reviewedAt: "2026-04-26T20:50:00Z"
+reviewType: "comprehensive (7-check + advisory)"
+
+# === GATE DECISION ===
+verdict: "PASS"
+score: "64/70"
+threshold: "49/70 (≥7/10 média)"
+
+# === 7 QUALITY CHECKS ===
+checks:
+  - id: 1
+    name: "Code Review"
+    score: "10/10"
+    verdict: "PASS"
+    findings:
+      - "run-kb-sync.mjs: 3 modos limpos (loop / --once / --tenant=X), exit codes apropriados"
+      - "ecosystem.config.cjs: 2 apps independentes, params adequados (256M memory, 60s restart_delay, autorestart, logs separados)"
+      - "Convention follows existing app pattern (zenya-webhook estrutura)"
+      - "Comments documentam decisão técnica (Dara isolation rationale)"
+      - "Sem secrets hardcoded — credenciais via Tier 2"
+
+  - id: 2
+    name: "Test Coverage"
+    score: "7/10"
+    verdict: "CONCERNS"
+    findings:
+      - "ZERO testes novos pra .mjs script — justificado (wrapper sobre kb-sync.ts já testado em outros .test.ts)"
+      - "Worker kb-sync.ts não modificado, cobertura existente preservada"
+      - "Smoke local --once falhou em fetch (env Windows) — runtime end-to-end NÃO validado pré-deploy"
+    recommendation: "Step 4 smoke real prod é OBRIGATÓRIO pra fechar gap. Não-bloqueante mas trackeable como concern."
+
+  - id: 3
+    name: "AC Traceability"
+    score: "8/10"
+    verdict: "PASS-WITH-PENDING"
+    findings:
+      - "AC1 (script criado + 2 flags): ✅ confirmado em run-kb-sync.mjs"
+      - "AC2 (ecosystem.config 2 apps): ✅ confirmado"
+      - "AC3 (pm2 list mostra zenya-kb-sync online): ⏳ só pós-deploy"
+      - "AC4 (last_synced_at atualiza em 30min): ⏳ só pós-deploy + wait"
+      - "AC5 (pm2 logs mostra ciclos 15min): ⏳ só pós-deploy"
+      - "AC6 (sem regressão): ✅ 122/122 mantida"
+    note: "3/6 ACs são operacionais (esperado pra story que adiciona worker runtime). Step 4-5 validam todos."
+
+  - id: 4
+    name: "No Regressions"
+    score: "10/10"
+    verdict: "PASS"
+    findings:
+      - "npm test 122/122 passing (era 122 pré-Story 18.4 — paridade)"
+      - "Build tsc 0 erros"
+      - "kb-sync.ts não modificado — zero risk no worker"
+      - "webhook.ts não modificado — zero risk no path principal de processamento"
+
+  - id: 5
+    name: "Performance"
+    score: "10/10"
+    verdict: "PASS"
+    findings:
+      - "Sync interval 15min adequado pra Sheets API rate limit"
+      - "restart_delay 60s evita tight restart loop em rate limit"
+      - "batchGet em 1 HTTP request (existente em fetchSheetRows) eficiente"
+      - "Promise.all em runKbSyncOnce paraleliza tenants (existente)"
+      - "max_memory 256M conservador — sync leve, suficiente"
+
+  - id: 6
+    name: "Security"
+    score: "10/10"
+    verdict: "PASS"
+    findings:
+      - "Credenciais em zenya_tenant_credentials (Tier 2 criptografado AES-256-GCM)"
+      - "Service Account JSON via getCredentialJson (decrypt centralizado)"
+      - "Sem secrets em código fonte ou env raw"
+      - "Worker read-only no Sheets API (scope spreadsheets.readonly)"
+      - "UPSERT só altera dados do próprio tenant (tenant_id em todas queries)"
+      - "POSITIVO: Discovery removeu PLAKA_SHEETS_SA_PATH info stale — não inventou, usou banco"
+
+  - id: 7
+    name: "Documentation"
+    score: "9/10"
+    verdict: "PASS"
+    findings:
+      - "Cap. 3 §11.1 atualizado (deploy 2 apps)"
+      - "Cap. 3 §11.1.5 nova (operações específicas zenya-kb-sync com debug --once / --tenant=)"
+      - "Comentários inline em run-kb-sync.mjs documentam decisão"
+      - "Comentários ecosystem.config.cjs explicam isolation rationale"
+      - "Cap. 4 NÃO atualizado — apropriado (discovery confirmou que não há env var nova)"
+
+# === ADVISORY NOTES ===
+concerns:
+  - severity: "MEDIUM"
+    category: "test-coverage"
+    description: "Smoke local não validou runtime end-to-end (env Windows fetch failed)"
+    mitigation: "Step 4 smoke prod obrigatório — Mauro/Devops valida pós-deploy via pm2 list + query last_synced_at"
+    blocking: false
+
+  - severity: "LOW"
+    category: "operational"
+    description: "Operação de 2 apps PM2 (zenya-webhook + zenya-kb-sync) pode confundir reaviso"
+    mitigation: "Cap. 3 §11.1.5 documenta. Próximo cliente novo já entra com instruções."
+    blocking: false
+
+risks:
+  - id: R1
+    description: "ecosystem.config.cjs malformado quebra pm2 reload"
+    probability: "LOW"
+    impact: "MEDIUM"
+    mitigation: "Devops testa via `pm2 reload ecosystem.config.cjs` no deploy. Validate output antes de marcar deploy ok."
+  - id: R2
+    description: "Service Account credenciais expirar mid-sync (PLAKA)"
+    probability: "LOW"
+    impact: "LOW"
+    mitigation: "Worker tem try/catch (existente em syncTenantKB). restart_delay 60s evita loop. Logs documentam."
+  - id: R3
+    description: "Race entre webhook + kb-sync ler/escrever zenya_tenant_kb_entries"
+    probability: "VERY LOW"
+    impact: "LOW"
+    mitigation: "kb-sync UPSERT é atomic em Postgres. Reads do webhook (sheets-kb tool) são de outra coluna (`question_normalized`) — sem hot path conflict."
+
+# === STEP 4 SMOKE REQUIREMENTS ===
+smokePlan:
+  obligatory: true
+  reason: "Story tem side effect persistente (UPDATE em zenya_tenant_kb_entries). Cobertura unit não substitui validação prod."
+  scenarios:
+    - "Pós-deploy: `pm2 list` mostra `zenya-kb-sync` online, restarts <5, memória <256M"
+    - "Aguardar 30min, query: SELECT MAX(last_synced_at), NOW() - MAX(last_synced_at) AS age FROM zenya_tenant_kb_entries — age <16min esperado"
+    - "Logs: `pm2 logs zenya-kb-sync --lines 50` mostra '[kb-sync] sincronizando N tenants...' + 'OK por tenant'"
+    - "Monitor 24-48h: contagem de erros em logs estável"
+
+# === NEXT STEPS ===
+nextSteps:
+  - "@devops Gage *push (PR formal + CI verde + squash-merge)"
+  - "@devops Gage *deploy VPS (pm2 reload ecosystem.config.cjs)"
+  - "Step 4 smoke obrigatório (Mauro + Gage)"
+  - "Step 5 monitor 24-48h"
+  - "Step 6 sign-off Mauro → Status: Done + TD-01 Resolved"
+
+# === COMPLIANCE ===
+aioxCompliance:
+  articleIII_storyDriven: "Story Ready com 9.5/10 PO + Escopo IN/OUT explícito"
+  articleIV_noInvention: "ACs traceable a Cap. canônicos + DB Specialist Review §2"
+  articleV_qualityFirst: "QA gate Quinn formal (não auto-validation)"

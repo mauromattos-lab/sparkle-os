@@ -608,10 +608,47 @@ curl -s -X POST "https://api.supabase.com/v1/projects/uqpwmygaktkgbknhmknx/datab
 ssh sparkle-vps
 cd /root/SparkleOS && git pull
 cd packages/zenya && npm install && npm run build
-pm2 reload zenya-webhook  # restart graceful (não-disruptivo)
+
+# A partir de Story 18.4, há 2 apps PM2:
+#   1. zenya-webhook   — recebe Chatwoot webhooks, processa mensagens, fala com LLM
+#   2. zenya-kb-sync   — sincroniza Google Sheets → zenya_tenant_kb_entries (15min loop)
+# Apps são independentes: falha em um não derruba o outro.
+
+pm2 reload zenya-webhook   # reload graceful do webhook
+pm2 reload zenya-kb-sync   # reload graceful do worker KB sync (se .env ou run-kb-sync.mjs mudou)
+
+# OU reload ambos via ecosystem (zero-downtime para os 2):
+pm2 reload ecosystem.config.cjs
 
 # Validação cross-tenant: §7 smoke em pelo menos 2-3 tenants ativos
+# Validação KB sync: pm2 logs zenya-kb-sync --lines 30 (ciclo a cada 15min)
 ```
+
+### 11.1.5 Operações específicas zenya-kb-sync (Story 18.4)
+
+```bash
+# Verificar status
+pm2 list | grep zenya-kb-sync   # deve estar online, restarts <5, memória <256M
+
+# Logs
+pm2 logs zenya-kb-sync --lines 50   # últimos sync ciclos
+
+# Sync ad-hoc (debug, sem PM2)
+ssh sparkle-vps
+cd /root/SparkleOS/packages/zenya
+node scripts/run-kb-sync.mjs --once                 # 1 ciclo todos tenants
+node scripts/run-kb-sync.mjs --tenant=<uuid>        # 1 tenant específico
+
+# Validar último sync no banco
+SELECT MAX(last_synced_at) AS last_sync, NOW() - MAX(last_synced_at) AS age
+FROM zenya_tenant_kb_entries;
+# Esperado: age < 16 minutos. Se >30min, worker provavelmente parou — check logs.
+
+# Restart manual se ciclo travou (raro)
+pm2 restart zenya-kb-sync
+```
+
+**Quem precisa Sheets sync ativo:** tenants com credencial `sheets_kb` em `zenya_tenant_credentials`. Hoje: PLAKA. Outros tenants podem ser adicionados sem código novo (basta cadastrar credencial — worker pega no próximo ciclo).
 
 ### 11.2 Mudança em pattern compartilhado (factory tools, prompt base, agente)
 
