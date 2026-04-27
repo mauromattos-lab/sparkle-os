@@ -591,6 +591,36 @@ curl -s -X POST "https://api.supabase.com/v1/projects/uqpwmygaktkgbknhmknx/datab
 - ❌ Deletar mensagens da queue sem investigar — perde audit trail
 - ❌ Inventar URL de webhook (cicatriz Doceria — sempre `api.sparkleai.tech`)
 
+### Path: "validar tenant antes de enqueue" (Story 18.5 / Fix 1)
+
+**Sintoma:** webhook retorna `400 {error: 'unknown_tenant', accountId: <X>}` e mensagem do cliente nunca aparece em `zenya_queue`.
+
+**Diagnóstico:** o `account_id` do payload Chatwoot não corresponde a nenhum registro em `zenya_tenants` (lookup falhou em `loadTenantByAccountId`). Story 18.5 valida o tenant ANTES de `enqueue` para evitar mensagens órfãs em `pending` (era 66% do leak histórico — TD-02).
+
+**Ação:**
+
+```bash
+# 1. Confirmar account_id que falhou nos logs
+ssh sparkle-vps 'pm2 logs zenya-webhook --lines 500 | grep "No tenant for account_id"'
+# Procurar: [zenya] No tenant for account_id=X — webhook rejected
+
+# 2. Verificar se tenant existe
+curl -s -X POST "https://api.supabase.com/v1/projects/uqpwmygaktkgbknhmknx/database/query" \
+  -H "Authorization: Bearer $SUPABASE_PAT" -H "Content-Type: application/json" \
+  -d "{\"query\":\"SELECT id, name, chatwoot_account_id FROM zenya_tenants WHERE chatwoot_account_id='X';\"}"
+
+# 3a. Se tenant existe mas account_id está errado na config Chatwoot:
+#     → corrigir o accountId no Chatwoot Settings > Integrations > Webhooks
+# 3b. Se tenant não existe:
+#     → seed do tenant (scripts/seed-{tenant}-tenant.mjs) ou criar registro
+```
+
+**Log a procurar:** `[zenya] No tenant for account_id=X — webhook rejected: <erro>`.
+
+**Quem faz:** `@dev` Dex investiga; `@devops` se for config Chatwoot.
+
+---
+
 **Quem faz:** `@dev` Dex investiga; `@devops` se infra (Z-API, nginx, VPS); `@qa` Quinn se padrão repetitivo (vira issue).
 
 **Tempo:** 5-30 min.

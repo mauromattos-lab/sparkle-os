@@ -115,6 +115,34 @@ function validatePayload(payload: ChatwootWebhookPayload): string | null {
   return null;
 }
 
+/**
+ * Story 18.5 / Fix 4 (Causa D — race condition, 4% do leak).
+ *
+ * Após `markAllDone`, re-fetch verifica se mensagens novas chegaram durante
+ * o processamento (entre fetchPending e markAllDone). Se houver, log warning
+ * e deixa pra próximo webhook entrante pegar — sem reentrancy/recursion.
+ *
+ * Decisão deliberada: mensagens novas durante processamento ficam pra próximo
+ * turn. Custo: pequena latência adicional (~debounce 2.5s). Benefício:
+ * simplicidade + previsibilidade + zero risco de loop infinito.
+ */
+async function checkRaceAfterMarkDone(accountId: string, phone: string): Promise<void> {
+  try {
+    const stillPending = await fetchPending(accountId, phone);
+    if (stillPending.length > 0) {
+      console.warn(
+        `[zenya] Race detected: ${stillPending.length} new pending msg(s) arrived ` +
+        `during processing (account=${accountId} phone=${phone}) — ` +
+        `next webhook will pick them up`,
+      );
+    }
+  } catch (err) {
+    // Best-effort: race check é informativo, não crítico. Se DB tá fora,
+    // log e segue — não queremos transformar uma race detection em failure.
+    console.warn(`[zenya] Race check failed (non-critical) account=${accountId}: ${err}`);
+  }
+}
+
 export function createWebhookRouter(): Hono {
   const app = new Hono();
 
@@ -187,6 +215,20 @@ export function createWebhookRouter(): Hono {
       return c.json({ ok: true, skipped: true });
     }
 
+    // Story 18.5 / Fix 1 (Causa A — tenant lookup failure, 66% do leak):
+    // Validar tenant ANTES de enqueue. Se account_id não tem tenant, rejeita
+    // o webhook com 400 sem enfileirar nada — não há trabalho a fazer e
+    // mensagens órfãs em pending eram a maior fonte de leak (581/875).
+    let tenantConfig: TenantConfig;
+    try {
+      tenantConfig = await loadTenantByAccountId(accountId);
+    } catch (err) {
+      console.warn(
+        `[zenya] No tenant for account_id=${accountId} — webhook rejected: ${err}`,
+      );
+      return c.json({ error: 'unknown_tenant', accountId }, 400);
+    }
+
     const messageId = String(payload.id ?? `${accountId}-${phone}-${Date.now()}`);
     const message = payload.content ?? '';
 
@@ -203,118 +245,150 @@ export function createWebhookRouter(): Hono {
     // Lock is ALWAYS released in withSessionLock's finally block.
     void (async () => {
       await withSessionLock(accountId, phone, async () => {
-        // Debounce: wait for any burst messages to arrive and get enqueued
-        await sleep(DEBOUNCE_MS);
+        // Story 18.5 / Fix 3 (Causa C — failure path antes try/catch interno, 25% do leak):
+        // pendingIds declarado FORA do try interno para que o catch best-effort
+        // possa marcá-los como failed mesmo se a exceção escapar de fetchPending,
+        // transcribeAudioUrl, isBurstMessage, etc. (paths sem try/catch local).
+        let pendingIds: string[] = [];
 
-        // Fetch all pending messages accumulated during the debounce window
-        const pending = await fetchPending(accountId, phone);
-        const pendingIds = pending.map((m) => m.message_id);
+        try {
+          // Debounce: wait for any burst messages to arrive and get enqueued
+          await sleep(DEBOUNCE_MS);
 
-        // Resolve content for each pending message — transcribe audio if needed
-        const resolvedContents: string[] = [];
-        let inputIsAudio = false;
-        for (const m of pending) {
-          // Defensive audio detection: queue.ts extracts audio_url from
-          // attachments[file_type=audio].data_url, but also try payload attachments
-          // directly here in case of shape drift (Chatwoot fork or Z-API update).
-          let audioUrl: string | undefined = m.audio_url;
-          if (!audioUrl && !m.content) {
-            const atts = (m as unknown as { attachments?: Array<Record<string, unknown>> }).attachments;
-            const audioAtt = Array.isArray(atts)
-              ? atts.find((a) => a['file_type'] === 'audio' && typeof a['data_url'] === 'string')
-              : null;
-            audioUrl = audioAtt?.['data_url'] as string | undefined;
-          }
+          // Fetch all pending messages accumulated during the debounce window
+          const pending = await fetchPending(accountId, phone);
+          pendingIds = pending.map((m) => m.message_id);
 
-          if (m.content) {
-            resolvedContents.push(m.content);
-          } else if (audioUrl) {
-            inputIsAudio = true;
-            const transcription = await transcribeAudioUrl(audioUrl);
-            if (transcription) {
-              resolvedContents.push(transcription);
-            } else {
-              resolvedContents.push('[áudio não transcrito]');
+          // Resolve content for each pending message — transcribe audio if needed
+          const resolvedContents: string[] = [];
+          let inputIsAudio = false;
+          for (const m of pending) {
+            // Defensive audio detection: queue.ts extracts audio_url from
+            // attachments[file_type=audio].data_url, but also try payload attachments
+            // directly here in case of shape drift (Chatwoot fork or Z-API update).
+            let audioUrl: string | undefined = m.audio_url;
+            if (!audioUrl && !m.content) {
+              const atts = (m as unknown as { attachments?: Array<Record<string, unknown>> }).attachments;
+              const audioAtt = Array.isArray(atts)
+                ? atts.find((a) => a['file_type'] === 'audio' && typeof a['data_url'] === 'string')
+                : null;
+              audioUrl = audioAtt?.['data_url'] as string | undefined;
+            }
+
+            if (m.content) {
+              resolvedContents.push(m.content);
+            } else if (audioUrl) {
+              inputIsAudio = true;
+              const transcription = await transcribeAudioUrl(audioUrl);
+              if (transcription) {
+                resolvedContents.push(transcription);
+              } else {
+                resolvedContents.push('[áudio não transcrito]');
+              }
             }
           }
-        }
-        console.log(
-          `[zenya][audio-diag] conv=${conversationId} pending=${pending.length} ` +
-          `inputIsAudio=${inputIsAudio} mergedLen=${resolvedContents.join('\n').length}`,
-        );
+          console.log(
+            `[zenya][audio-diag] conv=${conversationId} pending=${pending.length} ` +
+            `inputIsAudio=${inputIsAudio} mergedLen=${resolvedContents.join('\n').length}`,
+          );
 
-        // Merge all pending messages into a single input for the agent
-        // If no pending found (race condition), fall back to the current message
-        const mergedMessage = resolvedContents.length > 0
-          ? resolvedContents.join('\n')
-          : message;
+          // Merge all pending messages into a single input for the agent
+          // If no pending found (race condition), fall back to the current message
+          const mergedMessage = resolvedContents.length > 0
+            ? resolvedContents.join('\n')
+            : message;
 
-        // Resolve actual tenant config (cache hit after first request)
-        const config = await loadTenantByAccountId(accountId);
+          // Story 18.5 / Fix 1: reuse tenantConfig already loaded pre-enqueue.
+          // No second loadTenantByAccountId call here — would be redundant DB hit.
+          const config = tenantConfig;
 
-        // Admin channel: messages from admin_phones get metrics/management responses
-        if (config.admin_phones.length > 0 && config.admin_phones.includes(phone)) {
-          const adminContact = config.admin_contacts.find((c) => c.phone === phone);
-          const adminName = adminContact?.name ?? null;
+          // Admin channel: messages from admin_phones get metrics/management responses
+          if (config.admin_phones.length > 0 && config.admin_phones.includes(phone)) {
+            const adminContact = config.admin_contacts.find((c) => c.phone === phone);
+            const adminName = adminContact?.name ?? null;
 
-          // Story 18.3: Burst filter — drop Z-API sync history during boot grace.
-          // Uses created_at from the original webhook payload (closure). In burst scenarios
-          // Z-API floods sync messages with old timestamps; checking the trigger payload's
-          // timestamp is sufficient because Z-API doesn't interleave fresh messages mid-sync.
-          const triggerCreatedAtSec = Number(payload.created_at ?? 0);
-          if (triggerCreatedAtSec > 0 && isBurstMessage(triggerCreatedAtSec * 1000)) {
-            console.log(
-              `[admin] FILTERED burst — created_at=${triggerCreatedAtSec} ` +
-              `age_ms=${Date.now() - triggerCreatedAtSec * 1000} tenant=${config.name}`,
-            );
-            await markAllDone(pendingIds);
+            // Story 18.3: Burst filter — drop Z-API sync history during boot grace.
+            // Uses created_at from the original webhook payload (closure). In burst scenarios
+            // Z-API floods sync messages with old timestamps; checking the trigger payload's
+            // timestamp is sufficient because Z-API doesn't interleave fresh messages mid-sync.
+            const triggerCreatedAtSec = Number(payload.created_at ?? 0);
+            if (triggerCreatedAtSec > 0 && isBurstMessage(triggerCreatedAtSec * 1000)) {
+              console.log(
+                `[admin] FILTERED burst — created_at=${triggerCreatedAtSec} ` +
+                `age_ms=${Date.now() - triggerCreatedAtSec * 1000} tenant=${config.name}`,
+              );
+              await markAllDone(pendingIds);
+              await checkRaceAfterMarkDone(accountId, phone);
+              return;
+            }
+
+            console.log(`[zenya] Admin mode — phone=${phone} name=${adminName ?? 'unknown'} tenant=${config.name}`);
+            try {
+              await runAdminAgent({
+                accountId,
+                conversationId,
+                config,
+                message: mergedMessage,
+                phone,
+                adminName,
+                inputIsAudio,
+              });
+              await markAllDone(pendingIds);
+              await checkRaceAfterMarkDone(accountId, phone);
+            } catch (err) {
+              await markAllFailed(pendingIds);
+              throw err;
+            }
             return;
           }
 
-          console.log(`[zenya] Admin mode — phone=${phone} name=${adminName ?? 'unknown'} tenant=${config.name}`);
+          // Test mode: if allowed_phones is set, silently ignore unlisted numbers.
+          // Story 18.5 / Fix 2 (Causa B — test-mode-skip leak, 4% do leak):
+          // Marca pendingIds como `done` (não `failed`) — webhook fez seu trabalho
+          // corretamente decidindo ignorar. Distinção semântica importante pra alarme
+          // não sinalizar falsa instabilidade.
+          if (config.allowed_phones.length > 0 && !config.allowed_phones.includes(phone)) {
+            console.log(
+              `[zenya] Test mode — ignored ${phone} (not in allowed list for tenant ${config.name})`,
+            );
+            await markAllDone(pendingIds); // test-mode skip = sucesso silencioso (não falha)
+            await checkRaceAfterMarkDone(accountId, phone);
+            return;
+          }
+
+          // /reset command — test mode only: clears history + removes agente-off label (Story 18.2)
+          // handleResetCommand chama markAllDone internamente — não duplicar aqui.
+          if (config.allowed_phones.length > 0 && mergedMessage.trim() === '/reset') {
+            await handleResetCommand({ config, phone, accountId, conversationId, pendingIds });
+            return;
+          }
+
           try {
-            await runAdminAgent({
+            await runZenyaAgent({
+              tenantId: config.id,
               accountId,
               conversationId,
               config,
               message: mergedMessage,
               phone,
-              adminName,
               inputIsAudio,
             });
             await markAllDone(pendingIds);
+            await checkRaceAfterMarkDone(accountId, phone);
           } catch (err) {
             await markAllFailed(pendingIds);
             throw err;
           }
-          return;
-        }
-
-        // Test mode: if allowed_phones is set, silently ignore unlisted numbers
-        if (config.allowed_phones.length > 0 && !config.allowed_phones.includes(phone)) {
-          console.log(`[zenya] Test mode — ignored ${phone} (not in allowed list for tenant ${config.name})`);
-          return;
-        }
-
-        // /reset command — test mode only: clears history + removes agente-off label (Story 18.2)
-        if (config.allowed_phones.length > 0 && mergedMessage.trim() === '/reset') {
-          await handleResetCommand({ config, phone, accountId, conversationId, pendingIds });
-          return;
-        }
-
-        try {
-          await runZenyaAgent({
-            tenantId: config.id,
-            accountId,
-            conversationId,
-            config,
-            message: mergedMessage,
-            phone,
-            inputIsAudio,
-          });
-          await markAllDone(pendingIds);
         } catch (err) {
-          await markAllFailed(pendingIds);
+          // Story 18.5 / Fix 3: best-effort cleanup envelope.
+          // Captura exceções que escaparam dos try/catch internos (admin path,
+          // Zenya path) E exceções de paths sem try/catch local (fetchPending,
+          // transcribeAudioUrl, isBurstMessage, handleResetCommand).
+          // markAllFailed é idempotente: paths internos já marcaram failed,
+          // o UPDATE noop apenas reafirma o status — overhead irrelevante.
+          // .catch(() => {}) garante que falha de DB durante cleanup não
+          // mascara o erro original que estamos re-lançando.
+          await markAllFailed(pendingIds).catch(() => {});
           throw err;
         }
       });
