@@ -150,13 +150,23 @@ export async function setTypingStatus(
 /**
  * Sends an audio file as an attachment to the conversation.
  * Uses multipart/form-data — no Content-Type header (browser sets boundary).
+ *
+ * mimeType + filename default to MP3 for backward compatibility. For Cloud
+ * API tenants that need native PTT voice messages, pass `audio/ogg` +
+ * `response.ogg` so WhatsApp renders it as a voice message instead of an
+ * audio file attachment.
  */
-export async function sendAudioMessage(params: ChatwootParams, audioBuffer: Buffer): Promise<void> {
+export async function sendAudioMessage(
+  params: ChatwootParams,
+  audioBuffer: Buffer,
+  mimeType: string = 'audio/mpeg',
+  filename: string = 'response.mp3',
+): Promise<void> {
   const formData = new FormData();
   formData.append(
     'attachments[]',
-    new Blob([audioBuffer], { type: 'audio/mpeg' }),
-    'response.mp3',
+    new Blob([audioBuffer], { type: mimeType }),
+    filename,
   );
   formData.append('message_type', 'outgoing');
   formData.append('content', '');

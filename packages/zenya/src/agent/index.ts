@@ -101,8 +101,15 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
         await setTypingStatus(chatwootParams, 'on', 'recording').catch(() => undefined);
         try {
           const ssml = await formatSSML(reply);
-          const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey());
-          await sendAudioMessage(chatwootParams, audioBuffer);
+          const audioFormat = config.audio_format ?? 'mp3';
+          const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey(), undefined, audioFormat);
+          const isOgg = audioFormat === 'ogg_opus';
+          await sendAudioMessage(
+            chatwootParams,
+            audioBuffer,
+            isOgg ? 'audio/ogg' : 'audio/mpeg',
+            isOgg ? 'response.ogg' : 'response.mp3',
+          );
         } catch (audioErr) {
           // AC4 (story 7.6): fallback to text — user gets the response, not a silent error
           console.warn('[zenya] Audio generation failed, falling back to text:', audioErr);

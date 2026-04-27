@@ -24,6 +24,12 @@ export interface TenantConfig {
    * value resolves to true, matching the DB default.
    */
   escalation_public_summary?: boolean;
+  /**
+   * Audio format for TTS responses. `mp3` (default) works on Z-API tenants.
+   * `ogg_opus` is required for WhatsApp Cloud API tenants to render audio
+   * as a native voice message (PTT) instead of a downloadable attachment.
+   */
+  audio_format?: 'mp3' | 'ogg_opus';
 }
 
 const TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -62,6 +68,7 @@ function rowToConfig(row: Record<string, unknown>): TenantConfig {
     admin_phones: Array.isArray(row['admin_phones']) ? (row['admin_phones'] as string[]) : [],
     admin_contacts: Array.isArray(row['admin_contacts']) ? (row['admin_contacts'] as Array<{ phone: string; name: string }>) : [],
     escalation_public_summary: row['escalation_public_summary'] !== false,
+    audio_format: row['audio_format'] === 'ogg_opus' ? 'ogg_opus' : 'mp3',
   };
 }
 
@@ -76,7 +83,7 @@ export async function loadTenantConfig(tenantId: string): Promise<TenantConfig> 
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary, audio_format')
     .eq('id', tenantId)
     .single();
 
@@ -101,7 +108,7 @@ export async function loadTenantByAccountId(accountId: string): Promise<TenantCo
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary, audio_format')
     .eq('chatwoot_account_id', accountId)
     .single();
 

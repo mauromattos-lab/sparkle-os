@@ -26,10 +26,29 @@ export async function formatSSML(text: string): Promise<string> {
 }
 
 /**
- * Generates an MP3 audio Buffer from text using ElevenLabs eleven_flash_v2_5.
- * voiceId defaults to ELEVENLABS_VOICE_ID env var.
+ * ElevenLabs supported output formats. `ogg_opus` is required for
+ * WhatsApp Cloud API to render the audio as a native voice message
+ * (PTT) instead of as a downloadable file attachment.
  */
-export async function generateAudio(text: string, apiKey: string, voiceId?: string): Promise<Buffer> {
+export type AudioOutputFormat = 'mp3' | 'ogg_opus';
+
+const OUTPUT_FORMAT_QUERY: Record<AudioOutputFormat, string> = {
+  mp3: 'mp3_44100_128',
+  ogg_opus: 'opus_48000_64',
+};
+
+/**
+ * Generates an audio Buffer from text using ElevenLabs eleven_flash_v2_5.
+ * voiceId defaults to ELEVENLABS_VOICE_ID env var.
+ * outputFormat defaults to 'mp3' for backward compatibility — pass 'ogg_opus'
+ * for WhatsApp Cloud API tenants that need native voice messages.
+ */
+export async function generateAudio(
+  text: string,
+  apiKey: string,
+  voiceId?: string,
+  outputFormat: AudioOutputFormat = 'mp3',
+): Promise<Buffer> {
   const vid = voiceId ?? process.env['ELEVENLABS_VOICE_ID'];
   if (!vid) throw new Error('ELEVENLABS_VOICE_ID env var is required');
 
@@ -37,7 +56,8 @@ export async function generateAudio(text: string, apiKey: string, voiceId?: stri
   const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
 
   try {
-    const res = await fetch(`${ELEVENLABS_API}/${vid}`, {
+    const url = `${ELEVENLABS_API}/${vid}?output_format=${OUTPUT_FORMAT_QUERY[outputFormat]}`;
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'xi-api-key': apiKey,
