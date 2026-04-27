@@ -33,7 +33,18 @@ interface ChatwootWebhookPayload {
    */
   source_id?: string | null;
   account?: { id: string | number };
-  conversation?: { id: string | number; labels?: string[] };
+  conversation?: {
+    id: string | number;
+    labels?: string[];
+    /**
+     * Total messages in this conversation (including the current one).
+     * Story 18.23: used to detect "outgoing before first incoming" — when
+     * messages_count <= 1, the conversation has no prior incoming and an
+     * outgoing event (e.g. WhatsApp Business app's auto-greeting on
+     * Click-to-WhatsApp ads) must NOT trigger anti-eco/agente-off.
+     */
+    messages_count?: number;
+  };
   sender?: { phone_number?: string | null; name?: string; type?: string };
   /** Chatwoot payload's "meta" block — contains the conversation's Contact (customer) */
   meta?: { sender?: { phone_number?: string | null; name?: string } };
@@ -189,6 +200,34 @@ export function createWebhookRouter(): Hono {
     if (payload.message_type === 'outgoing') {
       const isBot = payload.content_attributes?.sent_by_zenya === true;
       const isHumanReply = !isBot;
+
+      // Story 18.23 — anti-eco não aplica agente-off em outgoing antes do
+      // primeiro incoming. Saudação automática do WhatsApp Business app
+      // (configurada pelo dono do número) sai como outgoing ANTES do cliente
+      // responder e era tratada como human-reply pela regra antiga, ativando
+      // agente-off e silenciando o bot quando o lead de Click-to-WhatsApp ad
+      // chegasse depois. Sinal: conversation.messages_count <= 1 (essa
+      // mensagem é a única até agora — não houve incoming prévio).
+      // Padrão validado em prod pelo workflow n8n legado (Master Zenya v3,
+      // docs/zenya/raw/wf_4BadjudZ6rww1AGk.json) que usa
+      // `body.conversation?.messages_count === 1` para detectar 1ª msg.
+      if (isHumanReply) {
+        const messagesCount = payload.conversation?.messages_count;
+        const isOutgoingBeforeFirstIncoming =
+          messagesCount !== undefined && messagesCount <= 1;
+        if (isOutgoingBeforeFirstIncoming) {
+          console.log(
+            `[zenya] outgoing_before_first_incoming — conv=${conversationId} ` +
+              `account=${accountId} messages_count=${messagesCount}`,
+          );
+          return c.json({
+            ok: true,
+            skipped: true,
+            reason: 'outgoing_before_first_incoming',
+          });
+        }
+      }
+
       if (isHumanReply && !payload.conversation?.labels?.includes('agente-off')) {
         try {
           const config = await loadTenantByAccountId(accountId);

@@ -460,6 +460,13 @@ ssh sparkle-vps 'curl http://localhost:3004/zenya/health'
 - Webhook detecta `outgoing && !sent_by_zenya` → adiciona `agente-off` automaticamente
 - Evento registrado como `escalation source = 'human-reply'`
 
+**Guarda Story 18.23 — outgoing antes do primeiro incoming não dispara `agente-off`:**
+- A regra de auto-detecção tem **uma exceção crítica**: se a `outgoing` chega numa conversa que ainda **não tem nenhum `incoming`** do cliente, `agente-off` **não é aplicada**
+- Sinal usado: `payload.conversation.messages_count <= 1` (essa é a única mensagem da conversa até agora)
+- Motivo: a "Mensagem de saudação automática" do **WhatsApp Business app** (configurável pelo dono do número) sai como `outgoing` automaticamente quando alguém clica num **Click-to-WhatsApp ad** (Instagram/Facebook), antes do cliente responder. Sem essa guarda, o bot silenciava o lead inteiro
+- Webhook retorna `{ ok: true, skipped: true, reason: 'outgoing_before_first_incoming' }` e log `[zenya] outgoing_before_first_incoming — conv=… messages_count=…`
+- Edge case: se Chatwoot legado **não** envia `messages_count`, fallback é a regra antiga (aplica `agente-off`). Chatwoot v3+ envia o campo consistentemente
+
 ### 8.2 Remover (bot volta a atender)
 
 **Manual (Chatwoot):** remover label `agente-off`. Cache imediato — próxima mensagem o bot pega.
