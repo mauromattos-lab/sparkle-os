@@ -102,7 +102,13 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
         try {
           const ssml = await formatSSML(reply);
           const audioFormat = config.audio_format ?? 'mp3';
-          const audioBuffer = await generateAudio(ssml, getElevenLabsApiKey(), undefined, audioFormat);
+          const audioBuffer = await generateAudio(
+            ssml,
+            getElevenLabsApiKey(),
+            undefined,
+            audioFormat,
+            config.tts_config,
+          );
           const isOgg = audioFormat === 'ogg_opus';
           await sendAudioMessage(
             chatwootParams,
