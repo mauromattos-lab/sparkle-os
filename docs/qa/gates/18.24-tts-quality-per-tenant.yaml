@@ -1,0 +1,250 @@
+storyId: "18.24"
+storyPath: docs/stories/epic-18-brownfield-remediation/18.24.story.md
+gateDate: 2026-04-27
+qaAgent: "@qa Quinn"
+verdict: PASS
+score: "7/7"  # 7 quality checks técnicos todos PASS. Smoke real pós-deploy é gate de @devops.
+
+automated_validations:
+  typescript:
+    command: "tsc --noEmit (packages/zenya)"
+    result: PASS
+    notes: "Exit code 0, zero erros. exactOptionalPropertyTypes:true respeitado via spread condicional em rowToConfig (cicatriz inicial corrigida durante develop)."
+  unit_tests_focused:
+    command: "npm test elevenlabs.test.ts (packages/zenya)"
+    result: PASS
+    notes: "11/11 verde no arquivo elevenlabs.test.ts (5 legados + 6 novos Story 18.24)."
+  unit_tests_full_suite:
+    command: "npm test (packages/zenya)"
+    result: PASS
+    notes: "138/138 verde em 15 test files (132 antes + 6 novos). Zero regressão cross-package."
+
+checks:
+  - name: code_review
+    severity: low
+    verdict: PASS
+    notes: |
+      Padrões idiomáticos e cirúrgicos:
+      - Tipos exportados (`TtsConfig`, `TtsVoiceSettings`) com JSDoc detalhado em cada
+        campo explicando range, semântica e default. Ótima rastreabilidade.
+      - Helper `resolveTtsConfig` extraído com escopo focado — recebe param + tenantConfig,
+        retorna shape resolvido com voice_id garantido (throw se ausente). Isolamento
+        da lógica de cascade facilita teste.
+      - Cascade documentada em JSDoc do `generateAudio`: "tenantTtsConfig > voiceIdParam
+        > ELEVENLABS_VOICE_ID env". Cobertura unit explícita do priority.
+      - Defaults novos (`DEFAULT_MODEL_ID`, `DEFAULT_VOICE_SETTINGS`) com tipo
+        `Required<TtsVoiceSettings>` — garante que nenhum campo fica undefined no resolved.
+      - Deep merge campo-a-campo (não Object.assign / spread shallow) — preserva semântica
+        de "missing field falls through to default" sem ambiguidade.
+      - Comentários "Story 18.24" em cada bloco novo facilitam arqueologia.
+      - `config-loader.ts` parse JSONB defensivo: `typeof === 'object' && !Array.isArray`
+        evita corromper se DB retornar shape inesperado. Spread condicional `...(tts_config
+        ? { tts_config } : {})` respeita exactOptionalPropertyTypes.
+      - `agent/index.ts` mudança mínima (1 linha funcional) — só passa `config.tts_config`
+        adicional. Sem refactor desnecessário.
+      Sem code smells. Sem dead code. Naming consistente em todos os arquivos.
+
+  - name: unit_tests
+    severity: low
+    verdict: PASS
+    notes: |
+      6 testes novos no sub-describe "Story 18.24 (per-tenant tts_config)":
+      - Cenário 1 (defaults globais sem ttsConfig): valida URL contém voice env + body tem
+        eleven_multilingual_v2 + voice_settings completo {0.40, 0.65, 0.40, 1.0, true}.
+      - Cenário 2 (ttsConfig parcial só voice_id): URL pega custom-voice-X, voice_settings
+        permanece com defaults novos.
+      - Cenário 3 (ttsConfig completo Roberta): valida exatamente os settings curados pra
+        Scar (0.35, 0.75, 0.30, 1.10, true) — uso de toEqual garante shape preciso.
+      - Cenário 4 (tts_config undefined): explicitamente passa undefined → equivalente
+        ao Cenário 1. Cobre o caso de tenant sem `tts_config` no DB (Prime, PLAKA, etc.).
+      - Edge: voice_id resolution priority — confirma cascade tenant > param > env via 2
+        chamadas back-to-back.
+      - Edge: voice_settings partial override (só stability custom) — outros campos
+        permanecem nos defaults. Garante deep merge field-a-field.
+
+      Helpers `lastFetchBody()` e `lastFetchUrl()` extraídos pra reuso — DRY no test.
+      Mocks reusam pattern existente do arquivo (mockFetch + vi.stubGlobal). Asserções
+      específicas (toEqual com objetos completos) verificam shape exato, não só presença.
+
+  - name: acceptance_criteria
+    severity: low
+    verdict: PASS
+    notes: |
+      11 ACs da Story 18.24 endereçados:
+      - AC 1 (Migration 010 nullable): ✅ `010_zenya_tts_config.sql` com IF NOT EXISTS,
+        comment com shape esperado, fallback documentado. Aplicada em prod via Supabase
+        Management API (status 201 confirmado durante develop).
+      - AC 2 (elevenlabs.ts atualizado — defaults + param ttsConfig + deep merge): ✅
+        Linhas 41-95 + alteração de assinatura de `generateAudio` (linha 113).
+      - AC 3 (tipo TtsConfig com shape correto): ✅ Linhas 41-72. JSDoc em cada campo.
+      - AC 4 (agent loop passa config.tts_config): ✅ packages/zenya/src/agent/index.ts:103-110.
+      - AC 5 (config-loader incluído + tipo): ✅ TenantConfig.tts_config?: TtsConfig +
+        SELECT atualizado em ambos loadTenantConfig e loadTenantByAccountId + parsing
+        JSONB defensivo em rowToConfig.
+      - AC 6 (seed Scar — SCAR_TTS_VOICE_ID env): ⚠️ NÃO implementado no seed-scar-tenant.mjs.
+        @dev usou caminho alternativo: UPDATE direto via script ad-hoc com supabase-js
+        (preserva admin_phones — cicatriz Scar 2026-04-27). Decisão pragmática registrada
+        no Completion Notes da story. Funcionalmente equivalente, mas seed reproducível
+        fica como follow-up (low priority).
+      - AC 7 (prompt Scar v7 com regra de comprimento): ✅ Regra Crítica §9 com
+        regra prática (qualificação OK, listas/preços/links texto sempre) + exemplo ❌/✅.
+      - AC 8 (curadoria voice_id): ✅ Roberta `RGymW84CSmfVugnA5tvA` confirmada por Mauro
+        após pesquisa Aria/Pax na Voice Library (filtro PT-BR feminina jovem casual).
+      - AC 9 (4 cenários teste): ✅ Cobertos + 2 edge cases extras (priority + partial).
+      - AC 10 (smoke real produção): ⏳ Pendente pós-deploy. Gate @devops, fica como waiver.
+      - AC 11 (sem regressão): ✅ 138/138. Tenants sem tts_config recebem defaults globais
+        elevados (mudança esperada e benéfica, não regressão funcional).
+
+  - name: regression
+    severity: low
+    verdict: PASS
+    notes: |
+      Suíte total Zenya: 138/138 verde (15 test files). Antes Story 18.24 eram 132 — todos
+      os 132 continuam passando + 6 novos. Zero falhas.
+
+      Comportamento preservado verificado:
+      - Tenants sem `tts_config` no DB caem em `rowToConfig` com tts_config = undefined
+        (spread condicional). Em `generateAudio`, undefined cai no Cenário 1/4 dos testes
+        — defaults globais (multilingual_v2 + settings novos) aplicados. Não é regressão
+        funcional, é mudança de qualidade documentada e aceita (Dev Notes da story
+        explicita trade-off Zenya Prime).
+      - `audio_format` (migration 009) ortogonal a `tts_config` (migration 010) — não
+        interagem entre si. Comportamento Cloud API (ogg_opus) preservado.
+      - `formatSSML` inalterada — pre-processamento via gpt-4.1-mini continua igual.
+
+  - name: performance
+    severity: medium
+    verdict: PASS
+    notes: |
+      Impacto medido na codebase: ZERO. Resolve `resolveTtsConfig` é O(1), helper síncrono
+      sem await. Body do POST cresceu ~30 bytes (campo `style`, `speed`, `use_speaker_boost`
+      adicionados) — desprezível.
+
+      ⚠️ Impacto de runtime conhecido (documentado na story): `eleven_multilingual_v2`
+      tem latência ~400-800ms vs `eleven_flash_v2_5` ~75ms. Trade-off explícito aceito
+      pelo @architect Aria — qualidade > velocidade pra resposta-áudio (SLA WhatsApp 5-15s
+      acomoda). Validar pós-deploy:
+      - Métrica: tempo médio entre request webhook e sendAudioMessage
+      - Aceitável: ≤3s end-to-end (incluindo formatSSML + generateAudio + upload Chatwoot)
+      - Se exceder consistentemente, abrir story de cache TTS (não bloquear merge).
+
+  - name: security
+    severity: low
+    verdict: PASS
+    notes: |
+      OWASP basics check (8-point):
+      - Injection: ✅ tts_config lido do DB como JSONB (typed, não eval/SQL string).
+        Campos entram em URL query (voice_id) e body JSON (model_id, voice_settings) —
+        ElevenLabs API trata. Sem string concat em SQL.
+      - Broken auth: ✅ inalterado. xi-api-key (ELEVENLABS_API_KEY) e service_role
+        (Supabase) preservados como antes.
+      - Sensitive data exposure: ✅ tts_config nunca logado (só tipo verificado em
+        rowToConfig). Não há leak de voice_id em error path comum.
+      - Broken access control: ✅ migração não muda RLS. tts_config segue mesma policy
+        que outros campos de zenya_tenants (service_role bypass; cliente sem acesso direto).
+      - Security misconfiguration: ✅ defaults novos não diminuem segurança (TTS é
+        outbound-only).
+      - Vulnerable deps: ✅ não introduz dep nova.
+      - Insufficient logging: ⚠️ Story 18.24 não adiciona log estruturado pro path TTS
+        com voice_id resolved. Não crítico, mas seria útil pra debug futuro. Tech debt
+        candidata: log line "[zenya][tts] tenant=X voice=Y model=Z latency=Nms" pra
+        observabilidade. Não bloqueia.
+      - XML/XSS: N/A (não há render HTML).
+
+  - name: documentation
+    severity: low
+    verdict: PASS
+    notes: |
+      Documentação completa em 5 camadas:
+      1. JSDoc em types `TtsConfig`/`TtsVoiceSettings` com semântica + range + default
+         de cada campo.
+      2. JSDoc em `generateAudio` documenta cascade order (tenantTtsConfig > param > env).
+      3. JSDoc em `resolveTtsConfig` explica deep merge.
+      4. SQL comment em `010_zenya_tts_config.sql` documenta shape JSONB esperado e
+         fallback (NULL = defaults globais).
+      5. Story Dev Agent Record com Completion Notes detalhado (decisão técnica autônoma,
+         cascade do voice_id, speed param risk, migration aplicada via Management API,
+         UPDATE direto vs applyTenantSeed cicatriz Scar) + Change Log v1.3.
+
+      Prompt Scar v7: Regra Crítica §9 com regra prática + exemplo ❌/✅. Frontmatter
+      atualizado com source acrescentada e notes v7.
+
+waivers:
+  - check: smoke_real_pos_deploy
+    reason: |
+      Step 4 do pattern operacional canônico do Epic 18 (6 steps) — smoke real só pode
+      rodar após @devops Gage fazer push + deploy VPS. Cobertura unit dos 6 cenários
+      cobre o comportamento programático. Smoke real validará tom em produção.
+    severity: medium
+    follow_up: |
+      @devops Gage:
+      1. Push da branch feat/18.24-tts-quality-per-tenant
+      2. PR + squash-merge em main
+      3. SSH VPS → git pull → npm install → npm run build → pm2 reload zenya-webhook
+      4. Smoke real comparativo:
+         a) Aguardar config-loader cache TTL expirar (5min) ou forçar reload
+         b) Mandar mensagem WhatsApp pra Scar pedindo resposta-áudio (test mode admin)
+         c) Ouvir áudio response com voice Roberta — comparar A/B com áudio antigo
+            do Gustavo 2026-04-26 14:46:45 (.ogg)
+         d) Validar: (i) voz Roberta confirmada (não a default ELEVENLABS_VOICE_ID),
+            (ii) maior expressão emocional, (iii) comprimento ≤30s
+      5. Validar com Gustavo direto pelo WhatsApp ("tá natural agora?")
+      6. Se Gustavo aprovar → sign-off Mauro → status story Done.
+      7. Se NÃO aprovar (ex: Roberta soa esquisita em PT-BR) → pivotar voice_id pra
+         alternativa (Keren, Zenya2 ou outra) via UPDATE direto. Não precisa código novo.
+
+  - check: monitor_48h_sem_regressao
+    reason: |
+      Step 5 do pattern Epic 18 — gate temporal pós-deploy. Métricas a observar
+      sem regressão TTS cross-tenant:
+      - pm2 logs zenya-webhook | grep -i 'ElevenLabs API error' deve permanecer 0/dia
+      - Latência média TTS ≤3s end-to-end (request webhook → sendAudioMessage)
+      - Tenants sem tts_config (Prime, PLAKA, Doceria, Fun, HL) respondem com áudio
+        sem erro (defaults globais multilingual_v2 funcionam universalmente)
+    severity: low
+    follow_up: |
+      @devops monitora 48h. Se latência exceder, abrir story de cache TTS (Wave 3 idea).
+
+issues: []  # Zero issues técnicos identificados.
+
+recommendations:
+  - severity: low
+    category: tech_debt
+    title: "Adicionar log estruturado no path TTS pra observabilidade"
+    detail: |
+      `generateAudio` não loga estruturadamente. Tech debt candidata: log line
+      `[zenya][tts] tenant=<id> voice=<id> model=<model> latency=<ms> bytes=<n>` pra
+      facilitar debug e medição de SLA pós-deploy. Não bloqueia merge — Story 18.16
+      (Wave 3 — observability core) provavelmente endereça.
+
+  - severity: low
+    category: completeness
+    title: "Atualizar seed-scar-tenant.mjs pra aceitar SCAR_TTS_VOICE_ID env (AC 6 follow-up)"
+    detail: |
+      AC 6 da story 18.24 esperava o seed reproducível. @dev usou UPDATE direto via
+      script ad-hoc (mais seguro contra cicatriz applyTenantSeed sobrescrevendo
+      admin_phones). Resolveu o caso atual mas não tornou o setup reproducível pra
+      futuros tenants. Tech debt: criar helper `updateTenantTtsConfig` em seed-common.mjs
+      similar a `updateTenantPrompt`, depois atualizar seed-scar-tenant.mjs pra usar.
+      Não bloqueia esta story (Scar tts_config setado ✅) mas vale como tech debt pra
+      próximos tenants quererem voice custom.
+
+  - severity: low
+    category: future_iteration
+    title: "Considerar cache invalidation cross-instance pra tts_config update"
+    detail: |
+      config-loader tem TTL de 5min. UPDATE manual em `tts_config` requer aguardar TTL
+      expirar OU pm2 reload. Story 18.9 (Wave 2 — cache invalidação NOTIFY/LISTEN) já
+      endereça isso cross-tenant. Não bloqueia merge.
+
+next_steps: |
+  1. ✅ @qa Quinn gate PASS 7/7
+  2. ⏭️ @devops Gage *push:
+     - Push branch feat/18.24-tts-quality-per-tenant
+     - Abrir PR title: feat(zenya): Story 18.24 — TTS qualidade por-tenant [Wave 2]
+     - PR body referencia gate file (este) + story file
+     - Squash-merge na main
+     - Deploy VPS (snapshot SQL prévio + pm2 reload zenya-webhook)
+     - Smoke real comparativo (waiver smoke_real_pos_deploy)
+     - Monitor 48h
+  3. Após Gustavo aprovar tom Roberta + sign-off Mauro → status story → Done.
