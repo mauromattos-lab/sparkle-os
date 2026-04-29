@@ -90,11 +90,13 @@ export async function runZenyaAgent(params: AgentParams): Promise<void> {
     await saveHistory(tenantId, phone, message, reply);
 
     // AC6: send reply — format decision:
-    // 1. Explicit preference ('audio'|'texto') always wins
-    // 2. No preference set → mirror input format (audio in → audio out, text in → text out)
+    // 1. tts_config.enabled === false → always text, regardless of preference or input format
+    // 2. Explicit preference ('audio'|'texto') always wins
+    // 3. No preference set → mirror input format (audio in → audio out, text in → text out)
     if (reply.trim()) {
+      const ttsOutputEnabled = config.tts_config?.enabled !== false;
       const audioPref = await getContactAudioPreference(chatwootParams, phone).catch(() => null);
-      const respondWithAudio = audioPref === 'audio' || (audioPref === null && inputIsAudio === true);
+      const respondWithAudio = ttsOutputEnabled && (audioPref === 'audio' || (audioPref === null && inputIsAudio === true));
 
       if (respondWithAudio) {
         // Show "gravando áudio..." indicator before generating audio

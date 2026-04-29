@@ -65,6 +65,12 @@ export interface TtsVoiceSettings {
  * Stored as JSONB in zenya_tenants.tts_config (Story 18.24 / migration 010).
  */
 export interface TtsConfig {
+  /**
+   * Set to false to disable TTS output entirely for this tenant.
+   * Agent will always respond in text, even when client sends audio.
+   * Default: true (TTS enabled).
+   */
+  enabled?: boolean;
   /** ElevenLabs voice_id. Falls back to ELEVENLABS_VOICE_ID env var. */
   voice_id?: string;
   /** ElevenLabs model. Default: 'eleven_multilingual_v2'. */
