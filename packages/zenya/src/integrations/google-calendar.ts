@@ -10,9 +10,13 @@ import { getCredentialJson } from '../tenant/credentials.js';
 import type { TenantConfig } from '../tenant/config-loader.js';
 
 interface GoogleCalendarCredentials {
-  client_id: string;
-  client_secret: string;
-  refresh_token: string;
+  // OAuth2 mode
+  client_id?: string;
+  client_secret?: string;
+  refresh_token?: string;
+  // Service account mode (SA JSON embedded — same pattern as sheets_kb)
+  service_account?: Record<string, unknown>;
+  // Common
   calendar_id?: string;          // defaults to 'primary'
   duration_minutes?: number;     // default appointment duration, defaults to 30
 }
@@ -20,8 +24,17 @@ interface GoogleCalendarCredentials {
 const TIMEOUT_MS = 15_000;
 
 function getCalendarClient(creds: GoogleCalendarCredentials) {
+  if (creds.service_account) {
+    // Service account mode — SA JSON stored in credentials (same pattern as sheets_kb)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const auth = new google.auth.GoogleAuth({
+      credentials: creds.service_account as any,
+      scopes: ['https://www.googleapis.com/auth/calendar'],
+    }) as any;
+    return google.calendar({ version: 'v3', auth });
+  }
   const auth = new google.auth.OAuth2(creds.client_id, creds.client_secret);
-  auth.setCredentials({ refresh_token: creds.refresh_token });
+  auth.setCredentials({ refresh_token: creds.refresh_token ?? null });
   return google.calendar({ version: 'v3', auth });
 }
 
