@@ -294,6 +294,18 @@ export function createWebhookRouter(): Hono {
           // Debounce: wait for any burst messages to arrive and get enqueued
           await sleep(DEBOUNCE_MS);
 
+          // Per-tenant first-message delay: some tenants (e.g. Fun Personalize)
+          // need extra time on the very first message so the customer can finish
+          // typing their full intent before the bot responds.
+          const firstMsgDelay = tenantConfig.first_message_delay_s ?? 0;
+          if (firstMsgDelay > 0 && payload.conversation?.messages_count === 1) {
+            console.log(
+              `[zenya] first_message_delay — tenant=${tenantConfig.name} ` +
+              `delay_s=${firstMsgDelay} conv=${conversationId}`,
+            );
+            await sleep(firstMsgDelay * 1000);
+          }
+
           // Fetch all pending messages accumulated during the debounce window
           const pending = await fetchPending(accountId, phone);
           pendingIds = pending.map((m) => m.message_id);

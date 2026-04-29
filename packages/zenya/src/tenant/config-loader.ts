@@ -37,6 +37,14 @@ export interface TenantConfig {
    * global defaults (eleven_multilingual_v2 + expressive settings).
    */
   tts_config?: TtsConfig;
+  /**
+   * Delay (seconds) added before the agent processes the very first message of
+   * a new conversation (messages_count === 1). Useful for tenants where the
+   * customer's first message is sent immediately after opening the chat —
+   * the extra wait gives them time to type their full intent before the bot
+   * responds. Defaults to 0 (no extra delay). Applied after DEBOUNCE_MS.
+   */
+  first_message_delay_s?: number;
 }
 
 const TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -82,6 +90,7 @@ function rowToConfig(row: Record<string, unknown>): TenantConfig {
     escalation_public_summary: row['escalation_public_summary'] !== false,
     audio_format: row['audio_format'] === 'ogg_opus' ? 'ogg_opus' : 'mp3',
     ...(tts_config ? { tts_config } : {}),
+    first_message_delay_s: typeof row['first_message_delay_s'] === 'number' ? row['first_message_delay_s'] : 0,
   };
 }
 
@@ -96,7 +105,7 @@ export async function loadTenantConfig(tenantId: string): Promise<TenantConfig> 
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary, audio_format, tts_config')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary, audio_format, tts_config, first_message_delay_s')
     .eq('id', tenantId)
     .single();
 
@@ -121,7 +130,7 @@ export async function loadTenantByAccountId(accountId: string): Promise<TenantCo
   const sb = getSupabase();
   const { data, error } = await sb
     .from('zenya_tenants')
-    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary, audio_format, tts_config')
+    .select('id, name, system_prompt, active_tools, chatwoot_account_id, allowed_phones, admin_phones, admin_contacts, escalation_public_summary, audio_format, tts_config, first_message_delay_s')
     .eq('chatwoot_account_id', accountId)
     .single();
 
