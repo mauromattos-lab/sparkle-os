@@ -34,6 +34,20 @@ const REPO_ROOT = resolve(__dirname, '../../..');
 // Carregar .env local (scripts manuais) — no-op em GitHub Actions (usa secrets)
 loadEnv();
 
+// OVERRIDE_DATE (YYYY-MM-DD): permite publicar post com data retroativa.
+// Quando definido, substitui "hoje" em todo o pipeline e seta published_at
+// do Ghost para 09:00 BRT do dia especificado.
+function getEffectiveDate() {
+  return process.env.OVERRIDE_DATE || new Date().toISOString().slice(0, 10);
+}
+
+function getEffectiveDatetime() {
+  if (process.env.OVERRIDE_DATE) {
+    return `${process.env.OVERRIDE_DATE}T12:00:00.000Z`; // 09:00 BRT
+  }
+  return new Date().toISOString();
+}
+
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 
 function readRepoFile(relPath) {
@@ -167,7 +181,7 @@ function checkSchedulingGate() {
     console.log('[step-0] Flag --force ativa — ignorando gate');
     return;
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getEffectiveDate();
   const history = readRepoFile('squads/aeo-squad-plaka/data/posts-history.md');
   if (history.includes(`| ${today} |`)) {
     console.log(`[step-0] Já existe post hoje (${today}) — pulando`);
@@ -182,7 +196,7 @@ async function generateBriefing() {
   console.log('[step-1] Sage gerando briefing...');
   const systemPrompt = readRepoFile('squads/aeo-squad-plaka/tasks/daily-briefing.md');
   const history = readRepoFile('squads/aeo-squad-plaka/data/posts-history.md');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getEffectiveDate();
 
   // Últimos 10 posts para contexto (evitar repetição)
   const last10 = history
@@ -511,7 +525,7 @@ async function publishToGhost(briefing, postMd, featureImageUrl, productName) {
   const title = briefing.topico;
   const slug = slugify(title);
   const html = marked.parse(postMd);
-  const publishedAt = new Date().toISOString();
+  const publishedAt = getEffectiveDatetime();
 
   // Ghost 5 usa mobiledoc internamente — encapsular HTML em HTML card
   const mobiledoc = JSON.stringify({
@@ -651,7 +665,7 @@ async function main() {
   }
 
   // Step 9b: Publicar post
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getEffectiveDate();
   const productName = imageResult?.productName ?? 'Plaka Acessórios';
   const { slug, url } = await publishToGhost(briefing, post, ghostImageUrl, productName);
 

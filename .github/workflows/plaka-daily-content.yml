@@ -9,6 +9,10 @@ on:
         description: 'Ignorar gate de 1 post/dia'
         type: boolean
         default: false
+      override_date:
+        description: 'Data retroativa do post (YYYY-MM-DD). Vazio = hoje.'
+        type: string
+        default: ''
 
 jobs:
   daily-content:
@@ -37,6 +41,7 @@ jobs:
           ZAPI_TOKEN: ${{ secrets.ZAPI_TOKEN }}
           MAURO_PHONE: ${{ secrets.MAURO_PHONE }}
           FORCE: ${{ inputs.force }}
+          OVERRIDE_DATE: ${{ inputs.override_date }}
 
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
